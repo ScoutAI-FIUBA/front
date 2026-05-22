@@ -2,7 +2,6 @@ services:
   - type: web
     name: scoutai-front
     runtime: static
-    plan: free
     branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
