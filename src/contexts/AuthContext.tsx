@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { RegisterDto, User, UserCredentials } from '@/types'
 import { authService } from '@/services/registry'
-import { getStoredToken } from '@/services/mock/auth.mock'
+import { getStoredToken } from '@/services/api/token'
 
 interface AuthContextValue {
   user: User | null

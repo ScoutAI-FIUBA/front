@@ -1,6 +1,6 @@
 # ScoutAI Frontend
 
-Plataforma de scouting deportivo — frontend **mock-first** con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui.
+Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos y jugadores** consumen el backend real; partidos, videos y análisis siguen en mock.
 
 ## Requisitos
 
@@ -11,17 +11,15 @@ Plataforma de scouting deportivo — frontend **mock-first** con React, TypeScri
 
 ```bash
 npm install
+cp .env.example .env
 npm run dev
 ```
 
-Abrir [http://localhost:5173](http://localhost:5173)
+Levantá el backend en `tpp/back` (`docker compose up`) y abrí [http://localhost:5173](http://localhost:5173).
 
-## Credenciales demo
+Registrate desde la app o usá una cuenta existente en el backend (contraseña mín. 8 caracteres).
 
-| Campo | Valor |
-|-------|-------|
-| Email | `analista@scoutai.com` |
-| Contraseña | `demo123` |
+Para volver a mocks locales: `VITE_USE_MOCK_API=true` en `.env`.
 
 ## Pantallas
 
@@ -33,16 +31,16 @@ Abrir [http://localhost:5173](http://localhost:5173)
 - Videos (lista + subir)
 - Análisis (lista + detalle)
 
-## Arquitectura mock-first
+## Arquitectura de servicios
 
 ```
-src/services/contracts/   → interfaces (listas para API real)
-src/services/mock/        → implementaciones actuales
+src/services/contracts/   → interfaces
+src/services/api/         → cliente HTTP (auth, teams, players)
+src/services/mock/        → mocks (partidos, videos, análisis + fallback)
 src/services/registry.ts  → punto único de cambio
-src/mocks/store.ts        → persistencia en sessionStorage
 ```
 
-Para conectar el backend real, reemplazá las exportaciones en `src/services/registry.ts` por implementaciones en `src/services/api/`.
+Variables: `VITE_API_BASE_URL` (default `http://localhost:8005`), `VITE_USE_MOCK_API=true` para desactivar el backend en auth/equipos/jugadores.
 
 ## Flujo de datos demo
 

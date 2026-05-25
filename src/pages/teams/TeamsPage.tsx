@@ -69,11 +69,15 @@ export function TeamsPage() {
       toast.error('Seleccioná jugador y equipo')
       return
     }
-    await teamService.addMember(linkTeam, linkPlayer)
-    toast.success('Jugador vinculado')
-    setLinkPlayer('')
-    setLinkTeam('')
-    void load()
+    try {
+      await teamService.addMember(linkTeam, linkPlayer)
+      toast.success('Jugador vinculado')
+      setLinkPlayer('')
+      setLinkTeam('')
+      void load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo vincular')
+    }
   }
 
   return (

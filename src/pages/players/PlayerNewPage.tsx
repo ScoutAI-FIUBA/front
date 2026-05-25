@@ -27,6 +27,8 @@ export function PlayerNewPage() {
   const [position, setPosition] = useState<PositionCode | ''>('')
   const [jersey, setJersey] = useState('')
   const [birthDate, setBirthDate] = useState('')
+  const [heightCm, setHeightCm] = useState('180')
+  const [weightKg, setWeightKg] = useState('75')
   const [teamId, setTeamId] = useState('')
 
   useEffect(() => {
@@ -38,16 +40,31 @@ export function PlayerNewPage() {
       toast.error('Completá los campos obligatorios')
       return
     }
-    await playerService.create({
-      firstName,
-      lastName,
-      birthDate,
-      primaryPosition: position,
-      jerseyNumber: jersey ? Number(jersey) : undefined,
-      teamId: teamId || undefined,
-    })
-    toast.success('Jugador guardado')
-    navigate('/jugadores')
+    const height = Number(heightCm)
+    const weight = Number(weightKg)
+    if (!height || height <= 0 || !weight || weight <= 0) {
+      toast.error('Altura y peso deben ser números válidos')
+      return
+    }
+    try {
+      await playerService.create({
+        firstName,
+        lastName,
+        birthDate,
+        primaryPosition: position,
+        heightCm: height,
+        weightKg: weight,
+        jerseyNumber: jersey ? Number(jersey) : undefined,
+        teamId: teamId || undefined,
+      })
+      if (teamId) {
+        toast.message('El equipo seleccionado no se guardó: el backend aún no soporta vinculación.')
+      }
+      toast.success('Jugador guardado')
+      navigate('/jugadores')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo guardar el jugador')
+    }
   }
 
   const age = birthDate ? calcAge(birthDate) : null
@@ -113,6 +130,16 @@ export function PlayerNewPage() {
           <div>
             <Label>Edad</Label>
             <Input value={age ?? ''} readOnly placeholder="Ej. 24" className="mt-1 bg-muted" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>Altura (cm)</Label>
+              <Input type="number" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>Peso (kg)</Label>
+              <Input type="number" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="mt-1" />
+            </div>
           </div>
           <div>
             <Label>Equipo asociado</Label>

@@ -1,9 +1,8 @@
 import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { IAuthService, AuthResult } from '../contracts/auth.service'
-import type { RegisterDto, User, UserCredentials } from '@/types'
-
-const TOKEN_KEY = 'scoutai-auth-token'
+import type { RegisterDto, User } from '@/types'
+import { clearStoredToken, setStoredToken } from '../api/token'
 
 export const mockAuthService: IAuthService = {
   async login({ email, password }): Promise<AuthResult> {
@@ -17,7 +16,7 @@ export const mockAuthService: IAuthService = {
     }
     const { password: _, ...safeUser } = user
     const token = `mock-token-${user.id}`
-    sessionStorage.setItem(TOKEN_KEY, token)
+    setStoredToken(token)
     return { user: safeUser, token }
   },
 
@@ -42,13 +41,13 @@ export const mockAuthService: IAuthService = {
     const last = getStore().users[getStore().users.length - 1]
     const { password: _, ...safeUser } = last
     const token = `mock-token-${last.id}`
-    sessionStorage.setItem(TOKEN_KEY, token)
+    setStoredToken(token)
     return { user: safeUser, token }
   },
 
   async logout(): Promise<void> {
     await simulateNetwork(200)
-    sessionStorage.removeItem(TOKEN_KEY)
+    clearStoredToken()
   },
 
   async getCurrentUser(token: string): Promise<User | null> {
@@ -62,6 +61,4 @@ export const mockAuthService: IAuthService = {
   },
 }
 
-export function getStoredToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY)
-}
+export { getStoredToken } from '../api/token'
