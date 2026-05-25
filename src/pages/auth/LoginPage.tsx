@@ -1,0 +1,101 @@
+import { useState } from 'react'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import { Alert } from '@/components/ui/alert'
+import { useAuth } from '@/contexts/AuthContext'
+
+export function LoginPage() {
+  const navigate = useNavigate()
+  const { login, isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) return null
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  const [email, setEmail] = useState('analista@scoutai.com')
+  const [password, setPassword] = useState('demo123')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await login({ email, password })
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl md:grid-cols-2">
+        <div className="relative flex flex-col justify-between bg-[#7a4a58] p-10 text-white">
+          <p className="text-lg font-bold">ScoutAI</p>
+          <div>
+            <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
+            <p className="mt-4 text-white/80">
+              Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
+            </p>
+          </div>
+          <p className="text-xs text-white/50">ScoutAI MVP</p>
+        </div>
+
+        <div className="p-10">
+          <h2 className="text-2xl font-bold">Iniciar sesión</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Plataforma de scouting y análisis deportivo</p>
+
+          {error && (
+            <Alert className="mt-4 flex items-center gap-2 border-red-200 bg-red-50 text-red-600">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </Alert>
+          )}
+
+          <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
+            <div>
+              <Label htmlFor="email">Correo electrónico</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@scoutai.com" className="mt-1" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Contraseña</Label>
+                <button type="button" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</button>
+              </div>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Iniciar sesión'}
+            </Button>
+          </form>
+
+          <div className="my-6 flex items-center gap-4">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">O continuar con</span>
+            <Separator className="flex-1" />
+          </div>
+
+          <Button variant="outline" className="w-full" disabled>
+            Google
+          </Button>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            ¿No tiene una cuenta?{' '}
+            <Link to="/register" className="font-medium text-primary hover:underline">
+              Crear cuenta
+            </Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+
