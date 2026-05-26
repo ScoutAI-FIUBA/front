@@ -1,0 +1,20 @@
+import type { Team, TeamMembership } from '@/types'
+
+export interface CreateTeamDto {
+  name: string
+  shortName: string
+  city: string
+  country: string
+  league?: string
+  category?: string
+}
+
+export interface ITeamService {
+  list(): Promise<Team[]>
+  getById(id: string): Promise<Team | null>
+  create(dto: CreateTeamDto): Promise<Team>
+  search(query: string): Promise<Team[]>
+  getMembers(teamId: string): Promise<TeamMembership[]>
+  addMember(teamId: string, playerId: string): Promise<TeamMembership>
+  getPlayerCount(teamId: string): Promise<number>
+}

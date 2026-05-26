@@ -1,8 +1,13 @@
 # ScoutAI Frontend
 
-Vite + React + TypeScript.
+Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos, jugadores y vinculación jugador–equipo** consumen el backend real; partidos, videos y análisis siguen en mock.
 
-## Run locally
+## Requisitos
+
+- Node.js 18+
+- npm
+
+## Instalación
 
 ```bash
 npm install
@@ -10,13 +15,39 @@ cp .env.example .env
 npm run dev
 ```
 
-## Build
+Levantá el backend en `tpp/back` (`docker compose up`) y abrí [http://localhost:5173](http://localhost:5173).
 
-```bash
-npm run build
-npm run preview
+Registrate desde la app o usá una cuenta existente en el backend (contraseña mín. 8 caracteres).
+
+Para volver a mocks locales: `VITE_USE_MOCK_API=true` en `.env`.
+
+## Pantallas
+
+- Login / Registro
+- Dashboard
+- Equipos (lista + vincular jugador)
+- Jugadores (lista + crear)
+- Partidos (crear + roster)
+- Videos (lista + subir)
+- Análisis (lista + detalle)
+
+## Arquitectura de servicios
+
+```
+src/services/contracts/   → interfaces
+src/services/api/         → cliente HTTP (auth, teams, players)
+src/services/mock/        → mocks (partidos, videos, análisis + fallback)
+src/services/registry.ts  → punto único de cambio
 ```
 
-## Deploy
+Variables: `VITE_API_BASE_URL` (default `http://localhost:8005`), `VITE_USE_MOCK_API=true` para desactivar el backend en auth/equipos/jugadores.
 
-Production config lives in `render.yaml` and `.env.example`. Set `VITE_API_BASE_URL` in the Render dashboard before deploying.
+## Flujo de datos demo
+
+Usuario → Equipos → Jugadores → Partido → Roster → Video → Análisis → Eventos (`GameEvent` con `quarter` según modelo PDF).
+
+## Scripts
+
+- `npm run dev` — desarrollo
+- `npm run build` — build producción
+- `npm run preview` — preview del build

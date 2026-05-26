@@ -1,57 +1,44 @@
-import { useEffect, useState } from "react";
-import { API_BASE_URL, fetchHealth } from "./api";
-import "./App.css";
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'sonner'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { AppShell } from '@/components/layout/AppShell'
+import { LoginPage } from '@/pages/auth/LoginPage'
+import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { DashboardPage } from '@/pages/dashboard/DashboardPage'
+import { TeamsPage } from '@/pages/teams/TeamsPage'
+import { PlayersPage } from '@/pages/players/PlayersPage'
+import { PlayerNewPage } from '@/pages/players/PlayerNewPage'
+import { MatchesPage } from '@/pages/matches/MatchesPage'
+import { VideosPage } from '@/pages/videos/VideosPage'
+import { VideoUploadPage } from '@/pages/videos/VideoUploadPage'
+import { AnalysisPage } from '@/pages/analysis/AnalysisPage'
+import { AnalysisDetailPage } from '@/pages/analysis/AnalysisDetailPage'
 
-type HealthState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ok"; status: string }
-  | { kind: "error"; message: string };
-
-function App() {
-  const [health, setHealth] = useState<HealthState>({ kind: "idle" });
-
-  const ping = async () => {
-    setHealth({ kind: "loading" });
-    try {
-      const result = await fetchHealth();
-      setHealth({ kind: "ok", status: result.status });
-    } catch (err) {
-      setHealth({
-        kind: "error",
-        message: err instanceof Error ? err.message : "Unknown error",
-      });
-    }
-  };
-
-  useEffect(() => {
-    void ping();
-  }, []);
-
+export default function App() {
   return (
-    <main className="app">
-      <header>
-        <h1>ScoutAI</h1>
-        <p className="subtitle">Basketball scouting platform</p>
-      </header>
-
-      <section className="card">
-        <h2>Backend status</h2>
-        <p>
-          API URL: <code>{API_BASE_URL || "(not configured)"}</code>
-        </p>
-        <div className={`status status-${health.kind}`}>
-          {health.kind === "idle" && <span>Idle</span>}
-          {health.kind === "loading" && <span>Checking…</span>}
-          {health.kind === "ok" && <span>OK — {health.status}</span>}
-          {health.kind === "error" && <span>Error — {health.message}</span>}
-        </div>
-        <button type="button" onClick={ping} disabled={health.kind === "loading"}>
-          Ping /health
-        </button>
-      </section>
-    </main>
-  );
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/equipos" element={<TeamsPage />} />
+            <Route path="/jugadores" element={<PlayersPage />} />
+            <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
+            <Route path="/partidos" element={<MatchesPage />} />
+            <Route path="/videos" element={<VideosPage />} />
+            <Route path="/videos/subir" element={<VideoUploadPage />} />
+            <Route path="/analisis" element={<AnalysisPage />} />
+            <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
+          </Route>
+        </Route>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+      <Toaster position="top-right" richColors />
+    </AuthProvider>
+  )
 }
 
-export default App;
