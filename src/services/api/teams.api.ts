@@ -1,10 +1,8 @@
 import type { ITeamService } from '../contracts/teams.service'
 import type { Team, TeamMembership } from '@/types'
 import { apiJson } from './http-client'
-import { mapApiTeam, toTeamPayload, type ApiTeam } from './mappers'
-
-const MEMBERSHIP_UNAVAILABLE =
-  'La vinculación jugador-equipo aún no está disponible en el backend.'
+import { mapApiTeam, toTeamPayload, type ApiPlayer, type ApiTeam } from './mappers'
+import { assignPlayerToTeam } from './players.api'
 
 export const apiTeamService: ITeamService = {
   async list(): Promise<Team[]> {
@@ -37,15 +35,32 @@ export const apiTeamService: ITeamService = {
     )
   },
 
-  async getMembers(_teamId: string): Promise<TeamMembership[]> {
-    return []
+  async getMembers(teamId: string): Promise<TeamMembership[]> {
+    const data = await apiJson<{ players: ApiPlayer[] }>(
+      `/players?team_id=${encodeURIComponent(teamId)}`,
+    )
+    return data.players.map((player) => ({
+      id: `${player.id}-${teamId}`,
+      teamId,
+      playerId: player.id,
+      joinedAt: new Date().toISOString(),
+    }))
   },
 
-  async addMember(_teamId: string, _playerId: string): Promise<TeamMembership> {
-    throw new Error(MEMBERSHIP_UNAVAILABLE)
+  async addMember(teamId: string, playerId: string): Promise<TeamMembership> {
+    await assignPlayerToTeam(playerId, teamId)
+    return {
+      id: `${playerId}-${teamId}`,
+      teamId,
+      playerId,
+      joinedAt: new Date().toISOString(),
+    }
   },
 
-  async getPlayerCount(_teamId: string): Promise<number> {
-    return 0
+  async getPlayerCount(teamId: string): Promise<number> {
+    const data = await apiJson<{ players: ApiPlayer[] }>(
+      `/players?team_id=${encodeURIComponent(teamId)}`,
+    )
+    return data.players.length
   },
 }

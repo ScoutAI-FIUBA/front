@@ -24,6 +24,7 @@ export interface ApiPlayer {
   height_cm: number
   weight_kg: number
   primary_position: string
+  team_id?: string | null
 }
 
 const PROFILE_PREFIX = 'scoutai-profile-'
@@ -82,6 +83,7 @@ export function mapApiPlayer(player: ApiPlayer): Player {
     heightCm: player.height_cm,
     weightKg: player.weight_kg,
     primaryPosition: player.primary_position as Player['primaryPosition'],
+    teamId: player.team_id ?? null,
     createdAt: new Date().toISOString(),
     status: 'active',
   }

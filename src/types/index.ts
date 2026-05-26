@@ -52,6 +52,7 @@ export interface Player {
   weightKg?: number
   primaryPosition: PositionCode
   createdAt: string
+  teamId?: string | null
   jerseyNumber?: number
   photoUrl?: string
   status?: PlayerStatus

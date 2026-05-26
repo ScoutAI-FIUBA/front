@@ -30,20 +30,20 @@ export function PlayersPage() {
     void (async () => {
       const [players, teamList] = await Promise.all([playerService.list(), teamService.list()])
       setTeams(teamList)
-      const enriched = await Promise.all(
-        players.map(async (p) => ({
+      const teamNames = new Map(teamList.map((t) => [t.id, t.name]))
+      setRows(
+        players.map((p) => ({
           ...p,
-          teamName: await playerService.getTeamName(p.id),
+          teamName: p.teamId ? teamNames.get(p.teamId) ?? null : null,
         })),
       )
-      setRows(enriched)
     })()
   }, [])
 
   const filtered = rows.filter((p) => {
     const name = `${p.firstName} ${p.lastName}`.toLowerCase()
     const matchSearch = name.includes(search.toLowerCase())
-    const matchTeam = teamFilter === 'all' || p.teamName === teams.find((t) => t.id === teamFilter)?.name
+    const matchTeam = teamFilter === 'all' || p.teamId === teamFilter
     return matchSearch && matchTeam
   })
 

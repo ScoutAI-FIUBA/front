@@ -3,10 +3,25 @@ import type { Player } from '@/types'
 import { apiJson } from './http-client'
 import { mapApiPlayer, toPlayerPayload, type ApiPlayer } from './mappers'
 
+async function fetchPlayers(teamId?: string): Promise<Player[]> {
+  const path = teamId
+    ? `/players?team_id=${encodeURIComponent(teamId)}`
+    : '/players'
+  const data = await apiJson<{ players: ApiPlayer[] }>(path)
+  return data.players.map(mapApiPlayer)
+}
+
+export async function assignPlayerToTeam(playerId: string, teamId: string): Promise<Player> {
+  const data = await apiJson<{ player: ApiPlayer }>(
+    `/players/${encodeURIComponent(playerId)}/team/${encodeURIComponent(teamId)}`,
+    { method: 'PUT' },
+  )
+  return mapApiPlayer(data.player)
+}
+
 export const apiPlayerService: IPlayerService = {
   async list(): Promise<Player[]> {
-    const data = await apiJson<{ players: ApiPlayer[] }>('/players')
-    return data.players.map(mapApiPlayer)
+    return fetchPlayers()
   },
 
   async getById(id: string): Promise<Player | null> {
@@ -15,12 +30,6 @@ export const apiPlayerService: IPlayerService = {
   },
 
   async create(dto) {
-    if (dto.teamId) {
-      console.warn(
-        '[ScoutAI] teamId en create player ignorado: el backend aún no soporta membresías.',
-      )
-    }
-
     const data = await apiJson<{ player: ApiPlayer }>('/players', {
       method: 'POST',
       body: JSON.stringify(
@@ -34,14 +43,25 @@ export const apiPlayerService: IPlayerService = {
         }),
       ),
     })
-    return mapApiPlayer(data.player)
+
+    let player = mapApiPlayer(data.player)
+
+    if (dto.teamId) {
+      player = await assignPlayerToTeam(player.id, dto.teamId)
+    }
+
+    return player
   },
 
-  async filterByTeam(): Promise<Player[]> {
-    return []
+  async filterByTeam(teamId: string): Promise<Player[]> {
+    return fetchPlayers(teamId)
   },
 
-  async getTeamName(): Promise<string | null> {
-    return null
+  async getTeamName(playerId: string): Promise<string | null> {
+    const player = await this.getById(playerId)
+    if (!player?.teamId) return null
+
+    const teams = await apiJson<{ teams: { id: string; name: string }[] }>('/teams')
+    return teams.teams.find((t) => t.id === player.teamId)?.name ?? null
   },
 }

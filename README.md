@@ -1,6 +1,6 @@
 # ScoutAI Frontend
 
-Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos y jugadores** consumen el backend real; partidos, videos y análisis siguen en mock.
+Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos, jugadores y vinculación jugador–equipo** consumen el backend real; partidos, videos y análisis siguen en mock.
 
 ## Requisitos
 

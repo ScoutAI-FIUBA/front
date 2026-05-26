@@ -24,6 +24,7 @@ export const mockPlayerService: IPlayerService = {
       jerseyNumber: dto.jerseyNumber,
       heightCm: dto.heightCm,
       weightKg: dto.weightKg,
+      teamId: dto.teamId ?? null,
       createdAt: new Date().toISOString(),
       status: 'pending' as const,
     }
@@ -60,8 +61,11 @@ export const mockPlayerService: IPlayerService = {
   async getTeamName(playerId) {
     await simulateNetwork(150)
     const store = getStore()
-    const mem = store.memberships.find((m) => m.playerId === playerId && !m.leftAt)
-    if (!mem) return null
-    return store.teams.find((t) => t.id === mem.teamId)?.name ?? null
+    const player = store.players.find((p) => p.id === playerId)
+    const teamId =
+      player?.teamId ??
+      store.memberships.find((m) => m.playerId === playerId && !m.leftAt)?.teamId
+    if (!teamId) return null
+    return store.teams.find((t) => t.id === teamId)?.name ?? null
   },
 }

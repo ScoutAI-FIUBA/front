@@ -57,9 +57,6 @@ export function PlayerNewPage() {
         jerseyNumber: jersey ? Number(jersey) : undefined,
         teamId: teamId || undefined,
       })
-      if (teamId) {
-        toast.message('El equipo seleccionado no se guardó: el backend aún no soporta vinculación.')
-      }
       toast.success('Jugador guardado')
       navigate('/jugadores')
     } catch (err) {
