@@ -108,15 +108,15 @@ export function toPlayerPayload(dto: {
   lastName: string
   birthDate: string
   primaryPosition: string
-  heightCm?: number
-  weightKg?: number
+  heightCm: number
+  weightKg: number
 }) {
   return {
     first_name: dto.firstName,
     last_name: dto.lastName,
     birth_date: dto.birthDate,
-    height_cm: dto.heightCm ?? 180,
-    weight_kg: dto.weightKg ?? 75,
+    height_cm: dto.heightCm,
+    weight_kg: dto.weightKg,
     primary_position: dto.primaryPosition,
   }
 }

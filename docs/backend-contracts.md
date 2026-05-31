@@ -26,9 +26,17 @@ Service selection happens in `src/services/registry.ts`.
 
 - Access token is read through `getStoredToken`.
 - Authenticated requests send `Authorization: Bearer <token>`.
+- `POST /auth/logout` is an authenticated backend endpoint, so the real auth service sends the Bearer token before clearing local token state.
+- Backend `DELETE /auth/me` exists for account deletion, but the frontend does not expose a UI or service method for it yet.
 - On `401`, the client attempts `POST /auth/refresh` with `credentials: include`.
 - A successful refresh stores the new access token and retries once.
 - Failed refresh clears the stored token.
+
+## Player Contract Notes
+
+- Backend player create/update requires `height_cm` and `weight_kg`.
+- Frontend `CreatePlayerDto` and `UpdatePlayerDto` require `heightCm` and `weightKg`; forms validate both before calling the service.
+- The API mapper sends provided height and weight values directly and does not inject backend-facing defaults.
 
 ## Currently Real Or Mocked
 

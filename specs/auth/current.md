@@ -30,7 +30,7 @@ Current behavior documentation.
 - If a token exists, the app asks `authService.getCurrentUser(stored)` for the current user.
 - Login calls `authService.login`, then stores user and token in context state.
 - Register calls `authService.register`, then stores user and token in context state.
-- Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.
+- Logout calls `authService.logout`, sends the stored Bearer token when using the backend, clears user and token in context state, and navigates to `/login` from `AppShell`.
 - `ProtectedRoute` shows `Cargando...` while auth state is loading.
 - `ProtectedRoute` redirects unauthenticated users to `/login`.
 - Global toasts are rendered by `Toaster` in `src/App.tsx`.
@@ -51,6 +51,7 @@ Current behavior documentation.
 
 - Password recovery is displayed but not implemented.
 - Google login button is displayed disabled.
+- Backend `DELETE /auth/me` exists for account deletion, but the frontend does not expose UI or a service method for it yet.
 - No new auth features are requested by this spec.
 
 ## Verification

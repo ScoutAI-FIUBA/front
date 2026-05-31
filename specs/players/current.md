@@ -32,6 +32,7 @@ Current behavior documentation.
 - Create player page loads teams for optional association.
 - Create player page calculates age from birth date for display.
 - Create player requires first name, last name, position, birth date, valid height, and valid weight.
+- Player service create/update DTOs require `heightCm` and `weightKg` because the backend requires `height_cm` and `weight_kg`.
 - Create player navigates back to `/jugadores` after successful save.
 - Toasts provide success and error feedback.
 

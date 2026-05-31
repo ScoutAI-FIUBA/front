@@ -6,8 +6,8 @@ export interface CreatePlayerDto {
   birthDate: string
   primaryPosition: Player['primaryPosition']
   jerseyNumber?: number
-  heightCm?: number
-  weightKg?: number
+  heightCm: number
+  weightKg: number
   teamId?: string
 }
 
@@ -17,8 +17,8 @@ export interface UpdatePlayerDto {
   birthDate: string
   primaryPosition: Player['primaryPosition']
   jerseyNumber?: number
-  heightCm?: number
-  weightKg?: number
+  heightCm: number
+  weightKg: number
 }
 
 export interface IPlayerService {
