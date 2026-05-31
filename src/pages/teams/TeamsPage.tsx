@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -32,6 +33,12 @@ export function TeamsPage() {
   const [linkPlayer, setLinkPlayer] = useState('')
   const [linkTeam, setLinkTeam] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editTeamId, setEditTeamId] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editShortName, setEditShortName] = useState('')
+  const [editCity, setEditCity] = useState('')
+  const [editCountry, setEditCountry] = useState('')
   const [newName, setNewName] = useState('')
 
   const load = async () => {
@@ -62,6 +69,48 @@ export function TeamsPage() {
     setCreateOpen(false)
     toast.success('Equipo creado')
     void load()
+  }
+
+  const openEdit = (team: Team) => {
+    setEditTeamId(team.id)
+    setEditName(team.name)
+    setEditShortName(team.shortName)
+    setEditCity(team.city)
+    setEditCountry(team.country)
+    setEditOpen(true)
+  }
+
+  const handleUpdate = async () => {
+    if (!editTeamId || !editName.trim() || !editShortName.trim() || !editCity.trim() || !editCountry.trim()) {
+      toast.error('Completá los campos del equipo')
+      return
+    }
+    try {
+      await teamService.update(editTeamId, {
+        name: editName,
+        shortName: editShortName,
+        city: editCity,
+        country: editCountry,
+      })
+      toast.success('Equipo actualizado')
+      setEditOpen(false)
+      void load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el equipo')
+    }
+  }
+
+  const handleDelete = async (team: Team) => {
+    const confirmed = window.confirm(`¿Eliminar el equipo ${team.name}?`)
+    if (!confirmed) return
+    try {
+      await teamService.delete(team.id)
+      toast.success('Equipo eliminado')
+      if (linkTeam === team.id) setLinkTeam('')
+      void load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el equipo')
+    }
   }
 
   const handleLink = async () => {
@@ -102,7 +151,12 @@ export function TeamsPage() {
             <Button><Plus className="h-4 w-4" /> Crear equipo</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Crear equipo</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Crear equipo</DialogTitle>
+              <DialogDescription>
+                Ingresá el nombre del equipo. El resto de los datos se completa automáticamente.
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Nombre del equipo</Label>
@@ -118,7 +172,12 @@ export function TeamsPage() {
             <Button variant="outline"><Link2 className="h-4 w-4" /> Vincular jugador</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Vincular jugador con equipo</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Vincular jugador con equipo</DialogTitle>
+              <DialogDescription>
+                Seleccioná un jugador y un equipo para crear la asociación.
+              </DialogDescription>
+            </DialogHeader>
             <Alert className="border-accent bg-accent text-sm">Jugador listo para vincular</Alert>
             <div className="space-y-4">
               <div>
@@ -163,7 +222,8 @@ export function TeamsPage() {
               <p className="mt-4 text-xs font-medium text-muted-foreground">JUGADORES {counts[team.id] ?? 0}</p>
               <div className="mt-4 flex gap-2">
                 <Button size="sm" className="flex-1">Ver equipo</Button>
-                <Button size="sm" variant="outline">Editar</Button>
+                <Button size="sm" variant="outline" onClick={() => openEdit(team)}>Editar</Button>
+                <Button size="sm" variant="destructive" onClick={() => void handleDelete(team)}>Borrar</Button>
               </div>
             </CardContent>
           </Card>
@@ -187,6 +247,36 @@ export function TeamsPage() {
           <Button className="mt-4" onClick={() => setCreateOpen(true)}>+ Crear equipo</Button>
         </Card>
       )}
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar equipo</DialogTitle>
+            <DialogDescription>Actualizá los datos principales del equipo.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre del equipo</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label>Nombre corto</Label>
+              <Input value={editShortName} onChange={(e) => setEditShortName(e.target.value)} className="mt-1" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>Ciudad</Label>
+                <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label>País</Label>
+                <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="mt-1" />
+              </div>
+            </div>
+            <Button onClick={() => void handleUpdate()} className="w-full">Guardar cambios</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

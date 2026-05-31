@@ -49,6 +49,32 @@ export const mockPlayerService: IPlayerService = {
     return player
   },
 
+  async update(id, dto) {
+    await simulateNetwork()
+    const updated = updateStore((s) => {
+      const player = s.players.find((p) => p.id === id)
+      if (!player) return
+      player.firstName = dto.firstName
+      player.lastName = dto.lastName
+      player.birthDate = dto.birthDate
+      player.primaryPosition = dto.primaryPosition
+      player.jerseyNumber = dto.jerseyNumber
+      player.heightCm = dto.heightCm
+      player.weightKg = dto.weightKg
+    })
+    const player = updated.players.find((p) => p.id === id)
+    if (!player) throw new Error('Player not found')
+    return player
+  },
+
+  async delete(id) {
+    await simulateNetwork()
+    updateStore((s) => {
+      s.players = s.players.filter((p) => p.id !== id)
+      s.memberships = s.memberships.filter((m) => m.playerId !== id)
+    })
+  },
+
   async filterByTeam(teamId) {
     await simulateNetwork()
     const store = getStore()

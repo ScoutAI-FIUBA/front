@@ -26,6 +26,32 @@ export const mockTeamService: ITeamService = {
     return team
   },
 
+  async update(id, dto) {
+    await simulateNetwork()
+    const updated = updateStore((s) => {
+      const team = s.teams.find((t) => t.id === id)
+      if (!team) return
+      team.name = dto.name
+      team.shortName = dto.shortName
+      team.city = dto.city
+      team.country = dto.country
+    })
+    const team = updated.teams.find((t) => t.id === id)
+    if (!team) throw new Error('Team not found')
+    return team
+  },
+
+  async delete(id) {
+    await simulateNetwork()
+    updateStore((s) => {
+      s.teams = s.teams.filter((t) => t.id !== id)
+      s.memberships = s.memberships.filter((m) => m.teamId !== id)
+      s.players.forEach((player) => {
+        if (player.teamId === id) player.teamId = null
+      })
+    })
+  },
+
   async search(query) {
     await simulateNetwork(250)
     const q = query.toLowerCase()
@@ -52,6 +78,8 @@ export const mockTeamService: ITeamService = {
     }
     updateStore((s) => {
       s.memberships.push(membership)
+      const player = s.players.find((p) => p.id === playerId)
+      if (player) player.teamId = teamId
     })
     return membership
   },
