@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -102,7 +103,12 @@ export function TeamsPage() {
             <Button><Plus className="h-4 w-4" /> Crear equipo</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Crear equipo</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Crear equipo</DialogTitle>
+              <DialogDescription>
+                Ingresá el nombre del equipo. El resto de los datos se completa automáticamente.
+              </DialogDescription>
+            </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Nombre del equipo</Label>
@@ -118,7 +124,12 @@ export function TeamsPage() {
             <Button variant="outline"><Link2 className="h-4 w-4" /> Vincular jugador</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Vincular jugador con equipo</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>Vincular jugador con equipo</DialogTitle>
+              <DialogDescription>
+                Seleccioná un jugador y un equipo para crear la asociación.
+              </DialogDescription>
+            </DialogHeader>
             <Alert className="border-accent bg-accent text-sm">Jugador listo para vincular</Alert>
             <div className="space-y-4">
               <div>
