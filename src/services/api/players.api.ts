@@ -53,6 +53,29 @@ export const apiPlayerService: IPlayerService = {
     return player
   },
 
+  async update(id, dto) {
+    const data = await apiJson<{ player: ApiPlayer }>(`/players/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(
+        toPlayerPayload({
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          birthDate: dto.birthDate,
+          primaryPosition: dto.primaryPosition,
+          heightCm: dto.heightCm,
+          weightKg: dto.weightKg,
+        }),
+      ),
+    })
+    return mapApiPlayer(data.player)
+  },
+
+  async delete(id) {
+    await apiJson<void>(`/players/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+  },
+
   async filterByTeam(teamId: string): Promise<Player[]> {
     return fetchPlayers(teamId)
   },

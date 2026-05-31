@@ -23,6 +23,20 @@ export const apiTeamService: ITeamService = {
     return mapApiTeam(data.team)
   },
 
+  async update(id, dto) {
+    const data = await apiJson<{ team: ApiTeam }>(`/teams/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(toTeamPayload(dto)),
+    })
+    return mapApiTeam(data.team)
+  },
+
+  async delete(id) {
+    await apiJson<void>(`/teams/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
+  },
+
   async search(query: string): Promise<Team[]> {
     const q = query.trim().toLowerCase()
     if (!q) return this.list()
