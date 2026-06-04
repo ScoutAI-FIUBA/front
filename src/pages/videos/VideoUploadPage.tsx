@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type ChangeEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lightbulb, Play, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,46 +12,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { matchService, teamService, videoService } from '@/services/registry'
-import type { Match, Team } from '@/types'
+import { teamService, videoService } from '@/services/registry'
+import type { Team } from '@/types'
 import { toast } from 'sonner'
 
 export function VideoUploadPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
-  const [matches, setMatches] = useState<Match[]>([])
   const [title, setTitle] = useState('')
-  const [date, setDate] = useState('')
   const [teamId, setTeamId] = useState('')
-  const [matchId, setMatchId] = useState('')
-  const [rival, setRival] = useState('')
-  const [fileName, setFileName] = useState('')
+  const [description, setDescription] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [uploadStatus, setUploadStatus] = useState('Esperando archivo...')
 
   useEffect(() => {
-    void Promise.all([teamService.list(), matchService.list()]).then(([t, m]) => {
-      setTeams(t)
-      setMatches(m)
-    })
+    void teamService.list().then(setTeams)
   }, [])
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setFileName(file.name)
-      setUploadStatus(`Archivo listo: ${file.name}`)
+  const handleFile = (e: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      setFile(selectedFile)
+      setUploadStatus(`Archivo listo: ${selectedFile.name}`)
     }
   }
 
   const handleUpload = async () => {
-    if (!title || !teamId || !matchId) {
-      toast.error('Completá título, equipo y partido')
+    if (!title || !teamId || !file) {
+      toast.error('Completá título, equipo y archivo')
       return
     }
-    setUploadStatus('Subiendo...')
-    await videoService.upload({ title, teamId, matchId, rivalName: rival, fileName })
-    toast.success('Video subido correctamente')
-    navigate('/videos')
+
+    try {
+      setUploadStatus('Subiendo...')
+      await videoService.upload({ title, teamId, description, file })
+      toast.success('Video subido correctamente')
+      navigate('/videos')
+    } catch (error) {
+      setUploadStatus('Error al subir el video')
+      toast.error(error instanceof Error ? error.message : 'No se pudo subir el video')
+    }
   }
 
   return (
@@ -64,14 +64,10 @@ export function VideoUploadPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardContent className="space-y-4 p-6">
-            <h2 className="font-semibold">Detalles del Partido</h2>
+            <h2 className="font-semibold">Detalles del video</h2>
             <div>
-              <Label>Nombre del partido</Label>
+              <Label>Título</Label>
               <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Final Copa Regional 2024" className="mt-1" />
-            </div>
-            <div>
-              <Label>Fecha</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>Equipo asociado</Label>
@@ -81,15 +77,8 @@ export function VideoUploadPage() {
               </Select>
             </div>
             <div>
-              <Label>Partido</Label>
-              <Select value={matchId} onValueChange={setMatchId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar partido" /></SelectTrigger>
-                <SelectContent>{matches.map((m) => <SelectItem key={m.id} value={m.id}>{m.title ?? m.id}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Rival / oponente</Label>
-              <Input value={rival} onChange={(e) => setRival(e.target.value)} placeholder="Nombre del oponente" className="mt-1" />
+              <Label>Descripción</Label>
+              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Contexto opcional del video" className="mt-1" />
             </div>
             <div className="flex gap-2 rounded-lg bg-accent p-3 text-xs text-muted-foreground">
               <Lightbulb className="h-4 w-4 shrink-0 text-primary" />

@@ -12,6 +12,7 @@ const badgeVariants = cva(
         outline: 'text-foreground',
         analyzed: 'border-purple-200 bg-purple-50 text-purple-700',
         processing: 'border-pink-200 bg-pink-50 text-pink-700',
+        failed: 'border-red-200 bg-red-50 text-red-700',
         uploaded: 'border-gray-200 bg-gray-50 text-gray-600',
         position: 'border-primary/20 bg-accent text-primary',
       },

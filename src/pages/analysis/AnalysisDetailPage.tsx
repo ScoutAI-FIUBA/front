@@ -18,7 +18,7 @@ export function AnalysisDetailPage() {
       let data = await analysisService.getBySessionId(id)
       if (!data) {
         const video = await videoService.getById(id)
-        if (video) data = await analysisService.getByMatchId(video.matchId)
+        if (video?.matchId) data = await analysisService.getByMatchId(video.matchId)
       }
       setDetail(data)
     })()

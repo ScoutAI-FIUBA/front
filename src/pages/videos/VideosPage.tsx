@@ -17,10 +17,10 @@ import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const statusVariant = (s: Video['status']) =>
-  s === 'analyzed' ? 'analyzed' : s === 'processing' ? 'processing' : 'uploaded'
+  s === 'analyzed' ? 'analyzed' : s === 'processing' ? 'processing' : s === 'failed' ? 'failed' : 'uploaded'
 
 const statusLabel = (s: Video['status']) =>
-  s === 'analyzed' ? 'Analizado' : s === 'processing' ? 'Procesando' : 'Subido'
+  s === 'analyzed' ? 'Analizado' : s === 'processing' ? 'Procesando' : s === 'failed' ? 'Fallido' : 'Subido'
 
 export function VideosPage() {
   const [videos, setVideos] = useState<Video[]>([])
@@ -51,9 +51,13 @@ export function VideosPage() {
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? '—'
 
   const requestAnalysis = async (id: string) => {
-    await videoService.requestAnalysis(id)
-    toast.success('Análisis solicitado')
-    void load()
+    try {
+      await videoService.requestAnalysis(id)
+      toast.success('Análisis solicitado')
+      void load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo solicitar el análisis')
+    }
   }
 
   return (
@@ -80,6 +84,7 @@ export function VideosPage() {
             <SelectItem value="all">Cualquier estado</SelectItem>
             <SelectItem value="analyzed">Analizado</SelectItem>
             <SelectItem value="processing">Procesando</SelectItem>
+            <SelectItem value="failed">Fallido</SelectItem>
             <SelectItem value="uploaded">Subido</SelectItem>
           </SelectContent>
         </Select>
@@ -117,9 +122,13 @@ export function VideosPage() {
                       </div>
                     )}
                     {v.status === 'processing' && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> En espera</span>}
-                    {v.status === 'uploaded' && (
+                    {v.status === 'uploaded' && videoService.canRequestAnalysis && (
                       <Button size="sm" onClick={() => void requestAnalysis(v.id)}>Solicitar análisis</Button>
                     )}
+                    {v.status === 'uploaded' && !videoService.canRequestAnalysis && (
+                      <span className="text-xs text-muted-foreground">Listo para reproducir</span>
+                    )}
+                    {v.status === 'failed' && <span className="text-xs text-red-600">Subida fallida</span>}
                   </td>
                 </tr>
               ))}

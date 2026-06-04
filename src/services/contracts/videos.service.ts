@@ -1,14 +1,14 @@
 import type { Video } from '@/types'
 
 export interface UploadVideoDto {
-  matchId: string
   teamId: string
   title: string
-  rivalName?: string
-  fileName?: string
+  description?: string
+  file: File
 }
 
 export interface IVideoService {
+  canRequestAnalysis: boolean
   list(): Promise<Video[]>
   getById(id: string): Promise<Video | null>
   filterByTeam(teamId: string): Promise<Video[]>
