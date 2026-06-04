@@ -7,6 +7,7 @@ import type { IAnalysisService } from './contracts/analysis.service'
 import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
 import { apiTeamService } from './api/teams.api'
+import { apiVideoService } from './api/videos.api'
 import { mockAuthService } from './mock/auth.mock'
 import { mockTeamService } from './mock/teams.mock'
 import { mockPlayerService } from './mock/players.mock'
@@ -21,7 +22,7 @@ export const authService: IAuthService = useMockApi ? mockAuthService : apiAuthS
 export const teamService: ITeamService = useMockApi ? mockTeamService : apiTeamService
 export const playerService: IPlayerService = useMockApi ? mockPlayerService : apiPlayerService
 
-/** Partidos, videos y análisis siguen en mock hasta que existan en el backend */
+/** Partidos y análisis siguen en mock hasta que existan en el backend */
 export const matchService: IMatchService = mockMatchService
-export const videoService: IVideoService = mockVideoService
+export const videoService: IVideoService = useMockApi ? mockVideoService : apiVideoService
 export const analysisService: IAnalysisService = mockAnalysisService

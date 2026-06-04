@@ -87,11 +87,11 @@ export interface MatchRoster {
   isStarter: boolean
 }
 
-export type VideoStatus = 'uploaded' | 'processing' | 'analyzed'
+export type VideoStatus = 'uploaded' | 'processing' | 'analyzed' | 'failed'
 
 export interface Video {
   id: string
-  matchId: string
+  matchId?: string
   teamId: string
   title: string
   storageUrl: string

@@ -67,19 +67,19 @@ src/
 - API clients live in `src/services/api`.
 - Mock services live in `src/services/mock`.
 - `src/services/registry.ts` selects real or mock services.
-- `authService`, `teamService`, and `playerService` use the backend unless `VITE_USE_MOCK_API=true`.
-- `matchService`, `videoService`, and `analysisService` currently use mocks.
+- `authService`, `teamService`, `playerService`, and `videoService` use the backend unless `VITE_USE_MOCK_API=true`.
+- `matchService` and `analysisService` currently use mocks.
 
 ## Mocks
 
 - Mock persistence/data lives in `src/mocks`.
 - Mock services cover auth, teams, players, matches, videos, and analysis.
-- The README states that matches, videos, and analysis remain mocked until backend support exists.
+- Matches and analysis remain mocked until backend support exists.
 
 ## Environment
 
 - `VITE_API_BASE_URL`: backend API URL.
-- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, and players.
+- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, and videos.
 
 ## Documentation And Specs
 

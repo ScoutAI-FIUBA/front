@@ -58,11 +58,7 @@ export const apiAuthService: IAuthService = {
 
   async logout(): Promise<void> {
     try {
-      await apiJson<void>(
-        '/auth/logout',
-        { method: 'POST' },
-        { auth: false },
-      )
+      await apiJson<void>('/auth/logout', { method: 'POST' })
     } finally {
       clearStoredToken()
     }

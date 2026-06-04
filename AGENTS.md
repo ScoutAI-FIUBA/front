@@ -17,8 +17,8 @@ This repository is an existing frontend application. Treat the current app as th
 - Stack: Vite, React, TypeScript, Tailwind CSS.
 - Routing: `react-router-dom` with routes defined in `src/App.tsx`.
 - Services: contracts, real API clients, and mock implementations under `src/services`.
-- Auth, teams, and players can use the real backend or mocks via `VITE_USE_MOCK_API`.
-- Matches, videos, and analysis currently use mocks.
+- Auth, teams, players, and videos can use the real backend or mocks via `VITE_USE_MOCK_API`.
+- Matches and analysis currently use mocks.
 
 ## Safe Workflow
 

@@ -3,6 +3,8 @@ import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { IVideoService } from '../contracts/videos.service'
 
 export const mockVideoService: IVideoService = {
+  canRequestAnalysis: true,
+
   async list() {
     await simulateNetwork()
     return getStore().videos
@@ -26,15 +28,15 @@ export const mockVideoService: IVideoService = {
 
   async upload(dto) {
     await simulateNetwork(800)
-    const video = {
-      id: generateId('video'),
-      matchId: dto.matchId,
-      teamId: dto.teamId,
-      title: dto.title,
-      storageUrl: `/mock/videos/${dto.fileName ?? 'upload.mp4'}`,
-      rivalName: dto.rivalName,
-      uploadedAt: new Date().toISOString(),
-      status: 'uploaded' as const,
+      const video = {
+        id: generateId('video'),
+      matchId: '',
+        teamId: dto.teamId,
+        title: dto.title,
+      storageUrl: `/mock/videos/${dto.file.name}`,
+      rivalName: dto.description,
+        uploadedAt: new Date().toISOString(),
+        status: 'uploaded' as const,
       resolution: '1080p',
     }
     updateStore((s) => {
