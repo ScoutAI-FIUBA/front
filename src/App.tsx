@@ -13,6 +13,7 @@ import { MatchesPage } from '@/pages/matches/MatchesPage'
 import { VideosPage } from '@/pages/videos/VideosPage'
 import { VideoUploadPage } from '@/pages/videos/VideoUploadPage'
 import { AnalysisPage } from '@/pages/analysis/AnalysisPage'
+import { AnalysisNewPage } from '@/pages/analysis/AnalysisNewPage'
 import { AnalysisDetailPage } from '@/pages/analysis/AnalysisDetailPage'
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/videos" element={<VideosPage />} />
             <Route path="/videos/subir" element={<VideoUploadPage />} />
             <Route path="/analisis" element={<AnalysisPage />} />
+            <Route path="/analisis/nuevo" element={<AnalysisNewPage />} />
             <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
           </Route>
         </Route>

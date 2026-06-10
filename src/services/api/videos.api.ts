@@ -65,20 +65,6 @@ async function listTeamVideos(teamId: string, status?: string | null): Promise<V
   return data.videos.map(mapApiVideo)
 }
 
-async function uploadPart(url: string, chunk: Blob, contentType: string): Promise<string> {
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: chunk,
-  })
-
-  if (!res.ok) throw new Error(`No se pudo subir una parte del video (${res.status})`)
-
-  const etag = res.headers.get('ETag')
-  if (!etag) throw new Error('El storage no devolvio ETag para completar la subida')
-  return etag
-}
-
 export const apiVideoService: IVideoService = {
   canRequestAnalysis: false,
 

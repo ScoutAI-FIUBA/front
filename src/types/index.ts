@@ -138,6 +138,27 @@ export interface AnalysisSession {
   remainingTime: string
 }
 
+export interface ManualAnalysisClip {
+  id: string
+  label: string
+  startSecond: number
+  endSecond: number
+}
+
+export interface ManualAnalysisDraft {
+  name: string
+  video: Video
+  teamId: string
+  rivalTeamId?: string
+  playerIds: string[]
+  clips: ManualAnalysisClip[]
+}
+
+export interface SavedManualAnalysis extends ManualAnalysisDraft {
+  sessionId: string
+  savedAt: string
+}
+
 export interface ActivityItem {
   id: string
   type: 'player' | 'video' | 'analysis' | 'team'
@@ -179,5 +200,6 @@ export interface MockStore {
   videos: Video[]
   gameEvents: GameEvent[]
   analysisSessions: AnalysisSession[]
+  manualAnalyses: SavedManualAnalysis[]
   activities: ActivityItem[]
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,9 +17,14 @@ export function AnalysisPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Análisis</h1>
-        <p className="text-sm text-muted-foreground">Sesiones de análisis de video y resultados detectados.</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Análisis</h1>
+          <p className="text-sm text-muted-foreground">Sesiones de análisis de video y resultados detectados.</p>
+        </div>
+        <Button asChild>
+          <Link to="/analisis/nuevo"><Plus className="h-4 w-4" /> Nuevo analisis</Link>
+        </Button>
       </div>
 
       <div className="grid gap-4">
