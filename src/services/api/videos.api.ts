@@ -31,6 +31,25 @@ interface InitUploadResponse {
 
 const PART_SIZE_BYTES = 5 * 1024 * 1024
 
+async function uploadPart(url: string, chunk: Blob, contentType: string): Promise<string> {
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': contentType },
+    body: chunk,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Part upload failed with status ${response.status}`)
+  }
+
+  const etag = response.headers.get('etag')
+  if (!etag) {
+    throw new Error('Part upload response missing ETag header')
+  }
+
+  return etag
+}
+
 function mapVideoStatus(status: ApiVideo['status']): VideoStatus {
   if (status === 'READY') return 'uploaded'
   if (status === 'FAILED') return 'failed'
