@@ -265,6 +265,7 @@ export const SEED_DATA: MockStore = {
       remainingTime: '00:00',
     },
   ],
+  manualAnalyses: [],
   activities: [
     {
       id: 'act-1',

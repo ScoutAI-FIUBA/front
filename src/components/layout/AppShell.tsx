@@ -66,8 +66,8 @@ export function AppShell() {
         </nav>
 
         <div className="space-y-1 border-t p-3">
-          <Button className="w-full" onClick={() => navigate('/videos/subir')}>
-            + Subir video
+          <Button className="w-full" onClick={() => navigate('/analisis/nuevo')}>
+            + Nuevo analisis
           </Button>
           <button type="button" className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent">
             <Settings className="h-4 w-4" /> Configuración
