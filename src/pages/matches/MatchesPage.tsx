@@ -42,7 +42,7 @@ export function MatchesPage() {
 
   useEffect(() => { void load() }, [])
 
-  const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? id
+  const teamName = (id?: string | null) => id ? teams.find((t) => t.id === id)?.name ?? id : 'Sin rival'
 
   const handleCreate = async () => {
     if (!homeId || !awayId || !date) {

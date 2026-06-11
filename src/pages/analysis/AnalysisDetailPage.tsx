@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Eye, Play, Target, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,9 +8,18 @@ import { Progress } from '@/components/ui/progress'
 import { analysisService, videoService } from '@/services/registry'
 import type { AnalysisDetail } from '@/types'
 
+function formatSeconds(value: number): string {
+  const minutes = Math.floor(value / 60)
+  const seconds = Math.floor(value % 60)
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+}
+
 export function AnalysisDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [detail, setDetail] = useState<AnalysisDetail | null>(null)
+  const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
+  const [videoAvailable, setVideoAvailable] = useState(true)
 
   useEffect(() => {
     if (!id) return
@@ -21,6 +30,7 @@ export function AnalysisDetailPage() {
         if (video?.matchId) data = await analysisService.getByMatchId(video.matchId)
       }
       setDetail(data)
+      setVideoAvailable(true)
     })()
   }, [id])
 
@@ -28,7 +38,24 @@ export function AnalysisDetailPage() {
     return <p className="text-muted-foreground">Cargando análisis...</p>
   }
 
-  const { session, match, video, homeTeam, events, detectedPlayers } = detail
+  const { session, match, video, homeTeam, awayTeam, manualAnalysis, events, detectedPlayers } = detail
+  const clips = manualAnalysis?.clips ?? []
+
+  const playClip = (startSecond: number, endSecond?: number) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = startSecond
+    setActiveClipEnd(endSecond ?? null)
+    void videoRef.current.play().catch(() => undefined)
+  }
+
+  const handleVideoTimeUpdate = () => {
+    const player = videoRef.current
+    if (!player || activeClipEnd == null) return
+    if (player.currentTime >= activeClipEnd) {
+      player.pause()
+      setActiveClipEnd(null)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -50,18 +77,50 @@ export function AnalysisDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>
-            <CardContent className="relative flex aspect-video items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 p-8 text-white">
-              <div className="text-center">
-                <Play className="mx-auto mb-4 h-16 w-16 opacity-80" />
-                <p className="text-lg font-medium">Vista previa del video</p>
-                <p className="text-sm uppercase tracking-widest opacity-70">Procesamiento en curso</p>
-              </div>
+            <CardContent className="relative overflow-hidden rounded-t-lg bg-black p-0 text-white">
+              {videoAvailable && video.storageUrl ? (
+                <video
+                  ref={videoRef}
+                  src={video.storageUrl}
+                  controls
+                  className="aspect-video w-full"
+                  onError={() => setVideoAvailable(false)}
+                  onTimeUpdate={handleVideoTimeUpdate}
+                />
+              ) : (
+                <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900 p-8">
+                  <div className="text-center">
+                    <Play className="mx-auto mb-4 h-16 w-16 opacity-80" />
+                    <p className="text-lg font-medium">Vista previa del video</p>
+                    <p className="text-sm uppercase tracking-widest opacity-70">Video no disponible en esta sesion</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
             <div className="px-4 pb-4">
               <Progress value={session.progressPercent} className="mb-2" />
-              <p className="text-xs text-muted-foreground">42:15 / 90:00</p>
+              <p className="text-xs text-muted-foreground">{video.title}</p>
             </div>
           </Card>
+
+          {clips.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-base">Clips guardados</CardTitle></CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2">
+                {clips.map((clip) => (
+                  <button
+                    key={clip.id}
+                    type="button"
+                    className="rounded-lg border p-3 text-left text-sm transition hover:border-primary hover:bg-accent"
+                    onClick={() => playClip(clip.startSecond, clip.endSecond)}
+                  >
+                    <p className="font-medium">{clip.label}</p>
+                    <p className="text-xs text-muted-foreground">{formatSeconds(clip.startSecond)} - {formatSeconds(clip.endSecond)}</p>
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="flex flex-row justify-between">
@@ -83,6 +142,8 @@ export function AnalysisDetailPage() {
             <CardContent>
               <p className="font-semibold">{match.title ?? `${homeTeam.name} vs rival`}</p>
               <p className="text-sm text-muted-foreground">{match.competition}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Local: {homeTeam.name}</p>
+              <p className="text-xs text-muted-foreground">Visitante: {awayTeam?.name ?? 'Sin rival seleccionado'}</p>
               <p className="mt-2 text-xs text-muted-foreground">Video: {video.title}</p>
             </CardContent>
           </Card>

@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bookmark, Folder, Info, Plus, Save, Upload, Video } from 'lucide-react'
 import { toast } from 'sonner'
@@ -28,6 +28,7 @@ function formatSeconds(value: number): string {
 export function AnalysisNewPage() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const preservedVideoUrlRef = useRef('')
   const [teams, setTeams] = useState<Team[]>([])
   const [players, setPlayers] = useState<Player[]>([])
   const [name, setName] = useState('')
@@ -41,6 +42,8 @@ export function AnalysisNewPage() {
   const [clipEnd, setClipEnd] = useState('0')
   const [clipLabel, setClipLabel] = useState(DEFAULT_LABELS[0])
   const [clips, setClips] = useState<ManualAnalysisClip[]>([])
+  const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -52,17 +55,37 @@ export function AnalysisNewPage() {
 
   useEffect(() => {
     return () => {
-      if (videoUrl) URL.revokeObjectURL(videoUrl)
+      if (videoUrl && preservedVideoUrlRef.current !== videoUrl) URL.revokeObjectURL(videoUrl)
     }
   }, [videoUrl])
 
-  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
+  const selectVideoFile = (selectedFile: File) => {
     if (!selectedFile) return
+    if (!selectedFile.type.startsWith('video/')) {
+      toast.error('Selecciona un archivo de video')
+      return
+    }
 
     if (videoUrl) URL.revokeObjectURL(videoUrl)
+    preservedVideoUrlRef.current = ''
     setFile(selectedFile)
     setVideoUrl(URL.createObjectURL(selectedFile))
+  }
+
+  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    if (selectedFile) selectVideoFile(selectedFile)
+  }
+
+  const handleVideoDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault()
+    setIsDraggingVideo(false)
+    const selectedFile = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('video/'))
+    if (!selectedFile) {
+      toast.error('Arrastra un archivo de video')
+      return
+    }
+    selectVideoFile(selectedFile)
   }
 
   const togglePlayer = (playerId: string) => {
@@ -106,6 +129,22 @@ export function AnalysisNewPage() {
     setClipEnd(String(end))
   }
 
+  const playClip = (clip: ManualAnalysisClip) => {
+    if (!videoRef.current) return
+    videoRef.current.currentTime = clip.startSecond
+    setActiveClipEnd(clip.endSecond)
+    void videoRef.current.play().catch(() => undefined)
+  }
+
+  const handleVideoTimeUpdate = () => {
+    const video = videoRef.current
+    if (!video || activeClipEnd == null) return
+    if (video.currentTime >= activeClipEnd) {
+      video.pause()
+      setActiveClipEnd(null)
+    }
+  }
+
   const removeClip = (clipId: string) => {
     setClips((current) => current.filter((clip) => clip.id !== clipId))
   }
@@ -129,9 +168,10 @@ export function AnalysisNewPage() {
         description: rivalTeamId === 'none' ? undefined : teams.find((team) => team.id === rivalTeamId)?.name,
         file,
       })
+      preservedVideoUrlRef.current = videoUrl
       const session = await analysisService.saveManualAnalysis({
         name: name.trim(),
-        video: uploadedVideo,
+        video: { ...uploadedVideo, storageUrl: videoUrl || uploadedVideo.storageUrl },
         teamId,
         rivalTeamId: rivalTeamId === 'none' ? undefined : rivalTeamId,
         playerIds: selectedPlayerIds,
@@ -200,10 +240,18 @@ export function AnalysisNewPage() {
         <Card className="xl:col-span-1">
           <CardHeader><CardTitle className="text-base">2. Video</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-primary/30 bg-accent/50 p-6 text-center">
+            <label
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${isDraggingVideo ? 'border-primary bg-primary/10' : 'border-primary/30 bg-accent/50'}`}
+              onDragOver={(event) => {
+                event.preventDefault()
+                setIsDraggingVideo(true)
+              }}
+              onDragLeave={() => setIsDraggingVideo(false)}
+              onDrop={handleVideoDrop}
+            >
               <Upload className="mb-3 h-8 w-8 text-primary/60" />
               <span className="text-sm font-medium">Subir video</span>
-              <span className="mt-1 text-xs text-muted-foreground">1 video por analisis</span>
+              <span className="mt-1 text-xs text-muted-foreground">Arrastra o selecciona 1 video por analisis</span>
               <input type="file" accept="video/*" className="hidden" onChange={handleFile} />
             </label>
             <p className="truncate text-xs text-muted-foreground">{file ? file.name : 'Sin archivo seleccionado'}</p>
@@ -243,6 +291,7 @@ export function AnalysisNewPage() {
                   controls
                   className="aspect-video w-full"
                   onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+                  onTimeUpdate={handleVideoTimeUpdate}
                 />
               ) : (
                 <div className="flex aspect-video items-center justify-center text-white">
@@ -287,8 +336,10 @@ export function AnalysisNewPage() {
                 <div key={label} className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-semibold"><Folder className="h-4 w-4" /> {label}</div>
                   {labelClips.map((clip) => (
-                    <div key={clip.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
-                      <span>{formatSeconds(clip.startSecond)}-{formatSeconds(clip.endSecond)}</span>
+                    <div key={clip.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
+                      <button type="button" className="flex-1 text-left hover:text-primary" onClick={() => playClip(clip)}>
+                        {formatSeconds(clip.startSecond)}-{formatSeconds(clip.endSecond)}
+                      </button>
                       <Button variant="ghost" size="sm" onClick={() => removeClip(clip.id)}>Quitar</Button>
                     </div>
                   ))}
@@ -297,7 +348,7 @@ export function AnalysisNewPage() {
             </div>
 
             <div className="space-y-3 rounded-lg border border-dashed p-3">
-              <p className="text-sm font-semibold">Agregar clip</p>
+              <p className="text-sm font-semibold">Marcar clip</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Inicio</Label>
@@ -319,7 +370,7 @@ export function AnalysisNewPage() {
                 <Input list="analysis-labels" value={clipLabel} onChange={(event) => setClipLabel(event.target.value)} className="mt-1" />
                 <datalist id="analysis-labels">{DEFAULT_LABELS.map((label) => <option key={label} value={label} />)}</datalist>
               </div>
-              <Button className="w-full" onClick={addClip}><Plus className="h-4 w-4" /> Agregar clip</Button>
+              <Button className="w-full" onClick={addClip}><Plus className="h-4 w-4" /> Marcar clip</Button>
             </div>
 
             {relatedPlayers.length > 0 && (
