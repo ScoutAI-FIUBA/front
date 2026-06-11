@@ -71,7 +71,7 @@ export type MatchStatus = 'scheduled' | 'completed' | 'cancelled'
 export interface Match {
   id: string
   homeTeamId: string
-  awayTeamId: string
+  awayTeamId?: string | null
   scheduledAt: string
   venue?: string
   competition?: string
@@ -149,7 +149,7 @@ export interface ManualAnalysisDraft {
   name: string
   video: Video
   teamId: string
-  rivalTeamId?: string
+  rivalTeamId?: string | null
   playerIds: string[]
   clips: ManualAnalysisClip[]
 }
@@ -179,7 +179,8 @@ export interface AnalysisDetail {
   match: Match
   video: Video
   homeTeam: Team
-  awayTeam: Team
+  awayTeam?: Team
+  manualAnalysis?: SavedManualAnalysis
   events: GameEvent[]
   detectedPlayers: Array<{
     playerId: string

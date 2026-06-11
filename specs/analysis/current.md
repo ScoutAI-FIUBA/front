@@ -32,15 +32,19 @@ Current behavior documentation.
 - New analysis page creates a local demo analysis around one uploaded video.
 - New analysis page collects analysis name, required local team, optional visitor team, related players, and one video file.
 - New analysis page previews the selected video locally before upload.
+- New analysis page supports selecting a video through the file picker or by dragging a video file onto the upload area.
 - New analysis page lets the user stage manual clips by start time, end time, and label.
+- Staged clips can be clicked to seek the video to the clip start; playback pauses when it reaches the clip end when autoplay succeeds.
 - Manual clips remain local to the page until `Guardar analisis` is pressed.
 - `Guardar analisis` uploads the video through `videoService.upload()` and then calls mock `analysisService.saveManualAnalysis()` to simulate analysis persistence.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
+- Optional visitor team remains empty when the user does not select one; the mock does not invent a rival team for manual analyses.
 - Detail page reads `id` from the route.
 - Detail page first tries `analysisService.getBySessionId(id)`.
 - If no session detail is found, it tries to resolve the id as a video id through `videoService.getById(id)` and then loads analysis by match id.
 - Detail page displays a loading message while no detail is available.
-- Detail page displays session progress, video preview placeholder, match/video information, detected players, and detected events.
+- Detail page displays session progress, match/video information, detected players, and detected events.
+- Detail page shows the saved manual analysis video and clips when the local video URL is still available in the current browser session; otherwise it falls back to the existing placeholder.
 - Events render labels and metadata such as quarter, minute, player number, and XP when present.
 
 ## Service Selection
@@ -54,7 +58,7 @@ Current behavior documentation.
 - There is no real backend analysis API wired in the registry.
 - There is no real backend clip persistence.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
-- Existing analysis detail video playback is represented by a visual placeholder.
+- Persisted backend clip playback is not implemented; manual clip playback relies on metadata and the browser-accessible video URL.
 - Export button is displayed but no export implementation is documented here.
 - Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
 

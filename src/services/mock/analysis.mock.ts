@@ -19,14 +19,17 @@ function buildDetail(sessionId: string): AnalysisDetail | null {
   if (!match || !video) return null
 
   const homeTeam = store.teams.find((t) => t.id === match.homeTeamId)!
-  const awayTeam = store.teams.find((t) => t.id === match.awayTeamId)!
+  const awayTeam = match.awayTeamId ? store.teams.find((t) => t.id === match.awayTeamId) : undefined
+  const manualAnalysis = store.manualAnalyses?.find((analysis) => analysis.sessionId === sessionId)
   const events = store.gameEvents.filter(
     (e) => e.matchId === match.id && (!e.videoId || e.videoId === video.id),
   )
 
-  const rosterPlayerIds = store.rosters
-    .filter((r) => r.matchId === match.id)
-    .map((r) => r.playerId)
+  const rosterPlayerIds = manualAnalysis?.playerIds.length
+    ? manualAnalysis.playerIds
+    : store.rosters
+        .filter((r) => r.matchId === match.id)
+        .map((r) => r.playerId)
 
   const detectedPlayers = store.players
     .filter((p) => rosterPlayerIds.includes(p.id))
@@ -38,7 +41,7 @@ function buildDetail(sessionId: string): AnalysisDetail | null {
       heatmapPercent: Math.floor(Math.random() * 40) + 30,
     }))
 
-  return { session, match, video, homeTeam, awayTeam, events, detectedPlayers }
+  return { session, match, video, homeTeam, awayTeam, manualAnalysis, events, detectedPlayers }
 }
 
 export const mockAnalysisService: IAnalysisService = {
@@ -69,7 +72,6 @@ export const mockAnalysisService: IAnalysisService = {
       const now = new Date().toISOString()
       const matchId = generateId('manual-match')
       const sessionId = generateId('analysis')
-      const rivalTeamId = draft.rivalTeamId ?? s.teams.find((team) => team.id !== draft.teamId)?.id ?? draft.teamId
 
       if (!s.videos.some((video) => video.id === draft.video.id)) {
         s.videos.unshift({ ...draft.video, matchId, status: 'analyzed' })
@@ -78,13 +80,14 @@ export const mockAnalysisService: IAnalysisService = {
         if (video) {
           video.matchId = matchId
           video.status = 'analyzed'
+          video.storageUrl = draft.video.storageUrl
         }
       }
 
       s.matches.unshift({
         id: matchId,
         homeTeamId: draft.teamId,
-        awayTeamId: rivalTeamId,
+        awayTeamId: draft.rivalTeamId ?? null,
         scheduledAt: now,
         competition: 'Analisis manual',
         status: 'completed',
@@ -106,19 +109,25 @@ export const mockAnalysisService: IAnalysisService = {
       s.analysisSessions.unshift(savedSession)
       s.manualAnalyses.unshift({ ...draft, sessionId, savedAt: now })
       s.gameEvents.unshift(
-        ...draft.clips.map((clip, index) => ({
-          id: generateId('evt'),
-          matchId,
-          playerId: draft.playerIds[index % Math.max(draft.playerIds.length, 1)] ?? '',
-          teamId: draft.teamId,
-          videoId: draft.video.id,
-          eventType: 'pass' as const,
-          quarter: 1 as const,
-          metadata: {
-            label: clip.label,
-            minute: `${formatSeconds(clip.startSecond)}-${formatSeconds(clip.endSecond)}`,
-          },
-        })),
+        ...draft.clips.map((clip, index) => {
+          const player = s.players.find((item) => item.id === draft.playerIds[index % Math.max(draft.playerIds.length, 1)])
+          return {
+            id: generateId('evt'),
+            matchId,
+            playerId: player?.id ?? '',
+            teamId: draft.teamId,
+            videoId: draft.video.id,
+            eventType: 'pass' as const,
+            quarter: 1 as const,
+            metadata: {
+              label: clip.label,
+              minute: `${formatSeconds(clip.startSecond)}-${formatSeconds(clip.endSecond)}`,
+              startSecond: clip.startSecond,
+              endSecond: clip.endSecond,
+              playerNumber: player?.jerseyNumber,
+            },
+          }
+        }),
       )
       s.activities.unshift({
         id: generateId('act'),
