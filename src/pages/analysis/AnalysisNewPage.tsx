@@ -59,6 +59,10 @@ export function AnalysisNewPage() {
     }
   }, [videoUrl])
 
+  useEffect(() => {
+    setActiveClipEnd(null)
+  }, [videoUrl])
+
   const selectVideoFile = (selectedFile: File) => {
     if (!selectedFile) return
     if (!selectedFile.type.startsWith('video/')) {
@@ -68,6 +72,7 @@ export function AnalysisNewPage() {
 
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     preservedVideoUrlRef.current = ''
+    setActiveClipEnd(null)
     setFile(selectedFile)
     setVideoUrl(URL.createObjectURL(selectedFile))
   }

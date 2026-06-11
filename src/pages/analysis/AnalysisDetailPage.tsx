@@ -20,8 +20,10 @@ export function AnalysisDetailPage() {
   const [detail, setDetail] = useState<AnalysisDetail | null>(null)
   const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
   const [videoAvailable, setVideoAvailable] = useState(true)
+  const videoSource = detail?.video.storageUrl ?? ''
 
   useEffect(() => {
+    setActiveClipEnd(null)
     if (!id) return
     void (async () => {
       let data = await analysisService.getBySessionId(id)
@@ -34,15 +36,24 @@ export function AnalysisDetailPage() {
     })()
   }, [id])
 
+  useEffect(() => {
+    setActiveClipEnd(null)
+  }, [videoSource])
+
+  useEffect(() => {
+    if (!videoAvailable) setActiveClipEnd(null)
+  }, [videoAvailable])
+
   if (!detail) {
     return <p className="text-muted-foreground">Cargando análisis...</p>
   }
 
   const { session, match, video, homeTeam, awayTeam, manualAnalysis, events, detectedPlayers } = detail
   const clips = manualAnalysis?.clips ?? []
+  const videoPlayable = videoAvailable && Boolean(video.storageUrl)
 
   const playClip = (startSecond: number, endSecond?: number) => {
-    if (!videoRef.current) return
+    if (!videoPlayable || !videoRef.current) return
     videoRef.current.currentTime = startSecond
     setActiveClipEnd(endSecond ?? null)
     void videoRef.current.play().catch(() => undefined)
@@ -78,13 +89,16 @@ export function AnalysisDetailPage() {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardContent className="relative overflow-hidden rounded-t-lg bg-black p-0 text-white">
-              {videoAvailable && video.storageUrl ? (
+              {videoPlayable ? (
                 <video
                   ref={videoRef}
                   src={video.storageUrl}
                   controls
                   className="aspect-video w-full"
-                  onError={() => setVideoAvailable(false)}
+                  onError={() => {
+                    setActiveClipEnd(null)
+                    setVideoAvailable(false)
+                  }}
                   onTimeUpdate={handleVideoTimeUpdate}
                 />
               ) : (
@@ -106,18 +120,24 @@ export function AnalysisDetailPage() {
           {clips.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="text-base">Clips guardados</CardTitle></CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2">
-                {clips.map((clip) => (
-                  <button
-                    key={clip.id}
-                    type="button"
-                    className="rounded-lg border p-3 text-left text-sm transition hover:border-primary hover:bg-accent"
-                    onClick={() => playClip(clip.startSecond, clip.endSecond)}
-                  >
-                    <p className="font-medium">{clip.label}</p>
-                    <p className="text-xs text-muted-foreground">{formatSeconds(clip.startSecond)} - {formatSeconds(clip.endSecond)}</p>
-                  </button>
-                ))}
+              <CardContent className="space-y-3">
+                {!videoPlayable && (
+                  <p className="text-sm text-muted-foreground">El video no está disponible para reproducir estos clips.</p>
+                )}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {clips.map((clip) => (
+                    <button
+                      key={clip.id}
+                      type="button"
+                      className={`rounded-lg border p-3 text-left text-sm transition ${videoPlayable ? 'hover:border-primary hover:bg-accent' : 'cursor-not-allowed opacity-70'}`}
+                      disabled={!videoPlayable}
+                      onClick={() => playClip(clip.startSecond, clip.endSecond)}
+                    >
+                      <p className="font-medium">{clip.label}</p>
+                      <p className="text-xs text-muted-foreground">{formatSeconds(clip.startSecond)} - {formatSeconds(clip.endSecond)}</p>
+                    </button>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
