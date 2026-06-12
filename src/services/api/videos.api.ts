@@ -163,6 +163,6 @@ export const apiVideoService: IVideoService = {
   },
 
   async requestAnalysis(): Promise<Video> {
-    throw new Error('El backend todavia no expone solicitud de analisis para videos')
+    throw new Error('El backend todavía no expone solicitud de análisis para videos')
   },
 }

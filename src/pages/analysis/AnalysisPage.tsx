@@ -23,7 +23,7 @@ export function AnalysisPage() {
           <p className="text-sm text-muted-foreground">Sesiones de análisis de video y resultados detectados.</p>
         </div>
         <Button asChild>
-          <Link to="/analisis/nuevo"><Plus className="h-4 w-4" /> Nuevo analisis</Link>
+          <Link to="/analisis/nuevo"><Plus className="h-4 w-4" /> Nuevo análisis</Link>
         </Button>
       </div>
 

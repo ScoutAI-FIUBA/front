@@ -148,6 +148,8 @@ export interface ManualAnalysisClip {
 export interface ManualAnalysisDraft {
   name: string
   video: Video
+  team: Team
+  rivalTeam?: Team | null
   teamId: string
   rivalTeamId?: string | null
   playerIds: string[]

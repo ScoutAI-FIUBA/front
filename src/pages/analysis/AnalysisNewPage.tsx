@@ -1,6 +1,6 @@
 import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bookmark, Folder, Info, Plus, Save, Upload, Video } from 'lucide-react'
+import { Folder, Info, Plus, Save, Upload, Video } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,7 @@ import {
 import { analysisService, playerService, teamService, videoService } from '@/services/registry'
 import type { ManualAnalysisClip, Player, Team } from '@/types'
 
-const DEFAULT_LABELS = ['Pick and Roll', 'Transicion', 'Defensa', 'Tiro exterior']
+const DEFAULT_LABELS = ['Pick and Roll', 'Transición', 'Defensa', 'Tiro exterior']
 
 function formatSeconds(value: number): string {
   const minutes = Math.floor(value / 60)
@@ -38,6 +38,7 @@ export function AnalysisNewPage() {
   const [file, setFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState('')
   const [duration, setDuration] = useState(0)
+  const [currentTime, setCurrentTime] = useState(0)
   const [clipStart, setClipStart] = useState('0')
   const [clipEnd, setClipEnd] = useState('0')
   const [clipLabel, setClipLabel] = useState(DEFAULT_LABELS[0])
@@ -73,6 +74,7 @@ export function AnalysisNewPage() {
     if (videoUrl) URL.revokeObjectURL(videoUrl)
     preservedVideoUrlRef.current = ''
     setActiveClipEnd(null)
+    setCurrentTime(0)
     setFile(selectedFile)
     setVideoUrl(URL.createObjectURL(selectedFile))
   }
@@ -116,8 +118,13 @@ export function AnalysisNewPage() {
       return
     }
 
-    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) {
-      toast.error('El clip necesita un inicio y fin validos')
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0) {
+      toast.error('El clip necesita tiempos válidos')
+      return
+    }
+
+    if (end <= start) {
+      toast.error('El fin tiene que ser mayor que el inicio')
       return
     }
 
@@ -143,8 +150,9 @@ export function AnalysisNewPage() {
 
   const handleVideoTimeUpdate = () => {
     const video = videoRef.current
-    if (!video || activeClipEnd == null) return
-    if (video.currentTime >= activeClipEnd) {
+    if (!video) return
+    setCurrentTime(video.currentTime)
+    if (activeClipEnd != null && video.currentTime >= activeClipEnd) {
       video.pause()
       setActiveClipEnd(null)
     }
@@ -155,7 +163,12 @@ export function AnalysisNewPage() {
   }
 
   const saveAnalysis = async () => {
-    if (!name.trim() || !teamId || !file) {
+    const selectedTeam = teams.find((team) => team.id === teamId)
+    const selectedRivalTeam = rivalTeamId === 'none'
+      ? undefined
+      : teams.find((team) => team.id === rivalTeamId)
+
+    if (!name.trim() || !selectedTeam || !file) {
       toast.error('Completa nombre, equipo local y video')
       return
     }
@@ -170,23 +183,25 @@ export function AnalysisNewPage() {
       const uploadedVideo = await videoService.upload({
         title: name.trim(),
         teamId,
-        description: rivalTeamId === 'none' ? undefined : teams.find((team) => team.id === rivalTeamId)?.name,
+        description: selectedRivalTeam?.name,
         file,
       })
       preservedVideoUrlRef.current = videoUrl
       const session = await analysisService.saveManualAnalysis({
         name: name.trim(),
         video: { ...uploadedVideo, storageUrl: videoUrl || uploadedVideo.storageUrl },
-        teamId,
-        rivalTeamId: rivalTeamId === 'none' ? undefined : rivalTeamId,
+        team: selectedTeam,
+        rivalTeam: selectedRivalTeam,
+        teamId: selectedTeam.id,
+        rivalTeamId: selectedRivalTeam?.id,
         playerIds: selectedPlayerIds,
         clips,
       })
 
-      toast.success('Analisis guardado para demo')
+      toast.success('Análisis guardado para demo')
       navigate(`/analisis/${session.id}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el analisis')
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el análisis')
     } finally {
       setSaving(false)
     }
@@ -200,23 +215,33 @@ export function AnalysisNewPage() {
   const relatedPlayers = selectedPlayerIds.length > 0
     ? players.filter((player) => selectedPlayerIds.includes(player.id))
     : []
+  const previewStart = Number(clipStart)
+  const previewEnd = Number(clipEnd)
+  const canPreviewRange = duration > 0
+    && Number.isFinite(previewStart)
+    && Number.isFinite(previewEnd)
+    && previewStart >= 0
+    && previewEnd > previewStart
+  const previewLeft = canPreviewRange ? Math.min((previewStart / duration) * 100, 100) : 0
+  const previewWidth = canPreviewRange ? Math.min(((previewEnd - previewStart) / duration) * 100, 100 - previewLeft) : 0
+  const currentMarkerLeft = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase text-primary">Playground de analisis</p>
-          <h1 className="text-2xl font-bold">Nuevo analisis</h1>
-          <p className="text-sm text-muted-foreground">Carga un video, marca clips y guardalos como una demo local.</p>
+          <p className="text-xs font-semibold uppercase text-primary">Playground de análisis</p>
+          <h1 className="text-2xl font-bold">Nuevo análisis</h1>
+          <p className="text-sm text-muted-foreground">Carga un video, marca clips y guárdalos como una demo local.</p>
         </div>
         <Button onClick={() => void saveAnalysis()} disabled={saving}>
-          <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar analisis'}
+          <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar análisis'}
         </Button>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-2">
-          <CardHeader><CardTitle className="text-base">1. Datos del analisis</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">1. Datos del análisis</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label>Nombre</Label>
@@ -256,7 +281,7 @@ export function AnalysisNewPage() {
             >
               <Upload className="mb-3 h-8 w-8 text-primary/60" />
               <span className="text-sm font-medium">Subir video</span>
-              <span className="mt-1 text-xs text-muted-foreground">Arrastra o selecciona 1 video por analisis</span>
+              <span className="mt-1 text-xs text-muted-foreground">Arrastra o selecciona 1 video por análisis</span>
               <input type="file" accept="video/*" className="hidden" onChange={handleFile} />
             </label>
             <p className="truncate text-xs text-muted-foreground">{file ? file.name : 'Sin archivo seleccionado'}</p>
@@ -281,7 +306,7 @@ export function AnalysisNewPage() {
       </div>
 
       <div className="flex items-center gap-2 rounded-lg border bg-white p-3 text-xs text-muted-foreground">
-        <Info className="h-4 w-4 text-primary" /> Todo queda local hasta presionar Guardar analisis.
+        <Info className="h-4 w-4 text-primary" /> Todo queda local hasta presionar Guardar análisis.
       </div>
 
       <div className="grid gap-6 xl:grid-cols-5">
@@ -309,6 +334,13 @@ export function AnalysisNewPage() {
             </div>
             <div className="space-y-2">
               <div className="relative h-8 overflow-hidden rounded-md border bg-accent">
+                {canPreviewRange && (
+                  <div
+                    className="absolute top-0 h-full rounded-sm border border-primary bg-primary/20"
+                    style={{ left: `${previewLeft}%`, width: `${Math.max(previewWidth, 2)}%` }}
+                    title={`Rango nuevo ${formatSeconds(previewStart)}-${formatSeconds(previewEnd)}`}
+                  />
+                )}
                 {clips.map((clip) => {
                   const left = duration > 0 ? (clip.startSecond / duration) * 100 : 0
                   const width = duration > 0 ? ((clip.endSecond - clip.startSecond) / duration) * 100 : 0
@@ -321,9 +353,17 @@ export function AnalysisNewPage() {
                     />
                   )
                 })}
+                {duration > 0 && (
+                  <div
+                    className="absolute top-0 h-full w-0.5 bg-primary"
+                    style={{ left: `${currentMarkerLeft}%` }}
+                    title={`Tiempo actual ${formatSeconds(currentTime)}`}
+                  />
+                )}
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>00:00</span>
+                <span>Actual: {formatSeconds(currentTime)}</span>
                 <span>{duration > 0 ? formatSeconds(duration) : '00:00'}</span>
               </div>
             </div>
@@ -335,7 +375,7 @@ export function AnalysisNewPage() {
           <CardContent className="space-y-4">
             <div className="space-y-3 rounded-lg border p-3">
               {Object.entries(groupedClips).length === 0 && (
-                <p className="text-sm text-muted-foreground">Todavia no hay clips marcados.</p>
+                <p className="text-sm text-muted-foreground">Todavía no hay clips marcados.</p>
               )}
               {Object.entries(groupedClips).map(([label, labelClips]) => (
                 <div key={label} className="space-y-2">
@@ -359,14 +399,14 @@ export function AnalysisNewPage() {
                   <Label>Inicio</Label>
                   <div className="mt-1 flex gap-2">
                     <Input type="number" min="0" value={clipStart} onChange={(event) => setClipStart(event.target.value)} />
-                    <Button variant="outline" size="icon" onClick={() => applyCurrentTime(setClipStart)}><Bookmark className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={() => applyCurrentTime(setClipStart)}>Usar actual</Button>
                   </div>
                 </div>
                 <div>
                   <Label>Fin</Label>
                   <div className="mt-1 flex gap-2">
                     <Input type="number" min="0" value={clipEnd} onChange={(event) => setClipEnd(event.target.value)} />
-                    <Button variant="outline" size="icon" onClick={() => applyCurrentTime(setClipEnd)}><Bookmark className="h-4 w-4" /></Button>
+                    <Button variant="outline" onClick={() => applyCurrentTime(setClipEnd)}>Usar actual</Button>
                   </div>
                 </div>
               </div>
@@ -379,8 +419,15 @@ export function AnalysisNewPage() {
             </div>
 
             {relatedPlayers.length > 0 && (
-              <div className="rounded-lg bg-accent p-3 text-xs text-muted-foreground">
-                Jugadores vinculados: {relatedPlayers.map((player) => `${player.firstName} ${player.lastName}`).join(', ')}
+              <div className="space-y-2 rounded-lg bg-accent p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Jugadores vinculados</p>
+                <div className="flex flex-wrap gap-2">
+                  {relatedPlayers.map((player) => (
+                    <span key={player.id} className="rounded-full border bg-white px-2 py-1 text-foreground">
+                      {player.jerseyNumber ? `${player.jerseyNumber} · ` : ''}{player.firstName} {player.lastName}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </CardContent>
