@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,20 +11,29 @@ import { useAuth } from '@/contexts/AuthContext'
 export function LoginPage() {
   const navigate = useNavigate()
   const { login, isAuthenticated, isLoading } = useAuth()
-
-  if (isLoading) return null
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  if (isLoading) return null
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const submittedEmail = String(formData.get('email') ?? '').trim()
+    const submittedPassword = String(formData.get('password') ?? '')
+
+    if (!submittedEmail || !submittedPassword) {
+      setError('Completa correo y contraseña')
+      return
+    }
+
     setError('')
     setLoading(true)
     try {
-      await login({ email, password })
+      await login({ email: submittedEmail, password: submittedPassword })
       navigate('/dashboard')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
@@ -61,14 +70,14 @@ export function LoginPage() {
           <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
             <div>
               <Label htmlFor="email">Correo electrónico</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@scoutai.com" className="mt-1" />
+              <Input id="email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@scoutai.com" className="mt-1" />
             </div>
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Contraseña</Label>
                 <button type="button" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</button>
               </div>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
+              <Input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Ingresando...' : 'Iniciar sesión'}

@@ -4,6 +4,16 @@ import type { IAuthService, AuthResult } from '../contracts/auth.service'
 import type { RegisterDto, User } from '@/types'
 import { clearStoredToken, setStoredToken } from '../api/token'
 
+function toSafeUser(user: User & { password: string }): User {
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    createdAt: user.createdAt,
+  }
+}
+
 export const mockAuthService: IAuthService = {
   async login({ email, password }): Promise<AuthResult> {
     await simulateNetwork()
@@ -14,10 +24,9 @@ export const mockAuthService: IAuthService = {
     if (!user) {
       throw new Error('Correo o contraseña incorrectos')
     }
-    const { password: _, ...safeUser } = user
     const token = `mock-token-${user.id}`
     setStoredToken(token)
-    return { user: safeUser, token }
+    return { user: toSafeUser(user), token }
   },
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -39,10 +48,9 @@ export const mockAuthService: IAuthService = {
     })
 
     const last = getStore().users[getStore().users.length - 1]
-    const { password: _, ...safeUser } = last
     const token = `mock-token-${last.id}`
     setStoredToken(token)
-    return { user: safeUser, token }
+    return { user: toSafeUser(last), token }
   },
 
   async logout(): Promise<void> {
@@ -56,8 +64,7 @@ export const mockAuthService: IAuthService = {
     const userId = token.replace('mock-token-', '')
     const user = getStore().users.find((u) => u.id === userId)
     if (!user) return null
-    const { password: _, ...safeUser } = user
-    return safeUser
+    return toSafeUser(user)
   },
 }
 
