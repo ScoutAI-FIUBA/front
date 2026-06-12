@@ -27,16 +27,20 @@ Current behavior documentation.
 ## Current Behavior
 
 - Analysis list loads sessions through `analysisService.listSessions()`.
-- Analysis list exposes a `Nuevo analisis` action.
+- Analysis list exposes a `Nuevo análisis` action.
 - Each session displays session code, status, progress, frame count, and a detail link.
 - New analysis page creates a local demo analysis around one uploaded video.
 - New analysis page collects analysis name, required local team, optional visitor team, related players, and one video file.
 - New analysis page previews the selected video locally before upload.
 - New analysis page supports selecting a video through the file picker or by dragging a video file onto the upload area.
 - New analysis page lets the user stage manual clips by start time, end time, and label.
+- New analysis page rejects zero-duration clips: the end time must be greater than the start time.
+- New analysis page has explicit `Usar actual` buttons to copy the current video timestamp into start or end.
+- New analysis page shows the current video position and the in-progress clip range on the timeline before the clip is saved.
+- New analysis page displays selected related players as compact chips.
 - Staged clips can be clicked to seek the video to the clip start; playback pauses when it reaches the clip end when autoplay succeeds.
-- Manual clips remain local to the page until `Guardar analisis` is pressed.
-- `Guardar analisis` uploads the video through `videoService.upload()` and then calls mock `analysisService.saveManualAnalysis()` to simulate analysis persistence.
+- Manual clips remain local to the page until `Guardar análisis` is pressed.
+- `Guardar análisis` uploads the video through `videoService.upload()` and then calls mock `analysisService.saveManualAnalysis()` to simulate analysis persistence.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
 - The mock save stores snapshots of the selected local and visitor teams before creating the synthetic match, so detail rendering works when teams came from the backend service instead of the mock store.
 - Optional visitor team remains empty when the user does not select one; the mock does not invent a rival team for manual analyses.

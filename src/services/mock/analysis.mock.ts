@@ -96,7 +96,7 @@ export const mockAnalysisService: IAnalysisService = {
         homeTeamId: draft.teamId,
         awayTeamId: draft.rivalTeamId ?? null,
         scheduledAt: now,
-        competition: 'Analisis manual',
+        competition: 'Análisis manual',
         status: 'completed',
         title: draft.name,
       })
@@ -139,13 +139,13 @@ export const mockAnalysisService: IAnalysisService = {
       s.activities.unshift({
         id: generateId('act'),
         type: 'analysis',
-        title: 'Analisis manual guardado',
+        title: 'Análisis manual guardado',
         detail: `${draft.name} - ${draft.clips.length} clips`,
         timestamp: now,
       })
     })
 
-    if (!savedSession) throw new Error('No se pudo guardar el analisis')
+    if (!savedSession) throw new Error('No se pudo guardar el análisis')
     return savedSession
   },
 
