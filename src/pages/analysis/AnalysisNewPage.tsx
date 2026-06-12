@@ -155,7 +155,12 @@ export function AnalysisNewPage() {
   }
 
   const saveAnalysis = async () => {
-    if (!name.trim() || !teamId || !file) {
+    const selectedTeam = teams.find((team) => team.id === teamId)
+    const selectedRivalTeam = rivalTeamId === 'none'
+      ? undefined
+      : teams.find((team) => team.id === rivalTeamId)
+
+    if (!name.trim() || !selectedTeam || !file) {
       toast.error('Completa nombre, equipo local y video')
       return
     }
@@ -170,15 +175,17 @@ export function AnalysisNewPage() {
       const uploadedVideo = await videoService.upload({
         title: name.trim(),
         teamId,
-        description: rivalTeamId === 'none' ? undefined : teams.find((team) => team.id === rivalTeamId)?.name,
+        description: selectedRivalTeam?.name,
         file,
       })
       preservedVideoUrlRef.current = videoUrl
       const session = await analysisService.saveManualAnalysis({
         name: name.trim(),
         video: { ...uploadedVideo, storageUrl: videoUrl || uploadedVideo.storageUrl },
-        teamId,
-        rivalTeamId: rivalTeamId === 'none' ? undefined : rivalTeamId,
+        team: selectedTeam,
+        rivalTeam: selectedRivalTeam,
+        teamId: selectedTeam.id,
+        rivalTeamId: selectedRivalTeam?.id,
         playerIds: selectedPlayerIds,
         clips,
       })

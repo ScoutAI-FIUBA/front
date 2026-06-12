@@ -73,6 +73,13 @@ export const mockAnalysisService: IAnalysisService = {
       const matchId = generateId('manual-match')
       const sessionId = generateId('analysis')
 
+      if (!s.teams.some((team) => team.id === draft.team.id)) {
+        s.teams.unshift(draft.team)
+      }
+      if (draft.rivalTeam && !s.teams.some((team) => team.id === draft.rivalTeam?.id)) {
+        s.teams.unshift(draft.rivalTeam)
+      }
+
       if (!s.videos.some((video) => video.id === draft.video.id)) {
         s.videos.unshift({ ...draft.video, matchId, status: 'analyzed' })
       } else {

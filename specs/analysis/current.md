@@ -38,6 +38,7 @@ Current behavior documentation.
 - Manual clips remain local to the page until `Guardar analisis` is pressed.
 - `Guardar analisis` uploads the video through `videoService.upload()` and then calls mock `analysisService.saveManualAnalysis()` to simulate analysis persistence.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
+- The mock save stores snapshots of the selected local and visitor teams before creating the synthetic match, so detail rendering works when teams came from the backend service instead of the mock store.
 - Optional visitor team remains empty when the user does not select one; the mock does not invent a rival team for manual analyses.
 - Detail page reads `id` from the route.
 - Detail page first tries `analysisService.getBySessionId(id)`.
