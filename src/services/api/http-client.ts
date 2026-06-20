@@ -6,6 +6,26 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_URL ??
   'http://localhost:8005'
 
+const REQUEST_TIMEOUT_MS = 20_000
+
+function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  if (init?.signal) {
+    if (init.signal.aborted) {
+      window.clearTimeout(timeoutId)
+      controller.abort()
+    } else {
+      init.signal.addEventListener('abort', () => controller.abort(), { once: true })
+    }
+  }
+
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => {
+    window.clearTimeout(timeoutId)
+  })
+}
+
 interface ApiFetchOptions {
   auth?: boolean
   skipRefresh?: boolean
@@ -29,7 +49,7 @@ async function tryRefreshToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const res = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include',
         })
@@ -63,11 +83,23 @@ export async function apiFetch(
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
-    credentials: 'include',
-  })
+  let res: Response
+  try {
+    res = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
+      ...init,
+      headers,
+      credentials: 'include',
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(
+        `El servidor no respondió a tiempo (${API_BASE_URL}). Verificá que el backend esté activo.`,
+      )
+    }
+    throw new Error(
+      `No se pudo conectar con el backend (${API_BASE_URL}). Verificá tu conexión o la URL de la API.`,
+    )
+  }
 
   if (res.status === 401 && auth && !skipRefresh) {
     const newToken = await tryRefreshToken()

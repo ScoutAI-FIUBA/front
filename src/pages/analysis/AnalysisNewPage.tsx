@@ -1,6 +1,6 @@
 import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Folder, Info, Plus, Save, Upload, Video } from 'lucide-react'
+import { Film, Folder, Info, Plus, Save, Upload, Video, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -215,6 +215,11 @@ export function AnalysisNewPage() {
   const relatedPlayers = selectedPlayerIds.length > 0
     ? players.filter((player) => selectedPlayerIds.includes(player.id))
     : []
+  const localPlayers = teamId ? players.filter((player) => player.teamId === teamId) : players
+  const visitorPlayers = rivalTeamId === 'none'
+    ? []
+    : players.filter((player) => player.teamId === rivalTeamId)
+  const shownLocalPlayers = teamId ? localPlayers : players
   const previewStart = Number(clipStart)
   const previewEnd = Number(clipEnd)
   const canPreviewRange = duration > 0
@@ -227,51 +232,34 @@ export function AnalysisNewPage() {
   const currentMarkerLeft = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase text-primary">Playground de análisis</p>
           <h1 className="text-2xl font-bold">Nuevo análisis</h1>
-          <p className="text-sm text-muted-foreground">Carga un video, marca clips y guárdalos como una demo local.</p>
+          <p className="text-sm text-muted-foreground">Carga un video, marca clips y organízalos por etiquetas.</p>
         </div>
         <Button onClick={() => void saveAnalysis()} disabled={saving}>
           <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar análisis'}
         </Button>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid gap-4 xl:grid-cols-6">
         <Card className="xl:col-span-2">
-          <CardHeader><CardTitle className="text-base">1. Datos del análisis</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
+          <CardHeader className="pb-3"><CardTitle className="text-base">1. Nombre del análisis</CardTitle></CardHeader>
+          <CardContent>
             <div>
               <Label>Nombre</Label>
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej: vs River Plate - 15/05/2025" className="mt-1" />
-            </div>
-            <div>
-              <Label>Equipo local</Label>
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar equipo" /></SelectTrigger>
-                <SelectContent>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Equipo visitante opcional</Label>
-              <Select value={rivalTeamId} onValueChange={setRivalTeamId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar rival" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin rival</SelectItem>
-                  {teams.filter((team) => team.id !== teamId).map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
           </CardContent>
         </Card>
 
         <Card className="xl:col-span-1">
-          <CardHeader><CardTitle className="text-base">2. Video</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-base">2. Subir video</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <label
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition ${isDraggingVideo ? 'border-primary bg-primary/10' : 'border-primary/30 bg-accent/50'}`}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition ${isDraggingVideo ? 'border-primary bg-primary/10' : 'border-primary/30 bg-accent/50'}`}
               onDragOver={(event) => {
                 event.preventDefault()
                 setIsDraggingVideo(true)
@@ -279,28 +267,69 @@ export function AnalysisNewPage() {
               onDragLeave={() => setIsDraggingVideo(false)}
               onDrop={handleVideoDrop}
             >
-              <Upload className="mb-3 h-8 w-8 text-primary/60" />
-              <span className="text-sm font-medium">Subir video</span>
-              <span className="mt-1 text-xs text-muted-foreground">Arrastra o selecciona 1 video por análisis</span>
+              <Upload className="mb-2 h-7 w-7 text-primary/60" />
+              <span className="text-sm font-medium">{file ? 'Cambiar video' : 'Arrastra o haz clic'}</span>
+              <span className="mt-1 text-xs text-muted-foreground">1 video por análisis</span>
               <input type="file" accept="video/*" className="hidden" onChange={handleFile} />
             </label>
-            <p className="truncate text-xs text-muted-foreground">{file ? file.name : 'Sin archivo seleccionado'}</p>
+            <p className="truncate text-xs text-muted-foreground">{file ? `Video cargado: ${file.name}` : 'Sin archivo seleccionado'}</p>
           </CardContent>
         </Card>
 
-        <Card className="xl:col-span-2">
+        <Card className="xl:col-span-1">
+          <CardHeader className="pb-3"><CardTitle className="text-base">3. Equipo local</CardTitle></CardHeader>
+          <CardContent>
+            <Select value={teamId} onValueChange={setTeamId}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar equipo" /></SelectTrigger>
+              <SelectContent>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-1">
+          <CardHeader className="pb-3"><CardTitle className="text-base">4. Equipo visitante</CardTitle></CardHeader>
+          <CardContent>
+            <Select value={rivalTeamId} onValueChange={setRivalTeamId}>
+              <SelectTrigger><SelectValue placeholder="Seleccionar rival" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin rival</SelectItem>
+                {teams.filter((team) => team.id !== teamId).map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">3. Jugadores relacionados</CardTitle>
+            <CardTitle className="text-base">5. Jugadores</CardTitle>
             <Badge variant="outline">{selectedPlayerIds.length}</Badge>
           </CardHeader>
-          <CardContent className="grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
-            {players.map((player) => (
-              <label key={player.id} className="flex items-center gap-2 rounded-md border p-2 text-sm">
-                <input type="checkbox" checked={selectedPlayerIds.includes(player.id)} onChange={() => togglePlayer(player.id)} />
-                <span className="font-medium">{player.jerseyNumber ?? '--'}</span>
-                <span>{player.firstName} {player.lastName}</span>
-              </label>
-            ))}
+          <CardContent className="max-h-48 space-y-3 overflow-y-auto text-sm">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Equipo local</p>
+              {shownLocalPlayers.length === 0 && (
+                <p className="text-xs text-muted-foreground">No hay jugadores para este equipo.</p>
+              )}
+              {shownLocalPlayers.map((player) => (
+                <label key={player.id} className="flex items-center gap-2">
+                  <input type="checkbox" checked={selectedPlayerIds.includes(player.id)} onChange={() => togglePlayer(player.id)} />
+                  <span className="font-medium">{player.jerseyNumber ? `#${player.jerseyNumber}` : 'S/N'}</span>
+                  <span className="truncate">{player.firstName} {player.lastName}</span>
+                </label>
+              ))}
+            </div>
+            {visitorPlayers.length > 0 && (
+              <div className="space-y-2 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">Equipo visitante</p>
+                {visitorPlayers.map((player) => (
+                  <label key={player.id} className="flex items-center gap-2">
+                    <input type="checkbox" checked={selectedPlayerIds.includes(player.id)} onChange={() => togglePlayer(player.id)} />
+                    <span className="font-medium">{player.jerseyNumber ? `#${player.jerseyNumber}` : 'S/N'}</span>
+                    <span className="truncate">{player.firstName} {player.lastName}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -309,7 +338,7 @@ export function AnalysisNewPage() {
         <Info className="h-4 w-4 text-primary" /> Todo queda local hasta presionar Guardar análisis.
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-5">
+      <div className="grid gap-5 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader><CardTitle className="text-base">Video</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -333,7 +362,7 @@ export function AnalysisNewPage() {
               )}
             </div>
             <div className="space-y-2">
-              <div className="relative h-8 overflow-hidden rounded-md border bg-accent">
+              <div className="relative h-10 overflow-hidden rounded-md border bg-accent">
                 {canPreviewRange && (
                   <div
                     className="absolute top-0 h-full rounded-sm border border-primary bg-primary/20"
@@ -366,6 +395,10 @@ export function AnalysisNewPage() {
                 <span>Actual: {formatSeconds(currentTime)}</span>
                 <span>{duration > 0 ? formatSeconds(duration) : '00:00'}</span>
               </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Usa el reproductor para ubicar el momento exacto.</span>
+                <Button variant="outline" size="sm" onClick={() => applyCurrentTime(setClipStart)}>Marcar inicio</Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -382,10 +415,13 @@ export function AnalysisNewPage() {
                   <div className="flex items-center gap-2 text-sm font-semibold"><Folder className="h-4 w-4" /> {label}</div>
                   {labelClips.map((clip) => (
                     <div key={clip.id} className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm">
-                      <button type="button" className="flex-1 text-left hover:text-primary" onClick={() => playClip(clip)}>
-                        {formatSeconds(clip.startSecond)}-{formatSeconds(clip.endSecond)}
+                      <button type="button" className="flex flex-1 items-center gap-2 text-left hover:text-primary" onClick={() => playClip(clip)}>
+                        <Film className="h-4 w-4 text-muted-foreground" />
+                        <span>Clip {formatSeconds(clip.startSecond)}-{formatSeconds(clip.endSecond)}</span>
                       </button>
-                      <Button variant="ghost" size="sm" onClick={() => removeClip(clip.id)}>Quitar</Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeClip(clip.id)} aria-label="Quitar clip">
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -393,20 +429,20 @@ export function AnalysisNewPage() {
             </div>
 
             <div className="space-y-3 rounded-lg border border-dashed p-3">
-              <p className="text-sm font-semibold">Marcar clip</p>
+              <p className="text-sm font-semibold">Agregar nueva etiqueta / clip</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Inicio</Label>
                   <div className="mt-1 flex gap-2">
                     <Input type="number" min="0" value={clipStart} onChange={(event) => setClipStart(event.target.value)} />
-                    <Button variant="outline" onClick={() => applyCurrentTime(setClipStart)}>Usar actual</Button>
+                    <Button variant="outline" size="sm" onClick={() => applyCurrentTime(setClipStart)}>Usar actual</Button>
                   </div>
                 </div>
                 <div>
                   <Label>Fin</Label>
                   <div className="mt-1 flex gap-2">
                     <Input type="number" min="0" value={clipEnd} onChange={(event) => setClipEnd(event.target.value)} />
-                    <Button variant="outline" onClick={() => applyCurrentTime(setClipEnd)}>Usar actual</Button>
+                    <Button variant="outline" size="sm" onClick={() => applyCurrentTime(setClipEnd)}>Usar actual</Button>
                   </div>
                 </div>
               </div>
@@ -416,6 +452,9 @@ export function AnalysisNewPage() {
                 <datalist id="analysis-labels">{DEFAULT_LABELS.map((label) => <option key={label} value={label} />)}</datalist>
               </div>
               <Button className="w-full" onClick={addClip}><Plus className="h-4 w-4" /> Marcar clip</Button>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Info className="h-4 w-4" /> Usa la línea de tiempo o carga los tiempos manualmente.
+              </p>
             </div>
 
             {relatedPlayers.length > 0 && (
@@ -424,7 +463,7 @@ export function AnalysisNewPage() {
                 <div className="flex flex-wrap gap-2">
                   {relatedPlayers.map((player) => (
                     <span key={player.id} className="rounded-full border bg-white px-2 py-1 text-foreground">
-                      {player.jerseyNumber ? `${player.jerseyNumber} · ` : ''}{player.firstName} {player.lastName}
+                      {player.jerseyNumber ? `#${player.jerseyNumber} ` : ''}{player.firstName} {player.lastName}
                     </span>
                   ))}
                 </div>
