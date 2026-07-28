@@ -24,7 +24,7 @@
 
 ## Components
 
-- `src/components/layout/AppShell.tsx`: protected app shell and navigation.
+- `src/components/layout/AppShell.tsx`: responsive protected app shell, desktop sidebar, mobile drawer, header, user summary, and logout.
 - `src/components/layout/ProtectedRoute.tsx`: protected route gate.
 - `src/components/ui/*.tsx`: local UI primitives such as button, card, input, dialog, select, badge, avatar, alert, progress, label, separator.
 

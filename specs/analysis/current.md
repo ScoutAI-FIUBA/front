@@ -31,6 +31,11 @@ Current behavior documentation.
 - Each session displays session code, status, progress, frame count, and a detail link.
 - New analysis page creates a local demo analysis around one uploaded video.
 - New analysis page collects analysis name, required local team, optional visitor team, related players, and one video file.
+- New analysis page presents those setup controls in one compact configuration rail on desktop rather than as a sequential form.
+- On narrow screens, the same configuration rail stacks its controls inside one divided surface.
+- Player selection opens from a compact control with the current selected-player count.
+- The video player and timeline are the dominant workspace surface, with clip creation and organization in a dedicated tool panel.
+- Draft/local persistence status is displayed in the workspace header.
 - New analysis page previews the selected video locally before upload.
 - New analysis page supports selecting a video through the file picker or by dragging a video file onto the upload area.
 - New analysis page lets the user stage manual clips by start time, end time, and label.

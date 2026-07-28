@@ -11,6 +11,7 @@ Specs document current behavior and proposed changes before implementation.
 - `videos/current.md`
 - `analysis/current.md`
 - `clip-collections/current.md`
+- `ui-foundation/current.md`
 
 These files describe the behavior that already exists in the app. They are not requests for new features.
 

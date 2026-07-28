@@ -40,7 +40,9 @@ Redirects:
 ## Layout
 
 - `src/components/layout/ProtectedRoute.tsx` gates protected pages based on auth state.
-- `src/components/layout/AppShell.tsx` provides sidebar navigation, header, search field, upload shortcut, and logout action.
+- `src/components/layout/AppShell.tsx` provides persistent desktop navigation and an overlay drawer on narrow screens.
+- The shell includes the section header, search field, primary analysis action, authenticated-user summary, and logout action.
+- Protected page content uses a responsive padded container and does not reserve sidebar width on mobile.
 
 ## Domain Areas
 
