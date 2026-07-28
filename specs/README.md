@@ -10,6 +10,7 @@ Specs document current behavior and proposed changes before implementation.
 - `matches/current.md`
 - `videos/current.md`
 - `analysis/current.md`
+- `clip-collections/current.md`
 
 These files describe the behavior that already exists in the app. They are not requests for new features.
 

@@ -26,7 +26,10 @@ Protected routes under `ProtectedRoute` and `AppShell`:
 - `/partidos`
 - `/videos`
 - `/videos/subir`
+- `/videos/:videoId/colecciones`
+- `/videos/:videoId/colecciones/:collectionId`
 - `/analisis`
+- `/analisis/nuevo`
 - `/analisis/:id`
 
 Redirects:
@@ -46,8 +49,9 @@ Redirects:
 - Teams: list/create/edit/delete teams and link players to teams.
 - Players: list/filter/create/edit/delete players.
 - Matches: create matches and define rosters using mock data.
-- Videos: list/filter/upload/request analysis using mock-backed video flows.
-- Analysis: list sessions and view analysis detail with events and detected players.
+- Videos: list/filter/upload videos and enter their private clip collections.
+- Clip collections: create/list collections, register existing clip URLs, play clips, and delete clip metadata.
+- Analysis: create mock manual analyses, list sessions, and view analysis detail with events and detected players.
 
 ## Services
 
@@ -65,8 +69,9 @@ src/services/registry.ts  service selection point
 - Auth: backend API or mock via `VITE_USE_MOCK_API`.
 - Teams: backend API or mock via `VITE_USE_MOCK_API`.
 - Players: backend API or mock via `VITE_USE_MOCK_API`.
+- Clip collections: backend API or mock via `VITE_USE_MOCK_API`.
 - Matches: mock only.
-- Videos: mock only.
+- Videos: backend API or mock via `VITE_USE_MOCK_API`.
 - Analysis: mock only.
 
 ## Styling

@@ -2,7 +2,7 @@
 
 ## Current Integration Model
 
-The frontend can use the backend for auth, teams, players, and videos. It uses mocks for matches and analysis.
+The frontend can use the backend for auth, teams, players, videos, and clip collections. It uses mocks for matches and analysis.
 
 Service selection happens in `src/services/registry.ts`.
 
@@ -10,7 +10,7 @@ Service selection happens in `src/services/registry.ts`.
 
 - `VITE_API_BASE_URL`: backend API base URL.
 - `VITE_API_URL`: fallback supported by `src/services/api/http-client.ts`.
-- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, and videos.
+- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, videos, and clip collections.
 
 `.env.example` currently points `VITE_API_BASE_URL` to the deployed backend and documents the mock toggle.
 
@@ -38,6 +38,7 @@ Backend-capable services:
 - Teams: `apiTeamService` or `mockTeamService`.
 - Players: `apiPlayerService` or `mockPlayerService`.
 - Videos: `apiVideoService` or `mockVideoService`.
+- Clip collections: `apiClipCollectionService` or `mockClipCollectionService`.
 
 Mock-only services:
 
@@ -63,6 +64,26 @@ Current limits:
 - `requestAnalysis(videoId)` is only available in mock mode because the backend does not expose analysis request endpoints yet.
 - Playback uses backend `storage_key` as the current `storageUrl`; use `GET /videos/{video_id}?team_id=...` when the UI needs the presigned playback URL.
 
+## Clip Collections Backend Integration
+
+Authenticated clip collection endpoints are scoped to an owned video:
+
+- `POST /videos/{video_id}/collections`.
+- `GET /videos/{video_id}/collections`.
+- `GET /videos/{video_id}/collections/{collection_id}`.
+- `POST /videos/{video_id}/collections/{collection_id}/clips`.
+- `POST /videos/{video_id}/collections/{collection_id}/clips/batch`.
+- `DELETE /videos/{video_id}/collections/{collection_id}/clips/{item_id}`.
+
+The API service maps backend snake_case payloads to frontend camelCase types. The backend generates each `storage_key`; the client provides `filename` and an already available `cloudflare_url`.
+
+Current limits:
+
+- The endpoints persist collection and item metadata; they do not generate a clip from a time range.
+- The frontend has no upload flow for generated clip files.
+- Collection update/delete and item update/reorder endpoints do not exist.
+- Manual-analysis `label`, `startSecond`, and `endSecond` values are not part of this contract.
+
 ## Known Standalone Helper
 
 `src/api.ts` exposes:
@@ -76,5 +97,5 @@ This helper is separate from `src/services/api/http-client.ts`.
 
 - Frontend domain types are in `src/types/index.ts`.
 - Service method shapes are in `src/services/contracts`.
-- Backend response mapping lives in `src/services/api/mappers.ts`.
+- Backend response mapping lives in `src/services/api/mappers.ts` and feature-specific API service mappers.
 - Any backend contract change should update the relevant service contract, API implementation, mapper, and spec document together.

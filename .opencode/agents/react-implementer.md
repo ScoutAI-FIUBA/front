@@ -10,8 +10,9 @@ You are the React implementer for this existing ScoutAI frontend.
 
 Before editing, read:
 
-- `PROJECT_MAP.md`
 - `AGENTS.md`
+- `PROJECT_MAP.md`
+- `docs/backend-contracts.md` when consuming an API
 - Relevant `specs/<area>/current.md`
 - Relevant source files for the requested change
 
@@ -23,7 +24,9 @@ Implementation rules:
 - Do not modify Vite, TypeScript, Tailwind, PostCSS, or ESLint config unless explicitly requested.
 - Do not delete, move, or rename existing files unless explicitly requested.
 - Keep backend/API and mock boundaries explicit.
-- Update docs/specs only when behavior changes or the task asks for it.
+- Map backend transport naming at the API boundary and keep frontend domain types in camelCase.
+- Update the relevant spec before changing behavior, then synchronize it with the verified result.
+- Do not connect manual-analysis time ranges to clip collections unless a real clip URL already exists.
 
 Verification:
 

@@ -42,7 +42,10 @@
 - `src/pages/players/PlayerNewPage.tsx`: create player form.
 - `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.
-- `src/pages/videos/VideoUploadPage.tsx`: video upload form using mock upload service.
+- `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.
+- `src/pages/videos/VideoCollectionsPage.tsx`: collections list and create flow for one video.
+- `src/pages/videos/VideoCollectionDetailPage.tsx`: clip playback, metadata creation, and deletion.
+- `src/pages/analysis/AnalysisNewPage.tsx`: manual-analysis playground and local time-range clips.
 - `src/pages/analysis/AnalysisPage.tsx`: analysis sessions list.
 - `src/pages/analysis/AnalysisDetailPage.tsx`: analysis detail, video preview placeholder, events, detected players.
 
@@ -54,6 +57,8 @@
 - `src/services/api/auth.api.ts`: real auth API service.
 - `src/services/api/teams.api.ts`: real teams API service.
 - `src/services/api/players.api.ts`: real players API service.
+- `src/services/api/videos.api.ts`: multipart video upload and video listing.
+- `src/services/api/clip-collections.api.ts`: clip collection and item metadata API.
 - `src/services/api/mappers.ts`: backend/frontend mapping helpers.
 - `src/services/api/token.ts`: token storage helpers.
 - `src/services/api/errors.ts`: API error parsing.
@@ -64,7 +69,7 @@
 - `src/mocks/store.ts`: mock store management.
 - `src/mocks/seed.ts`: seed data.
 - `src/mocks/delays.ts`: mock delay helpers.
-- `src/types/index.ts`: domain types for users, teams, players, matches, videos, events, analysis, dashboard, and mock store.
+- `src/types/index.ts`: domain types for users, teams, players, matches, videos, clip collections, events, analysis, dashboard, and mock store.
 
 ## Utilities
 

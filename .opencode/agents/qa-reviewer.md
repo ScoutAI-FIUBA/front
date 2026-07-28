@@ -23,10 +23,13 @@ Focus on:
 - Behavioral regressions.
 - Type and routing mistakes.
 - Service/API/mock mismatches.
+- Snake_case/camelCase mapping, authenticated requests, and `204` response handling.
+- Compatibility of persisted mock data after the mock store shape changes.
 - Auth and protected-route edge cases.
 - Missing acceptance criteria.
 - Missing manual or automated verification.
 - Changes that violate repository constraints.
+- Documentation or specs that no longer match implemented behavior.
 
 Output:
 

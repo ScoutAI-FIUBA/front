@@ -8,8 +8,8 @@ You are reviewing a ScoutAI frontend spec for safe implementation.
 
 Read:
 
-- `PROJECT_MAP.md`
 - `AGENTS.md`
+- `PROJECT_MAP.md`
 - The requested spec file under `specs/`
 - Relevant docs under `docs/`
 
@@ -20,6 +20,7 @@ Return:
 - Ambiguous or risky requirements.
 - Files likely to be affected.
 - Verification commands or manual checks needed.
+- Any mismatch between the spec, source code, and documented backend contract.
 
 Rules:
 
