@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart2, Clock, Eye, Lock, Plus } from 'lucide-react'
+import { BarChart2, Clock, Eye, FolderOpen, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -115,6 +115,11 @@ export function VideosPage() {
                   <td className="p-4">{formatDate(v.uploadedAt)}</td>
                   <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
                   <td className="p-4">
+                    <Button asChild variant="outline" size="sm" className="mb-2">
+                      <Link to={`/videos/${v.id}/colecciones`}>
+                        <FolderOpen className="h-4 w-4" /> Colecciones
+                      </Link>
+                    </Button>
                     {v.status === 'analyzed' && (
                       <div className="flex gap-2">
                         <Link to={`/analisis/${v.id}`} className="text-primary hover:text-primary/80"><Eye className="h-4 w-4" /></Link>
