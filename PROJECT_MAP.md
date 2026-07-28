@@ -56,6 +56,8 @@ src/
 - `/partidos`: matches page.
 - `/videos`: videos list page.
 - `/videos/subir`: video upload page.
+- `/videos/:videoId/colecciones`: clip collections for a video.
+- `/videos/:videoId/colecciones/:collectionId`: clip collection detail.
 - `/analisis`: analysis sessions page.
 - `/analisis/:id`: analysis detail page.
 - `/`: redirects to `/login`.
@@ -67,13 +69,13 @@ src/
 - API clients live in `src/services/api`.
 - Mock services live in `src/services/mock`.
 - `src/services/registry.ts` selects real or mock services.
-- `authService`, `teamService`, `playerService`, and `videoService` use the backend unless `VITE_USE_MOCK_API=true`.
+- `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
 - `matchService` and `analysisService` currently use mocks.
 
 ## Mocks
 
 - Mock persistence/data lives in `src/mocks`.
-- Mock services cover auth, teams, players, matches, videos, and analysis.
+- Mock services cover auth, teams, players, matches, videos, analysis, and clip collections.
 - Matches and analysis remain mocked until backend support exists.
 
 ## Environment

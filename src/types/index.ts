@@ -102,6 +102,32 @@ export interface Video {
   status: VideoStatus
 }
 
+export interface ClipCollection {
+  id: string
+  videoId: string
+  teamId: string
+  ownerUserId: string
+  name: string
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ClipCollectionItem {
+  id: string
+  collectionId: string
+  filename: string
+  storageKey: string
+  cloudflareUrl: string
+  position: number
+  createdAt: string
+}
+
+export interface ClipCollectionDetail {
+  collection: ClipCollection
+  items: ClipCollectionItem[]
+}
+
 export type EventType =
   | 'shot'
   | 'pass'
@@ -201,6 +227,8 @@ export interface MockStore {
   matches: Match[]
   rosters: MatchRoster[]
   videos: Video[]
+  clipCollections: ClipCollection[]
+  clipCollectionItems: ClipCollectionItem[]
   gameEvents: GameEvent[]
   analysisSessions: AnalysisSession[]
   manualAnalyses: SavedManualAnalysis[]

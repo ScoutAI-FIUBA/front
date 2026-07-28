@@ -266,6 +266,8 @@ export const SEED_DATA: MockStore = {
     },
   ],
   manualAnalyses: [],
+  clipCollections: [],
+  clipCollectionItems: [],
   activities: [
     {
       id: 'act-1',
