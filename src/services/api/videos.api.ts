@@ -29,6 +29,11 @@ interface InitUploadResponse {
   }>
 }
 
+interface GetVideoResponse {
+  video: ApiVideo
+  presigned_playback_url: string
+}
+
 const PART_SIZE_BYTES = 5 * 1024 * 1024
 
 async function uploadPart(url: string, chunk: Blob, contentType: string): Promise<string> {
@@ -65,12 +70,12 @@ function mapBackendStatus(status: VideoStatus | 'all'): string | null {
   return null
 }
 
-function mapApiVideo(video: ApiVideo): Video {
+function mapApiVideo(video: ApiVideo, playbackUrl = ''): Video {
   return {
     id: video.id,
     teamId: video.team_id,
     title: video.title,
-    storageUrl: video.storage_key,
+    storageUrl: playbackUrl,
     rivalName: video.description ?? undefined,
     uploadedAt: video.created_at,
     status: mapVideoStatus(video.status),
@@ -83,7 +88,7 @@ async function listTeamVideos(teamId: string, status?: string | null): Promise<V
     ? `?team_id=${encodeURIComponent(teamId)}&status=${encodeURIComponent(status)}`
     : `?team_id=${encodeURIComponent(teamId)}`
   const data = await apiJson<{ videos: ApiVideo[] }>(`/videos${query}`)
-  return data.videos.map(mapApiVideo)
+  return data.videos.map((video) => mapApiVideo(video))
 }
 
 export const apiVideoService: IVideoService = {
@@ -97,7 +102,14 @@ export const apiVideoService: IVideoService = {
 
   async getById(id: string): Promise<Video | null> {
     const videos = await this.list()
-    return videos.find((video) => video.id === id) ?? null
+    const video = videos.find((item) => item.id === id)
+    if (!video || video.status !== 'uploaded') return video ?? null
+
+    const data = await apiJson<GetVideoResponse>(
+      `/videos/${encodeURIComponent(id)}?team_id=${encodeURIComponent(video.teamId)}`,
+    )
+
+    return mapApiVideo(data.video, data.presigned_playback_url)
   },
 
   async filterByTeam(teamId: string): Promise<Video[]> {

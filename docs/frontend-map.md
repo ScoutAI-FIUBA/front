@@ -57,7 +57,7 @@
 - `src/services/api/auth.api.ts`: real auth API service.
 - `src/services/api/teams.api.ts`: real teams API service.
 - `src/services/api/players.api.ts`: real players API service.
-- `src/services/api/videos.api.ts`: multipart video upload and video listing.
+- `src/services/api/videos.api.ts`: multipart video upload, video listing, and presigned playback URL retrieval for ready videos.
 - `src/services/api/clip-collections.api.ts`: clip collection and item metadata API.
 - `src/services/api/mappers.ts`: backend/frontend mapping helpers.
 - `src/services/api/token.ts`: token storage helpers.
