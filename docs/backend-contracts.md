@@ -62,7 +62,9 @@ Current limits:
 - Backend video upload is team-scoped; it is no longer tied to a frontend `matchId`.
 - Backend statuses are mapped to frontend statuses: `READY -> uploaded`, `PENDING_UPLOAD -> processing`, `FAILED -> failed`.
 - `requestAnalysis(videoId)` is only available in mock mode because the backend does not expose analysis request endpoints yet.
-- Playback uses backend `storage_key` as the current `storageUrl`; use `GET /videos/{video_id}?team_id=...` when the UI needs the presigned playback URL.
+- `storage_key` is internal object metadata and is not used as a browser URL.
+- For a ready video, `apiVideoService.getById` calls `GET /videos/{video_id}?team_id=...` and maps the returned `presigned_playback_url` to the frontend `storageUrl`.
+- Non-ready videos do not request a presigned playback URL.
 
 ## Clip Collections Backend Integration
 
