@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { analysisService, playerService, teamService, videoService } from '@/services/registry'
 import type { ManualAnalysisClip, Player, Team } from '@/types'
+import { ClipTimeline } from './ClipTimeline'
 
 const DEFAULT_LABELS = ['Pick and Roll', 'Transición', 'Defensa', 'Tiro exterior']
 
@@ -75,6 +76,9 @@ export function AnalysisNewPage() {
     preservedVideoUrlRef.current = ''
     setActiveClipEnd(null)
     setCurrentTime(0)
+    setDuration(0)
+    setClipStart('0')
+    setClipEnd('0')
     setFile(selectedFile)
     setVideoUrl(URL.createObjectURL(selectedFile))
   }
@@ -108,10 +112,32 @@ export function AnalysisNewPage() {
     setter(String(Math.floor(currentTime)))
   }
 
+  const seekVideo = (time: number) => {
+    if (!videoRef.current) return
+    setActiveClipEnd(null)
+    videoRef.current.currentTime = time
+    setCurrentTime(time)
+  }
+
+  const updateClipRange = (start: number, end: number) => {
+    const normalize = (value: number) => String(Math.round(value * 10) / 10)
+    const previousStart = Number(clipStart)
+    const previousEnd = Number(clipEnd)
+    setClipStart(normalize(start))
+    setClipEnd(normalize(end))
+    if (Math.abs(start - previousStart) > 0.01) seekVideo(start)
+    else if (Math.abs(end - previousEnd) > 0.01) seekVideo(end)
+  }
+
   const addClip = () => {
     const start = Number(clipStart)
     const end = Number(clipEnd)
     const label = clipLabel.trim()
+
+    if (!videoUrl || duration <= 0) {
+      toast.error('Carga un video antes de guardar clips')
+      return
+    }
 
     if (!label) {
       toast.error('Agrega una etiqueta')
@@ -128,6 +154,11 @@ export function AnalysisNewPage() {
       return
     }
 
+    if (end > duration) {
+      toast.error('El rango no puede superar la duración del video')
+      return
+    }
+
     setClips((current) => [
       ...current,
       {
@@ -137,8 +168,6 @@ export function AnalysisNewPage() {
         endSecond: end,
       },
     ])
-    setClipStart(String(end))
-    setClipEnd(String(end))
   }
 
   const playClip = (clip: ManualAnalysisClip) => {
@@ -222,14 +251,6 @@ export function AnalysisNewPage() {
   const shownLocalPlayers = teamId ? localPlayers : players
   const previewStart = Number(clipStart)
   const previewEnd = Number(clipEnd)
-  const canPreviewRange = duration > 0
-    && Number.isFinite(previewStart)
-    && Number.isFinite(previewEnd)
-    && previewStart >= 0
-    && previewEnd > previewStart
-  const previewLeft = canPreviewRange ? Math.min((previewStart / duration) * 100, 100) : 0
-  const previewWidth = canPreviewRange ? Math.min(((previewEnd - previewStart) / duration) * 100, 100 - previewLeft) : 0
-  const currentMarkerLeft = duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0
 
   return (
     <div className="space-y-5">
@@ -350,7 +371,12 @@ export function AnalysisNewPage() {
                   src={videoUrl}
                   controls
                   className="aspect-video w-full"
-                  onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
+                  onLoadedMetadata={(event) => {
+                    const videoDuration = event.currentTarget.duration
+                    setDuration(videoDuration)
+                    setClipStart('0')
+                    setClipEnd(String(Math.round(Math.min(10, videoDuration) * 10) / 10))
+                  }}
                   onTimeUpdate={handleVideoTimeUpdate}
                 />
               ) : (
@@ -362,63 +388,30 @@ export function AnalysisNewPage() {
                 </div>
               )}
             </div>
-            <div className="space-y-3 rounded-xl border bg-muted/25 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Timeline</p>
-                <span className="font-mono text-xs font-medium">{formatSeconds(currentTime)}</span>
-              </div>
-              <div className="relative h-12 overflow-hidden rounded-lg border bg-background shadow-inner">
-                {canPreviewRange && (
-                  <div
-                    className="absolute top-0 h-full rounded-sm border border-primary bg-primary/20"
-                    style={{ left: `${previewLeft}%`, width: `${Math.max(previewWidth, 2)}%` }}
-                    title={`Rango nuevo ${formatSeconds(previewStart)}-${formatSeconds(previewEnd)}`}
-                  />
-                )}
-                {clips.map((clip) => {
-                  const left = duration > 0 ? (clip.startSecond / duration) * 100 : 0
-                  const width = duration > 0 ? ((clip.endSecond - clip.startSecond) / duration) * 100 : 0
-                  return (
-                    <div
-                      key={clip.id}
-                      className="absolute top-0 h-full rounded-sm bg-primary/60"
-                      style={{ left: `${Math.min(left, 100)}%`, width: `${Math.max(width, 2)}%` }}
-                      title={`${clip.label} ${formatSeconds(clip.startSecond)}-${formatSeconds(clip.endSecond)}`}
-                    />
-                  )
-                })}
-                {duration > 0 && (
-                  <div
-                    className="absolute top-0 h-full w-0.5 bg-primary"
-                    style={{ left: `${currentMarkerLeft}%` }}
-                    title={`Tiempo actual ${formatSeconds(currentTime)}`}
-                  />
-                )}
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>00:00</span>
-                <span>{duration > 0 ? formatSeconds(duration) : '00:00'}</span>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>Usa el reproductor para ubicar el momento exacto.</span>
-                <Button variant="outline" size="sm" onClick={() => applyCurrentTime(setClipStart)}>Marcar inicio</Button>
-              </div>
-            </div>
+            <ClipTimeline
+              videoUrl={videoUrl}
+              duration={duration}
+              currentTime={currentTime}
+              rangeStart={Number.isFinite(previewStart) ? previewStart : 0}
+              rangeEnd={Number.isFinite(previewEnd) ? previewEnd : 0}
+              onSeek={seekVideo}
+              onRangeChange={updateClipRange}
+            />
           </CardContent>
         </Card>
 
         <Card className="overflow-hidden xl:sticky xl:top-20 xl:self-start">
           <CardHeader className="flex flex-row items-center justify-between gap-3 border-b py-3">
             <div>
-              <CardTitle className="text-sm">Herramientas de clips</CardTitle>
-              <p className="mt-0.5 text-xs text-muted-foreground">Define rangos y organiza hallazgos.</p>
+              <CardTitle className="text-sm">Nuevo clip</CardTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">Selecciona el rango directamente sobre el video.</p>
             </div>
             <Badge variant="secondary">{clips.length} clips</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3 rounded-xl border border-dashed bg-muted/20 p-3">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">Nuevo rango</p>
+                <p className="text-sm font-semibold">Rango seleccionado</p>
                 <span className="font-mono text-xs text-muted-foreground">
                   {formatSeconds(Number(clipStart) || 0)}–{formatSeconds(Number(clipEnd) || 0)}
                 </span>
@@ -444,9 +437,9 @@ export function AnalysisNewPage() {
                 <Input list="analysis-labels" value={clipLabel} onChange={(event) => setClipLabel(event.target.value)} className="mt-1" />
                 <datalist id="analysis-labels">{DEFAULT_LABELS.map((label) => <option key={label} value={label} />)}</datalist>
               </div>
-              <Button className="w-full" onClick={addClip}><Plus className="h-4 w-4" /> Marcar clip</Button>
+              <Button className="w-full" onClick={addClip}><Plus className="h-4 w-4" /> Guardar clip</Button>
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Info className="h-4 w-4 shrink-0" /> Usa el tiempo actual o edita el rango manualmente.
+                <Info className="h-4 w-4 shrink-0" /> Arrastra los extremos de la línea de tiempo o ajusta los valores con precisión.
               </p>
             </div>
 

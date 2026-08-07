@@ -38,10 +38,13 @@ Current behavior documentation.
 - Draft/local persistence status is displayed in the workspace header.
 - New analysis page previews the selected video locally before upload.
 - New analysis page supports selecting a video through the file picker or by dragging a video file onto the upload area.
-- New analysis page lets the user stage manual clips by start time, end time, and label.
+- New analysis page lets the user stage manual clips by selecting a visual range on a single-track video timeline and assigning a label.
 - New analysis page rejects zero-duration clips: the end time must be greater than the start time.
-- New analysis page has explicit `Usar actual` buttons to copy the current video timestamp into start or end.
-- New analysis page shows the current video position and the in-progress clip range on the timeline before the clip is saved.
+- New analysis page generates a lightweight thumbnail strip locally from the selected video; thumbnails are not uploaded or persisted.
+- Clicking the timeline seeks the video, while dragging either range handle updates the clip start or end time.
+- Timeline range handles support keyboard adjustment and keep the range inside the video duration without allowing the handles to cross.
+- Start and end fields remain available for precise manual adjustments and stay synchronized with the visual range.
+- New analysis page shows the current video position, selected range, and range duration on the timeline before the clip is saved.
 - New analysis page displays selected related players as compact chips.
 - Staged clips can be clicked to seek the video to the clip start; playback pauses when it reaches the clip end when autoplay succeeds.
 - Manual clips remain local to the page until `Guardar análisis` is pressed.
