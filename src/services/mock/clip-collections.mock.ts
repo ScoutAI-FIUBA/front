@@ -1,7 +1,9 @@
 import { simulateNetwork } from '@/mocks/delays'
 import { generateId, getStore, updateStore } from '@/mocks/store'
 import type { ClipCollectionItem } from '@/types'
-import type { IClipCollectionService } from '../contracts/clip-collections.service'
+import type { AddClipDto, IClipCollectionService } from '../contracts/clip-collections.service'
+
+const MAX_CLIP_DURATION_MS = 30_000
 
 function ensureCollections() {
   const store = getStore()
@@ -10,9 +12,18 @@ function ensureCollections() {
   return store
 }
 
-function sanitizeFilename(filename: string): string {
-  const leaf = filename.replace(/\\/g, '/').split('/').pop()?.trim() || 'clip'
-  return leaf.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[.-]+|[.-]+$/g, '') || 'clip'
+function validateRange(clip: AddClipDto, durationMs?: number): void {
+  const rangeDuration = clip.endMs - clip.startMs
+  if (
+    !Number.isInteger(clip.startMs)
+    || !Number.isInteger(clip.endMs)
+    || clip.startMs < 0
+    || clip.endMs <= clip.startMs
+    || rangeDuration > MAX_CLIP_DURATION_MS
+    || (durationMs != null && clip.endMs > durationMs)
+  ) {
+    throw new Error('El rango del clip no es válido. Debe durar como máximo 30 segundos y quedar dentro del video.')
+  }
 }
 
 export const mockClipCollectionService: IClipCollectionService = {
@@ -69,10 +80,13 @@ export const mockClipCollectionService: IClipCollectionService = {
   async addClips(videoId, collectionId, clips) {
     await simulateNetwork()
     const store = ensureCollections()
+    const video = store.videos.find((item) => item.id === videoId)
     const collection = store.clipCollections.find(
       (item) => item.id === collectionId && item.videoId === videoId,
     )
+    if (!video) throw new Error('Video no encontrado')
     if (!collection) throw new Error('Colección de clips no encontrada')
+    clips.forEach((clip) => validateRange(clip, video.durationMs))
     const existing = store.clipCollectionItems.filter((item) => item.collectionId === collectionId)
     let position = Math.max(0, ...existing.map((item) => item.position)) + 1
     const created: ClipCollectionItem[] = clips.map((clip) => {
@@ -80,9 +94,8 @@ export const mockClipCollectionService: IClipCollectionService = {
       const item = {
         id,
         collectionId,
-        filename: clip.filename.trim(),
-        storageKey: `user/${collection.ownerUserId}/team/${collection.teamId}/video/${videoId}/collection/${collectionId}/clips/${id}-${sanitizeFilename(clip.filename)}`,
-        cloudflareUrl: clip.cloudflareUrl.trim(),
+        startMs: clip.startMs,
+        endMs: clip.endMs,
         position,
         createdAt: new Date().toISOString(),
       }
@@ -94,6 +107,22 @@ export const mockClipCollectionService: IClipCollectionService = {
       draft.clipCollectionItems.push(...created)
     })
     return created
+  },
+
+  async exportClip(videoId, collectionId, itemId) {
+    await simulateNetwork(600)
+    const store = ensureCollections()
+    const collectionExists = store.clipCollections.some(
+      (item) => item.id === collectionId && item.videoId === videoId,
+    )
+    const itemExists = store.clipCollectionItems.some(
+      (item) => item.id === itemId && item.collectionId === collectionId,
+    )
+    const video = store.videos.find((item) => item.id === videoId)
+    if (!collectionExists) throw new Error('Colección de clips no encontrada')
+    if (!itemExists) throw new Error('Clip no encontrado')
+    if (!video?.storageUrl) throw new Error('No se pudo preparar la descarga del clip')
+    return video.storageUrl
   },
 
   async deleteClip(videoId, collectionId, itemId) {

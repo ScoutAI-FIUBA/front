@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Eye, Play, Target, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Eye, FolderOpen, Play, Target, TriangleAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +81,13 @@ export function AnalysisDetailPage() {
         </div>
         <div className="flex gap-2">
           <Badge className="bg-accent text-primary">● Análisis en proceso</Badge>
-          <Button variant="outline" size="sm">Exportar Datos</Button>
+          {manualAnalysis?.clipCollectionId && (
+            <Button asChild variant="outline" size="sm">
+              <Link to={`/videos/${video.id}/colecciones/${manualAnalysis.clipCollectionId}`}>
+                <FolderOpen className="h-4 w-4" /> Ver colección y exportar
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 

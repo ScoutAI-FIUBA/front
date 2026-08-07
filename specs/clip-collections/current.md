@@ -7,7 +7,7 @@ Frontend integration for the backend clip collections foundation.
 ## Routes
 
 - `/videos/:videoId/colecciones`: list and create collections for one video.
-- `/videos/:videoId/colecciones/:collectionId`: view a collection, add clip metadata, and delete clips.
+- `/videos/:videoId/colecciones/:collectionId`: view a collection, add virtual clips, reproduce ranges, export, and delete clips.
 
 ## Files Involved
 
@@ -26,12 +26,15 @@ Frontend integration for the backend clip collections foundation.
 - Collections are private and scoped to an owned video.
 - The collections page loads the selected video and its collections.
 - Users can create a collection with a required name and optional description.
-- Collection detail displays clips in backend position order.
-- Users can add one clip metadata record with a filename and an existing Cloudflare URL.
-- Users can delete clip metadata records after confirmation.
-- Clip playback uses the persisted `cloudflareUrl`.
+- Collection detail displays virtual clips in backend position order.
+- Users add clips by defining `startMs` and `endMs`; no per-clip video file is uploaded.
+- The UI validates non-negative ranges, end after start, a maximum duration of 30 seconds, and the known video duration.
+- Users can delete virtual clips after confirmation.
+- Clip playback seeks the original video to `startMs` and pauses at `endMs`.
+- Users can request a server-side export for a clip and download the returned URL while a preparing state is shown.
+- Backend `INVALID_CLIP_RANGE` and `CLIP_EXPORT_FAILED` responses are surfaced as actionable messages.
 - API requests use the existing authenticated HTTP client.
-- The service exposes single and batch clip creation even though the initial UI adds one clip at a time.
+- The service exposes single and atomic batch range creation.
 - Mock mode persists collections and clip items in the existing session store.
 
 ## Backend Alignment
@@ -41,20 +44,19 @@ Frontend integration for the backend clip collections foundation.
 - `GET /videos/{video_id}/collections/{collection_id}`
 - `POST /videos/{video_id}/collections/{collection_id}/clips`
 - `POST /videos/{video_id}/collections/{collection_id}/clips/batch`
+- `POST /videos/{video_id}/collections/{collection_id}/clips/{item_id}/export`
 - `DELETE /videos/{video_id}/collections/{collection_id}/clips/{item_id}`
 
 Backend snake_case payloads are mapped to frontend camelCase types inside the API service.
 
 ## Non-Scope
 
-- Generating a physical clip file from `startSecond` and `endSecond`.
-- Uploading generated clip files to Cloudflare or R2.
+- Persisting labels on collection items because the backend range model does not expose a label field.
 - Editing, deleting, or reordering collections because the backend has no endpoints for those actions.
 - Editing or reordering collection items.
-- Automatically mapping manual-analysis labels to collections.
 
 ## Verification
 
 - Run `npm run lint`.
 - Run `npm run build`.
-- In mock mode, create a collection from a video, add a clip URL, play it, and delete it.
+- In mock mode, create a collection from a video, add a range, play it from the original video, export it, and delete it.

@@ -48,7 +48,11 @@ Current behavior documentation.
 - New analysis page displays selected related players as compact chips.
 - Staged clips can be clicked to seek the video to the clip start; playback pauses when it reaches the clip end when autoplay succeeds.
 - Manual clips remain local to the page until `Guardar análisis` is pressed.
-- `Guardar análisis` uploads the video through `videoService.upload()` and then calls mock `analysisService.saveManualAnalysis()` to simulate analysis persistence.
+- Manual clip ranges are limited to 30 seconds so they satisfy the persisted clip contract.
+- `Guardar análisis` uploads the video with its known duration, creates a collection named after the analysis, and persists all clip ranges atomically through `clipCollectionService.addClips()`.
+- Manual labels remain in the analysis model because collection items only persist range and position data.
+- After collection persistence, `Guardar análisis` calls mock `analysisService.saveManualAnalysis()` so the existing analysis detail keeps its labels and detected-event demo data.
+- Saved manual analysis stores the generated collection id and links to the persisted collection detail.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
 - The mock save stores snapshots of the selected local and visitor teams before creating the synthetic match, so detail rendering works when teams came from the backend service instead of the mock store.
 - Optional visitor team remains empty when the user does not select one; the mock does not invent a rival team for manual analyses.
@@ -64,15 +68,13 @@ Current behavior documentation.
 
 - `analysisService` currently always uses `mockAnalysisService`.
 - `videoService` uses the configured video implementation from the registry.
-- Manual analysis save remains mock/local because the backend does not expose analysis or clip endpoints yet.
+- Analysis session metadata remains mock/local, while its collection and clip ranges use the configured real or mock clip collection service.
 
 ## Non-Scope
 
 - There is no real backend analysis API wired in the registry.
-- There is no real backend clip persistence.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
-- Persisted backend clip playback is not implemented; manual clip playback relies on metadata and the browser-accessible video URL.
-- Export button is displayed but no export implementation is documented here.
+- Manual-analysis labels are not persisted on backend collection items.
 - Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
 
 ## Verification

@@ -23,9 +23,8 @@ interface ApiClipCollection {
 interface ApiClipCollectionItem {
   id: string
   collection_id: string
-  filename: string
-  storage_key: string
-  cloudflare_url: string
+  start_ms: number
+  end_ms: number
   position: number
   created_at: string
 }
@@ -52,9 +51,8 @@ function mapItem(item: ApiClipCollectionItem): ClipCollectionItem {
   return {
     id: item.id,
     collectionId: item.collection_id,
-    filename: item.filename,
-    storageKey: item.storage_key,
-    cloudflareUrl: item.cloudflare_url,
+    startMs: item.start_ms,
+    endMs: item.end_ms,
     position: item.position,
     createdAt: item.created_at,
   }
@@ -62,8 +60,8 @@ function mapItem(item: ApiClipCollectionItem): ClipCollectionItem {
 
 function toClipPayload(clip: AddClipDto) {
   return {
-    filename: clip.filename,
-    cloudflare_url: clip.cloudflareUrl,
+    start_ms: clip.startMs,
+    end_ms: clip.endMs,
   }
 }
 
@@ -115,6 +113,14 @@ export const apiClipCollectionService: IClipCollectionService = {
       },
     )
     return data.items.map(mapItem)
+  },
+
+  async exportClip(videoId, collectionId, itemId) {
+    const data = await apiJson<{ download_url: string }>(
+      `${collectionPath(videoId, collectionId)}/clips/${encodeURIComponent(itemId)}/export`,
+      { method: 'POST' },
+    )
+    return data.download_url
   },
 
   async deleteClip(videoId, collectionId, itemId) {

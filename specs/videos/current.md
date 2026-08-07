@@ -45,11 +45,12 @@ Current behavior documentation.
 ## Backend Alignment Notes
 
 - The backend exposes authenticated `/videos` endpoints for multipart upload initialization, completion, abort, listing, retrieval, update, and delete.
-- `apiVideoService.upload` initializes multipart upload, uploads file chunks to presigned part URLs, and completes the upload with returned ETags.
+- `apiVideoService.upload` initializes multipart upload, uploads file chunks to presigned part URLs, and completes the upload with returned ETags and known `duration_ms` when supplied by the player.
 - Video list responses keep the backend `storage_key` as internal metadata and do not expose it as a browser-playable URL.
 - `apiVideoService.getById` retrieves `GET /videos/{video_id}?team_id=...` for uploaded videos and maps `presigned_playback_url` to the frontend `storageUrl` used by the native video player.
 - Videos that are not ready are returned from list metadata without requesting a playback URL.
 - Backend statuses are mapped to frontend statuses: `READY -> uploaded`, `PENDING_UPLOAD -> processing`, `FAILED -> failed`.
+- Backend `duration_ms` is mapped to `Video.durationMs` for clip-range validation.
 - `requestAnalysis(videoId)` has no backend counterpart and remains mock-only.
 
 ## Non-Scope

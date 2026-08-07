@@ -95,6 +95,7 @@ export interface Video {
   teamId: string
   title: string
   storageUrl: string
+  durationMs?: number
   thumbnailUrl?: string
   resolution?: string
   rivalName?: string
@@ -116,9 +117,8 @@ export interface ClipCollection {
 export interface ClipCollectionItem {
   id: string
   collectionId: string
-  filename: string
-  storageKey: string
-  cloudflareUrl: string
+  startMs: number
+  endMs: number
   position: number
   createdAt: string
 }
@@ -174,6 +174,7 @@ export interface ManualAnalysisClip {
 export interface ManualAnalysisDraft {
   name: string
   video: Video
+  clipCollectionId?: string
   team: Team
   rivalTeam?: Team | null
   teamId: string
