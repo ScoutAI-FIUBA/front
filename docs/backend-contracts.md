@@ -75,16 +75,18 @@ Authenticated clip collection endpoints are scoped to an owned video:
 - `GET /videos/{video_id}/collections/{collection_id}`.
 - `POST /videos/{video_id}/collections/{collection_id}/clips`.
 - `POST /videos/{video_id}/collections/{collection_id}/clips/batch`.
+- `POST /videos/{video_id}/collections/{collection_id}/clips/{item_id}/export`.
 - `DELETE /videos/{video_id}/collections/{collection_id}/clips/{item_id}`.
 
-The API service maps backend snake_case payloads to frontend camelCase types. The backend generates each `storage_key`; the client provides `filename` and an already available `cloudflare_url`.
+The API service maps backend snake_case payloads to frontend camelCase types. Collection items are virtual ranges containing `id`, `start_ms`, `end_ms`, and `position`; they no longer contain per-clip file metadata.
 
 Current limits:
 
-- The endpoints persist collection and item metadata; they do not generate a clip from a time range.
-- The frontend has no upload flow for generated clip files.
+- Range duration is limited to 30 seconds and validated against `video.duration_ms` when known.
+- Playback uses the original video URL plus the item's temporal range.
+- Export synchronously generates or reuses a physical clip and returns `download_url`.
 - Collection update/delete and item update/reorder endpoints do not exist.
-- Manual-analysis `label`, `startSecond`, and `endSecond` values are not part of this contract.
+- Manual-analysis labels are not part of this contract.
 
 ## Known Standalone Helper
 

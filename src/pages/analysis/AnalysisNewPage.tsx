@@ -14,11 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { analysisService, playerService, teamService, videoService } from '@/services/registry'
+import { analysisService, clipCollectionService, playerService, teamService, videoService } from '@/services/registry'
 import type { ManualAnalysisClip, Player, Team } from '@/types'
 import { ClipTimeline } from './ClipTimeline'
 
 const DEFAULT_LABELS = ['Pick and Roll', 'Transición', 'Defensa', 'Tiro exterior']
+const MAX_CLIP_DURATION_SECONDS = 30
 
 function formatSeconds(value: number): string {
   const minutes = Math.floor(value / 60)
@@ -159,6 +160,11 @@ export function AnalysisNewPage() {
       return
     }
 
+    if (end - start > MAX_CLIP_DURATION_SECONDS) {
+      toast.error('Cada clip puede durar como máximo 30 segundos')
+      return
+    }
+
     setClips((current) => [
       ...current,
       {
@@ -213,12 +219,26 @@ export function AnalysisNewPage() {
         title: name.trim(),
         teamId,
         description: selectedRivalTeam?.name,
+        durationMs: Math.round(duration * 1000),
         file,
       })
+      const collection = await clipCollectionService.create(uploadedVideo.id, {
+        name: name.trim(),
+        description: `Clips creados desde el análisis ${name.trim()}`,
+      })
+      await clipCollectionService.addClips(
+        uploadedVideo.id,
+        collection.id,
+        clips.map((clip) => ({
+          startMs: Math.round(clip.startSecond * 1000),
+          endMs: Math.round(clip.endSecond * 1000),
+        })),
+      )
       preservedVideoUrlRef.current = videoUrl
       const session = await analysisService.saveManualAnalysis({
         name: name.trim(),
         video: { ...uploadedVideo, storageUrl: videoUrl || uploadedVideo.storageUrl },
+        clipCollectionId: collection.id,
         team: selectedTeam,
         rivalTeam: selectedRivalTeam,
         teamId: selectedTeam.id,
@@ -227,7 +247,7 @@ export function AnalysisNewPage() {
         clips,
       })
 
-      toast.success('Análisis guardado para demo')
+      toast.success(`Análisis y ${clips.length} clips guardados`)
       navigate(`/analisis/${session.id}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el análisis')
@@ -394,6 +414,7 @@ export function AnalysisNewPage() {
               currentTime={currentTime}
               rangeStart={Number.isFinite(previewStart) ? previewStart : 0}
               rangeEnd={Number.isFinite(previewEnd) ? previewEnd : 0}
+              maxRangeSeconds={MAX_CLIP_DURATION_SECONDS}
               onSeek={seekVideo}
               onRangeChange={updateClipRange}
             />

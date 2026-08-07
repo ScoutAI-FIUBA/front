@@ -4,6 +4,7 @@ export interface UploadVideoDto {
   teamId: string
   title: string
   description?: string
+  durationMs?: number
   file: File
 }
 

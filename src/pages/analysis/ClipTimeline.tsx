@@ -12,6 +12,7 @@ interface ClipTimelineProps {
   currentTime: number
   rangeStart: number
   rangeEnd: number
+  maxRangeSeconds?: number
   onSeek: (time: number) => void
   onRangeChange: (start: number, end: number) => void
 }
@@ -43,6 +44,7 @@ export function ClipTimeline({
   currentTime,
   rangeStart,
   rangeEnd,
+  maxRangeSeconds,
   onSeek,
   onRangeChange,
 }: ClipTimelineProps) {
@@ -133,10 +135,12 @@ export function ClipTimeline({
 
   const updateEdge = (edge: RangeEdge, nextTime: number) => {
     if (edge === 'start') {
-      onRangeChange(clamp(nextTime, 0, Math.max(0, rangeEnd - MIN_RANGE_SECONDS)), rangeEnd)
+      const minimumStart = maxRangeSeconds == null ? 0 : Math.max(0, rangeEnd - maxRangeSeconds)
+      onRangeChange(clamp(nextTime, minimumStart, Math.max(0, rangeEnd - MIN_RANGE_SECONDS)), rangeEnd)
       return
     }
-    onRangeChange(rangeStart, clamp(nextTime, Math.min(duration, rangeStart + MIN_RANGE_SECONDS), duration))
+    const maximumEnd = maxRangeSeconds == null ? duration : Math.min(duration, rangeStart + maxRangeSeconds)
+    onRangeChange(rangeStart, clamp(nextTime, Math.min(duration, rangeStart + MIN_RANGE_SECONDS), maximumEnd))
   }
 
   const handleTrackPointerDown = (event: PointerEvent<HTMLDivElement>) => {
