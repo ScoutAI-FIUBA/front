@@ -123,11 +123,10 @@ export function PlayerNewPage() {
             <div>
               <Label>Fecha de nacimiento</Label>
               <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1" />
+              {age !== null && (
+                <p className="mt-1 text-xs text-muted-foreground">{age} años</p>
+              )}
             </div>
-          </div>
-          <div>
-            <Label>Edad</Label>
-            <Input value={age ?? ''} readOnly placeholder="Ej. 24" className="mt-1 bg-muted" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
