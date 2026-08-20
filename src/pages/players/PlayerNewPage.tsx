@@ -15,9 +15,8 @@ import {
 import { playerService, teamService } from '@/services/registry'
 import type { PositionCode, Team } from '@/types'
 import { calcAge } from '@/lib/utils'
+import { POSITIONS } from '@/lib/positions'
 import { toast } from 'sonner'
-
-const POSITIONS: PositionCode[] = ['DEL', 'MC', 'MCD', 'DFC', 'MED', 'DEF', 'EXT', 'POR']
 
 export function PlayerNewPage() {
   const navigate = useNavigate()
@@ -110,7 +109,9 @@ export function PlayerNewPage() {
             <Select value={position} onValueChange={(v) => setPosition(v as PositionCode)}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
               <SelectContent>
-                {POSITIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {POSITIONS.map((p) => (
+                  <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -122,11 +123,10 @@ export function PlayerNewPage() {
             <div>
               <Label>Fecha de nacimiento</Label>
               <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1" />
+              {age !== null && (
+                <p className="mt-1 text-xs text-muted-foreground">{age} años</p>
+              )}
             </div>
-          </div>
-          <div>
-            <Label>Edad</Label>
-            <Input value={age ?? ''} readOnly placeholder="Ej. 24" className="mt-1 bg-muted" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
