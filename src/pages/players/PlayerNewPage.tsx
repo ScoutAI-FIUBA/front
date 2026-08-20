@@ -15,9 +15,8 @@ import {
 import { playerService, teamService } from '@/services/registry'
 import type { PositionCode, Team } from '@/types'
 import { calcAge } from '@/lib/utils'
+import { POSITIONS } from '@/lib/positions'
 import { toast } from 'sonner'
-
-const POSITIONS: PositionCode[] = ['DEL', 'MC', 'MCD', 'DFC', 'MED', 'DEF', 'EXT', 'POR']
 
 export function PlayerNewPage() {
   const navigate = useNavigate()
@@ -110,7 +109,9 @@ export function PlayerNewPage() {
             <Select value={position} onValueChange={(v) => setPosition(v as PositionCode)}>
               <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
               <SelectContent>
-                {POSITIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {POSITIONS.map((p) => (
+                  <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

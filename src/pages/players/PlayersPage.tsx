@@ -28,7 +28,7 @@ interface PlayerRow extends Player {
   teamName: string | null
 }
 
-const POSITIONS: Player['primaryPosition'][] = ['DEL', 'MC', 'MCD', 'DFC', 'MED', 'DEF', 'EXT', 'POR']
+import { POSITIONS, positionLabel } from '@/lib/positions'
 
 export function PlayersPage() {
   const [rows, setRows] = useState<PlayerRow[]>([])
@@ -170,7 +170,7 @@ export function PlayersPage() {
                     {p.firstName} {p.lastName}
                   </div>
                 </td>
-                <td className="p-4"><Badge variant="position">{p.primaryPosition}</Badge></td>
+                <td className="p-4"><Badge variant="position">{positionLabel(p.primaryPosition)}</Badge></td>
                 <td className="p-4">{calcAge(p.birthDate)}</td>
                 <td className="p-4">#{p.jerseyNumber ?? '—'}</td>
                 <td className="p-4 text-muted-foreground">{p.teamName ?? '—'}</td>
@@ -215,7 +215,7 @@ export function PlayersPage() {
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
                 <SelectContent>
                   {POSITIONS.map((position) => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
+                    <SelectItem key={position.code} value={position.code}>{position.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

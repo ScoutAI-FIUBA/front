@@ -19,15 +19,7 @@ export interface RegisterDto {
   password: string
 }
 
-export type PositionCode =
-  | 'DEL'
-  | 'MC'
-  | 'MCD'
-  | 'DFC'
-  | 'MED'
-  | 'DEF'
-  | 'EXT'
-  | 'POR'
+export type PositionCode = 'PG' | 'SG' | 'SF' | 'PF' | 'C'
 
 export interface Team {
   id: string
