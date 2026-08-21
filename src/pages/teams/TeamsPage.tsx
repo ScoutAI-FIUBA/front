@@ -40,6 +40,7 @@ export function TeamsPage() {
   const [editCity, setEditCity] = useState('')
   const [editCountry, setEditCountry] = useState('')
   const [newName, setNewName] = useState('')
+  const [newCity, setNewCity] = useState('')
 
   const load = async () => {
     const list = await teamService.list()
@@ -58,17 +59,27 @@ export function TeamsPage() {
   const totalPlayers = Object.values(counts).reduce((a, b) => a + b, 0)
 
   const handleCreate = async () => {
-    if (!newName.trim()) return
-    await teamService.create({
-      name: newName,
-      shortName: newName.slice(0, 3).toUpperCase(),
-      city: '—',
-      country: 'Argentina',
-    })
-    setNewName('')
-    setCreateOpen(false)
-    toast.success('Equipo creado')
-    void load()
+    const name = newName.trim()
+    const city = newCity.trim()
+    if (!name || !city) {
+      toast.error('Completá el nombre y la ciudad del equipo')
+      return
+    }
+    try {
+      await teamService.create({
+        name,
+        shortName: name.slice(0, 3).toUpperCase(),
+        city,
+        country: 'Argentina',
+      })
+      setNewName('')
+      setNewCity('')
+      setCreateOpen(false)
+      toast.success('Equipo creado')
+      void load()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo crear el equipo')
+    }
   }
 
   const openEdit = (team: Team) => {
@@ -154,13 +165,17 @@ export function TeamsPage() {
             <DialogHeader>
               <DialogTitle>Crear equipo</DialogTitle>
               <DialogDescription>
-                Ingresá el nombre del equipo. El resto de los datos se completa automáticamente.
+                Ingresá el nombre y la ciudad para identificar el equipo.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label>Nombre del equipo</Label>
                 <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Olympia FC" className="mt-1" />
+              </div>
+              <div>
+                <Label>Ciudad</Label>
+                <Input value={newCity} onChange={(e) => setNewCity(e.target.value)} placeholder="Ej. Buenos Aires" className="mt-1" />
               </div>
               <Button onClick={() => void handleCreate()} className="w-full">Guardar</Button>
             </div>
