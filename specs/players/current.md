@@ -28,6 +28,7 @@ Current behavior documentation.
 - List can be filtered by player name and team.
 - The page displays player name, position, age, jersey number, team name, and actions.
 - Edit dialog allows updating first name, last name, birth date, position, jersey number, height, and weight.
+- Jersey number is optional text of one or two digits: inputs strip non-digits, and `0` and `00` are distinct values.
 - Delete action uses browser confirmation before calling the service.
 - Create player page loads teams for optional association.
 - Create player page calculates age from birth date for display.

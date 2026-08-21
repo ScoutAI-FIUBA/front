@@ -45,7 +45,7 @@ export interface Player {
   primaryPosition: PositionCode
   createdAt: string
   teamId?: string | null
-  jerseyNumber?: number
+  jerseyNumber?: string
   photoUrl?: string
   status?: PlayerStatus
 }
@@ -206,7 +206,7 @@ export interface AnalysisDetail {
   detectedPlayers: Array<{
     playerId: string
     name: string
-    jerseyNumber: number
+    jerseyNumber: string
     position: string
     heatmapPercent: number
   }>

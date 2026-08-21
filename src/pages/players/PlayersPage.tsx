@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { playerService, teamService } from '@/services/registry'
 import type { Player, Team } from '@/types'
-import { calcAge, getInitials } from '@/lib/utils'
+import { calcAge, getInitials, toJerseyNumber } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface PlayerRow extends Player {
@@ -66,7 +66,7 @@ export function PlayersPage() {
     setEditFirstName(player.firstName)
     setEditLastName(player.lastName)
     setEditPosition(player.primaryPosition)
-    setEditJersey(player.jerseyNumber ? String(player.jerseyNumber) : '')
+    setEditJersey(player.jerseyNumber ?? '')
     setEditBirthDate(player.birthDate)
     setEditHeightCm(player.heightCm ? String(player.heightCm) : '')
     setEditWeightKg(player.weightKg ? String(player.weightKg) : '')
@@ -90,7 +90,7 @@ export function PlayersPage() {
         lastName: editLastName,
         birthDate: editBirthDate,
         primaryPosition: editPosition,
-        jerseyNumber: editJersey ? Number(editJersey) : undefined,
+        jerseyNumber: editJersey || undefined,
         heightCm: height,
         weightKg: weight,
       })
@@ -223,7 +223,7 @@ export function PlayersPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Dorsal</label>
-                <Input type="number" value={editJersey} onChange={(e) => setEditJersey(e.target.value)} className="mt-1" />
+                <Input inputMode="numeric" maxLength={2} value={editJersey} onChange={(e) => setEditJersey(toJerseyNumber(e.target.value))} className="mt-1" />
               </div>
               <div>
                 <label className="text-sm font-medium">Fecha de nacimiento</label>

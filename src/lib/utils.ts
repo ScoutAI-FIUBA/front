@@ -18,6 +18,10 @@ export function calcAge(birthDate: string): number {
   return age
 }
 
+export function toJerseyNumber(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, 2)
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-AR', {
     day: '2-digit',

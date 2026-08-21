@@ -36,7 +36,7 @@ function buildDetail(sessionId: string): AnalysisDetail | null {
     .map((p) => ({
       playerId: p.id,
       name: `${p.firstName.charAt(0)}. ${p.lastName}`,
-      jerseyNumber: p.jerseyNumber ?? 0,
+      jerseyNumber: p.jerseyNumber ?? '',
       position: p.primaryPosition,
       heatmapPercent: Math.floor(Math.random() * 40) + 30,
     }))
