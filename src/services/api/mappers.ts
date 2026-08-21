@@ -24,6 +24,7 @@ export interface ApiPlayer {
   height_cm: number
   weight_kg: number
   primary_position: string
+  jersey_number?: string | null
   team_id?: string | null
 }
 
@@ -83,6 +84,7 @@ export function mapApiPlayer(player: ApiPlayer): Player {
     heightCm: player.height_cm,
     weightKg: player.weight_kg,
     primaryPosition: player.primary_position as Player['primaryPosition'],
+    jerseyNumber: player.jersey_number ?? undefined,
     teamId: player.team_id ?? null,
     createdAt: new Date().toISOString(),
     status: 'active',
@@ -108,6 +110,7 @@ export function toPlayerPayload(dto: {
   lastName: string
   birthDate: string
   primaryPosition: string
+  jerseyNumber?: string
   heightCm?: number
   weightKg?: number
 }) {
@@ -118,5 +121,6 @@ export function toPlayerPayload(dto: {
     height_cm: dto.heightCm ?? 180,
     weight_kg: dto.weightKg ?? 75,
     primary_position: dto.primaryPosition,
+    jersey_number: dto.jerseyNumber ?? null,
   }
 }

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select'
 import { playerService, teamService } from '@/services/registry'
 import type { PositionCode, Team } from '@/types'
-import { calcAge } from '@/lib/utils'
+import { calcAge, toJerseyNumber } from '@/lib/utils'
 import { POSITIONS } from '@/lib/positions'
 import { toast } from 'sonner'
 
@@ -53,7 +53,7 @@ export function PlayerNewPage() {
         primaryPosition: position,
         heightCm: height,
         weightKg: weight,
-        jerseyNumber: jersey ? Number(jersey) : undefined,
+        jerseyNumber: jersey || undefined,
         teamId: teamId || undefined,
       })
       toast.success('Jugador guardado')
@@ -118,7 +118,7 @@ export function PlayerNewPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label>Dorsal</Label>
-              <Input type="number" value={jersey} onChange={(e) => setJersey(e.target.value)} placeholder="Ej. 10" className="mt-1" />
+              <Input inputMode="numeric" maxLength={2} value={jersey} onChange={(e) => setJersey(toJerseyNumber(e.target.value))} placeholder="Ej. 10" className="mt-1" />
             </div>
             <div>
               <Label>Fecha de nacimiento</Label>

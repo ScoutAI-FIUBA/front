@@ -5,7 +5,7 @@ export interface CreatePlayerDto {
   lastName: string
   birthDate: string
   primaryPosition: Player['primaryPosition']
-  jerseyNumber?: number
+  jerseyNumber?: string
   heightCm?: number
   weightKg?: number
   teamId?: string
@@ -16,7 +16,7 @@ export interface UpdatePlayerDto {
   lastName: string
   birthDate: string
   primaryPosition: Player['primaryPosition']
-  jerseyNumber?: number
+  jerseyNumber?: string
   heightCm?: number
   weightKg?: number
 }
