@@ -2,7 +2,7 @@
 
 ## Status
 
-Current behavior documentation.
+Implemented behavior through Phase 6C Setup redesign.
 
 ## Routes
 
@@ -14,6 +14,7 @@ Current behavior documentation.
 
 - `src/pages/analysis/AnalysisPage.tsx`
 - `src/pages/analysis/AnalysisNewPage.tsx`
+- `src/pages/analysis/AnalysisSetup.tsx`
 - `src/pages/analysis/AnalysisDetailPage.tsx`
 - `src/services/registry.ts`
 - `src/services/contracts/analysis.service.ts`
@@ -29,13 +30,32 @@ Current behavior documentation.
 - Analysis list loads sessions through `analysisService.listSessions()`.
 - Analysis list exposes a `Nuevo análisis` action.
 - Each session displays session code, status, progress, frame count, and a detail link.
-- New analysis page creates a local demo analysis around one uploaded video.
-- New analysis page collects analysis name, required local team, optional visitor team, related players, and one video file.
-- New analysis page presents those setup controls in one compact configuration rail on desktop rather than as a sequential form.
-- On narrow screens, the same configuration rail stacks its controls inside one divided surface.
-- Player selection opens from a compact control with the current selected-player count.
+- New analysis uses progressive disclosure inside the existing `/analisis/nuevo` route.
+- Setup first asks which material the user wants to analyze and offers an existing video or a new local file.
+- The workspace, timeline, clip editor, roster, and `Guardar análisis` action are not rendered during Setup.
+- Existing videos are not considered ready until `videoService.getById()` resolves a usable playback URL and the browser can read its media metadata.
+- Failed existing-video hydration remains an explicit recoverable Setup error and never enters the workspace.
+- Existing videos infer their associated team and suggest their video title as the analysis title.
+- New files display their filename, human-readable size, and validation state before exposing the required team selection.
+- New-file validation requires a non-empty video file whose media metadata can be read; no arbitrary size limit is invented.
+- Players and roster are not requested during Setup.
+- Rival, date, context, and analysis-title editing remain optional after the material is selected.
+- Date and free-form context remain local to the active flow because current persistence contracts do not represent them.
+- When no teams exist, Setup opens a small inline create-team dialog and returns to the same selected material after creation.
+- Team creation uses the existing service contract and the same inferred short name/default country behavior as the current Teams page.
+- A new file is uploaded through `videoService.upload()` before the workspace is shown.
+- Uploading is represented as indeterminate activity without fabricated percentage or ETA.
+- Upload failure preserves file, team, and optional context and exposes a retry action.
+- After a successful upload, Setup clearly states that the video exists in Videos while the analysis is not yet saved.
+- Ready Setup shows the prepared video, inferred team/title, optional context, and `Empezar análisis`.
+- Entering the workspace preserves the prepared Setup model and local playback URL.
+- Workspace exposes `Editar preparación`; returning to Setup does not re-upload a prepared video.
+- When clips already exist, Setup keeps the prepared material locked while allowing title and optional context edits.
+- The existing workspace monitor, timeline, clip editor, and library retain their previous composition.
+- `Guardar análisis` is visible only inside the workspace.
 - The video player and timeline are the dominant workspace surface, with clip creation and organization in a dedicated tool panel.
 - Draft/local persistence status is displayed in the workspace header.
+- For a newly uploaded video, the workspace distinguishes `video subido` from `análisis sin guardar`.
 - New analysis page previews the selected video locally before upload.
 - New analysis page supports selecting a video through the file picker or by dragging a video file onto the upload area.
 - New analysis page lets the user stage manual clips by selecting a visual range on a single-track video timeline and assigning a label.
@@ -49,9 +69,12 @@ Current behavior documentation.
 - Staged clips can be clicked to seek the video to the clip start; playback pauses when it reaches the clip end when autoplay succeeds.
 - Manual clips remain local to the page until `Guardar análisis` is pressed.
 - Manual clip ranges are limited to 30 seconds so they satisfy the persisted clip contract.
-- `Guardar análisis` uploads the video with its known duration, creates a collection named after the analysis, and persists all clip ranges atomically through `clipCollectionService.addClips()`.
+- Setup uploads a new video once before workspace entry; `Guardar análisis` does not upload it again.
+- For an existing video, the workspace reuses that video without an upload.
+- `Guardar análisis` creates a collection on the prepared video and persists all clip ranges atomically through `clipCollectionService.addClips()`.
 - Manual labels remain in the analysis model because collection items only persist range and position data.
 - After collection persistence, `Guardar análisis` calls mock `analysisService.saveManualAnalysis()` so the existing analysis detail keeps its labels and detected-event demo data.
+- Setup currently supplies an empty player association while retaining the `playerIds` boundary for future workspace player tooling.
 - Saved manual analysis stores the generated collection id and links to the persisted collection detail.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
 - The mock save stores snapshots of the selected local and visitor teams before creating the synthetic match, so detail rendering works when teams came from the backend service instead of the mock store.
@@ -75,10 +98,16 @@ Current behavior documentation.
 - There is no real backend analysis API wired in the registry.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
 - Manual-analysis labels are not persisted on backend collection items.
+- Setup date/free-form context is not persisted because the current contracts have no Partido persistence fields.
+- Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
 - Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
 
 ## Verification
 
 - Run `npm run build`.
 - Run `npm run lint`.
+- Inspect Setup and workspace at desktop and approximately 390px widths.
+- Verify existing-video hydration failure cannot enter the workspace.
+- Verify new-file validation, no-team creation, indeterminate upload, retry, ready, and edit-Setup flows.
+- Verify clips survive context editing and lock material changes once clip work exists.
 - Manually verify analysis list and detail loading with mock data.

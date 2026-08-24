@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented foundation for the in-progress ScoutAI frontend.
+Implemented Phase 6A foundation.
 
 ## Area
 
@@ -20,23 +20,29 @@ Application shell, responsive navigation, and shared visual primitives.
 
 ## Goal
 
-Provide a responsive, polished base that can support ongoing backend integration without prematurely redesigning unstable product flows.
+Provide a neutral, task-oriented visual foundation that can support ongoing backend integration and a future scoped dark analysis workspace without prematurely redesigning existing feature flows.
 
 ## Scope
 
 - Responsive desktop/mobile application shell.
 - Mobile navigation drawer and backdrop.
-- Improved brand block, active navigation, page container, and user footer.
-- Shared visual treatments for core UI primitives.
-- Background, typography fallback, focus, and selection polish.
+- Task-oriented navigation groups and labels without changing routes.
+- Global `Empezar análisis` action and removal of the nonfunctional global search.
+- A single CSS-variable token source for neutral surfaces, brand actions, and semantic states.
+- Existing/system typography using `Segoe UI Variable`, `system-ui`, and `sans-serif`.
+- Shared visual treatments for buttons, cards, inputs, selects, dialogs, and badges.
+- Shared `PageHeader`, `EmptyState`, and `StatusIndicator` components.
+- Mobile/tablet/desktop page padding of 16/24/32 pixels.
+- A normal content width around 1280 pixels while preserving the existing wide canvas for untouched data-heavy pages and the analysis workspace.
 
 ## Non-Scope
 
-- Dashboard information architecture redesign.
 - Analysis workspace redesign.
 - New charts, imagery, or dependencies.
 - Backend, API, mock, or domain behavior changes.
 - Implementing search, configuration, or help features.
+- Applying the new page composition to Equipos, Jugadores, Videos, Partidos, Analysis Setup, Analysis Review, or Workspace.
+- Scoped workspace-theme activation; workspace tokens can be introduced when the workspace is redesigned.
 
 ## Routes
 
@@ -45,12 +51,17 @@ Provide a responsive, polished base that can support ongoing backend integration
 ## Files Involved
 
 - `src/components/layout/AppShell.tsx`
+- `src/components/ui/page-header.tsx`
+- `src/components/ui/empty-state.tsx`
+- `src/components/ui/status-indicator.tsx`
 - `src/components/ui/button.tsx`
 - `src/components/ui/card.tsx`
 - `src/components/ui/dialog.tsx`
 - `src/components/ui/input.tsx`
 - `src/components/ui/select.tsx`
+- `src/components/ui/badge.tsx`
 - `src/index.css`
+- `tailwind.config.js`
 
 ## Services And Data
 
@@ -64,7 +75,13 @@ Provide a responsive, polished base that can support ongoing backend integration
 - Mobile navigation is accessible from the header and does not reduce content width.
 - Active navigation remains visually identifiable.
 - Logout remains available on desktop and mobile.
-- Shared form controls no longer resemble disabled/error fields by default.
+- Visible navigation uses Inicio, Análisis, Partidos, Videos, Equipos, and Jugadores grouped by user task.
+- Creation and detail routes keep their parent navigation item active.
+- The shell has no nonfunctional search control.
+- The global creation action reads `Empezar análisis` and routes to `/analisis/nuevo`.
+- Tailwind color utilities use CSS-variable tokens rather than independent hardcoded brand values.
+- Compatibility aliases keep untouched pages functional and visually coherent during the phased migration.
+- Shared form controls remain clearly interactive and do not resemble disabled/error fields by default.
 - Existing feature routes and actions continue working.
 
 ## Verification
@@ -76,5 +93,6 @@ Provide a responsive, polished base that can support ongoing backend integration
 
 ## Risks Or Notes
 
+- The token migration intentionally changes the brand action color, but compatibility aliases minimize regressions in untouched pages.
 - Feature-specific layouts may still need later responsive refinements.
-- This phase intentionally preserves the existing burgundy identity and page-level designs.
+- The wide outer canvas remains available so this phase does not indirectly redesign the analysis workspace or data-heavy pages.
