@@ -4,25 +4,39 @@
 
 @layer base {
   :root {
-    --background: 30 18% 97%;
-    --foreground: 225 18% 14%;
-    --card: 0 0% 100%;
-    --card-foreground: 340 15% 15%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 340 15% 15%;
-    --primary: 340 24% 36%;
+    --background: 220 18% 97%;
+    --foreground: 217 25% 11%;
+    --surface: 0 0% 100%;
+    --surface-elevated: 0 0% 100%;
+    --surface-subtle: 216 26% 95%;
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface-elevated);
+    --popover-foreground: var(--foreground);
+    --border: 216 26% 88%;
+    --border-strong: 215 16% 75%;
+    --input: var(--border);
+    --primary: 221 83% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 350 12% 83%;
-    --secondary-foreground: 340 20% 20%;
-    --muted: 350 20% 96%;
-    --muted-foreground: 225 7% 43%;
-    --accent: 350 60% 97%;
-    --accent-foreground: 340 24% 36%;
-    --destructive: 0 72% 51%;
+    --primary-hover: 224 76% 40%;
+    --primary-subtle: 219 100% 96%;
+    --muted: var(--surface-subtle);
+    --muted-foreground: 216 11% 47%;
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 35%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 350 15% 90%;
-    --input: 350 15% 90%;
-    --ring: 340 24% 36%;
+    --information: 204 80% 34%;
+    --information-foreground: 0 0% 100%;
+    --ring: var(--primary);
+
+    /* Compatibility aliases for screens that have not migrated yet. */
+    --secondary: var(--surface-subtle);
+    --secondary-foreground: var(--foreground);
+    --accent: var(--primary-subtle);
+    --accent-foreground: var(--primary);
     --radius: 0.5rem;
   }
 
@@ -32,7 +46,7 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: "Segoe UI Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: "Segoe UI Variable", system-ui, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 

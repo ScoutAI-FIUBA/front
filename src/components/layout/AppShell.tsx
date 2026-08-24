@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
-  LayoutDashboard,
+  CalendarDays,
+  House,
   LogOut,
   Menu,
   Plus,
-  Search,
   ShieldCheck,
   UserCheck,
   Users,
@@ -14,18 +14,35 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/equipos', label: 'Mis equipos', icon: Users },
-  { to: '/jugadores', label: 'Mis jugadores', icon: UserCheck },
-  { to: '/partidos', label: 'Partidos', icon: Users },
-  { to: '/videos', label: 'Videos', icon: Video },
-  { to: '/analisis', label: 'Análisis', icon: BarChart3 },
+const navGroups = [
+  {
+    label: null,
+    items: [{ to: '/dashboard', label: 'Inicio', icon: House }],
+  },
+  {
+    label: 'Trabajo',
+    items: [
+      { to: '/analisis', label: 'Análisis', icon: BarChart3 },
+      { to: '/partidos', label: 'Partidos', icon: CalendarDays },
+    ],
+  },
+  {
+    label: 'Material',
+    items: [{ to: '/videos', label: 'Videos', icon: Video }],
+  },
+  {
+    label: 'Scouting',
+    items: [
+      { to: '/equipos', label: 'Equipos', icon: Users },
+      { to: '/jugadores', label: 'Jugadores', icon: UserCheck },
+    ],
+  },
 ]
+
+const navItems = navGroups.flatMap((group) => group.items)
 
 export function AppShell() {
   const { pathname } = useLocation()
@@ -59,13 +76,13 @@ export function AppShell() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-white shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none',
+          'fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-surface shadow-xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         <div className="flex h-16 items-center justify-between border-b px-5">
           <Link to="/dashboard" className="flex items-center gap-3" onClick={() => setSidebarOpen(false)}>
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-sm font-bold text-white shadow-sm">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
               S
             </span>
             <span>
@@ -85,32 +102,7 @@ export function AppShell() {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          <p className="px-3 pb-2 pt-3 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-            Navegación
-          </p>
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const active = pathname === to || pathname.startsWith(`${to}/`)
-            return (
-              <Link
-                key={to}
-                to={to}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                  active
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                )}
-              >
-                <Icon className={cn('h-4 w-4', !active && 'text-muted-foreground group-hover:text-primary')} />
-                {label}
-              </Link>
-            )
-          })}
-        </nav>
-
-        <div className="space-y-3 border-t p-3">
+        <div className="px-3 pt-3">
           <Button
             className="w-full"
             onClick={() => {
@@ -118,8 +110,50 @@ export function AppShell() {
               navigate('/analisis/nuevo')
             }}
           >
-            <Plus className="h-4 w-4" /> Nuevo análisis
+            <Plus className="h-4 w-4" /> Empezar análisis
           </Button>
+        </div>
+
+        <nav className="flex-1 space-y-5 overflow-y-auto p-3 pt-5">
+          {navGroups.map((group, groupIndex) => (
+            <div key={group.label ?? 'inicio'}>
+              {group.label && (
+                <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-1">
+                {group.items.map(({ to, label, icon: Icon }) => {
+                  const active = pathname === to || pathname.startsWith(`${to}/`)
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-primary-subtle text-primary'
+                          : 'text-muted-foreground hover:bg-surface-subtle hover:text-foreground',
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          'h-4 w-4',
+                          active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                        )}
+                      />
+                      {label}
+                    </Link>
+                  )
+                })}
+              </div>
+              {groupIndex === 0 && <div className="mt-5 border-t" />}
+            </div>
+          ))}
+        </nav>
+
+        <div className="border-t p-3">
           <div className="flex items-center gap-3 rounded-xl border bg-background/70 p-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-primary">
               {userInitials}
@@ -134,7 +168,7 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => void handleLogout()}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white hover:text-primary"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-surface hover:text-primary"
               aria-label="Cerrar sesión"
             >
               <LogOut className="h-4 w-4" />
@@ -144,11 +178,11 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/95 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-surface/95 px-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              className="rounded-lg border bg-white p-2 text-muted-foreground shadow-sm hover:bg-accent hover:text-primary lg:hidden"
+              className="rounded-lg border bg-surface p-2 text-muted-foreground hover:bg-surface-subtle hover:text-primary lg:hidden"
               aria-label="Abrir menú"
               onClick={() => setSidebarOpen(true)}
             >
@@ -162,10 +196,6 @@ export function AppShell() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="w-72 bg-background/70 pl-9" placeholder="Buscar jugador o equipo..." />
-            </div>
             <button
               type="button"
               onClick={() => void handleLogout()}

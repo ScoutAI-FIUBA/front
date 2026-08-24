@@ -1,22 +1,16 @@
-import { type ChangeEvent, type DragEvent, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Film, Folder, Info, Plus, Save, Upload, Video, X } from 'lucide-react'
+import { Film, Folder, Info, Pencil, Plus, Save, Video, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { analysisService, clipCollectionService, playerService, teamService, videoService } from '@/services/registry'
-import type { ManualAnalysisClip, Player, Team } from '@/types'
+import { analysisService, clipCollectionService } from '@/services/registry'
+import type { ManualAnalysisClip } from '@/types'
 import { ClipTimeline } from './ClipTimeline'
+import { AnalysisSetup, type PreparedAnalysisSetup } from './AnalysisSetup'
 
 const DEFAULT_LABELS = ['Pick and Roll', 'Transición', 'Defensa', 'Tiro exterior']
 const MAX_CLIP_DURATION_SECONDS = 30
@@ -30,14 +24,9 @@ function formatSeconds(value: number): string {
 export function AnalysisNewPage() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const preservedVideoUrlRef = useRef('')
-  const [teams, setTeams] = useState<Team[]>([])
-  const [players, setPlayers] = useState<Player[]>([])
-  const [name, setName] = useState('')
-  const [teamId, setTeamId] = useState('')
-  const [rivalTeamId, setRivalTeamId] = useState('none')
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([])
-  const [file, setFile] = useState<File | null>(null)
+  const ownedVideoUrlRef = useRef('')
+  const [preparedSetup, setPreparedSetup] = useState<PreparedAnalysisSetup | null>(null)
+  const [editingSetup, setEditingSetup] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
@@ -46,66 +35,51 @@ export function AnalysisNewPage() {
   const [clipLabel, setClipLabel] = useState(DEFAULT_LABELS[0])
   const [clips, setClips] = useState<ManualAnalysisClip[]>([])
   const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
-  const [isDraggingVideo, setIsDraggingVideo] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    void Promise.all([teamService.list(), playerService.list()]).then(([teamData, playerData]) => {
-      setTeams(teamData)
-      setPlayers(playerData)
-    })
+    return () => {
+      if (ownedVideoUrlRef.current) URL.revokeObjectURL(ownedVideoUrlRef.current)
+    }
   }, [])
 
   useEffect(() => {
-    return () => {
-      if (videoUrl && preservedVideoUrlRef.current !== videoUrl) URL.revokeObjectURL(videoUrl)
-    }
+    setActiveClipEnd(null)
   }, [videoUrl])
 
   useEffect(() => {
-    setActiveClipEnd(null)
-  }, [videoUrl])
+    if (!preparedSetup?.uploadedDuringSetup) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [preparedSetup?.uploadedDuringSetup])
 
-  const selectVideoFile = (selectedFile: File) => {
-    if (!selectedFile) return
-    if (!selectedFile.type.startsWith('video/')) {
-      toast.error('Selecciona un archivo de video')
+  const handlePreparedSetup = (nextSetup: PreparedAnalysisSetup) => {
+    const materialChanged = preparedSetup?.video.id !== nextSetup.video.id
+    if (materialChanged && clips.length > 0) {
+      toast.error('El video no puede cambiarse porque ya hay clips marcados')
       return
     }
 
-    if (videoUrl) URL.revokeObjectURL(videoUrl)
-    preservedVideoUrlRef.current = ''
-    setActiveClipEnd(null)
-    setCurrentTime(0)
-    setDuration(0)
-    setClipStart('0')
-    setClipEnd('0')
-    setFile(selectedFile)
-    setVideoUrl(URL.createObjectURL(selectedFile))
-  }
-
-  const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = event.target.files?.[0]
-    if (selectedFile) selectVideoFile(selectedFile)
-  }
-
-  const handleVideoDrop = (event: DragEvent<HTMLLabelElement>) => {
-    event.preventDefault()
-    setIsDraggingVideo(false)
-    const selectedFile = Array.from(event.dataTransfer.files).find((item) => item.type.startsWith('video/'))
-    if (!selectedFile) {
-      toast.error('Arrastra un archivo de video')
-      return
+    if (materialChanged) {
+      if (ownedVideoUrlRef.current) URL.revokeObjectURL(ownedVideoUrlRef.current)
+      ownedVideoUrlRef.current = nextSetup.playbackUrl.startsWith('blob:')
+        ? nextSetup.playbackUrl
+        : ''
+      setVideoUrl(nextSetup.playbackUrl)
+      setDuration(nextSetup.durationSeconds)
+      setCurrentTime(0)
+      setClipStart('0')
+      setClipEnd(String(Math.round(Math.min(10, nextSetup.durationSeconds) * 10) / 10))
+      setActiveClipEnd(null)
+      setClips([])
     }
-    selectVideoFile(selectedFile)
-  }
 
-  const togglePlayer = (playerId: string) => {
-    setSelectedPlayerIds((current) =>
-      current.includes(playerId)
-        ? current.filter((id) => id !== playerId)
-        : [...current, playerId],
-    )
+    setPreparedSetup(nextSetup)
+    setEditingSetup(false)
   }
 
   const applyCurrentTime = (setter: (value: string) => void) => {
@@ -198,13 +172,8 @@ export function AnalysisNewPage() {
   }
 
   const saveAnalysis = async () => {
-    const selectedTeam = teams.find((team) => team.id === teamId)
-    const selectedRivalTeam = rivalTeamId === 'none'
-      ? undefined
-      : teams.find((team) => team.id === rivalTeamId)
-
-    if (!name.trim() || !selectedTeam || !file) {
-      toast.error('Completa nombre, equipo local y video')
+    if (!preparedSetup) {
+      toast.error('Prepará el material antes de guardar el análisis')
       return
     }
 
@@ -215,38 +184,37 @@ export function AnalysisNewPage() {
 
     try {
       setSaving(true)
-      const uploadedVideo = await videoService.upload({
-        title: name.trim(),
-        teamId,
-        description: selectedRivalTeam?.name,
-        durationMs: Math.round(duration * 1000),
-        file,
-      })
-      const collection = await clipCollectionService.create(uploadedVideo.id, {
-        name: name.trim(),
-        description: `Clips creados desde el análisis ${name.trim()}`,
+      const collection = await clipCollectionService.create(preparedSetup.video.id, {
+        name: preparedSetup.analysisName,
+        description: `Clips creados desde el análisis ${preparedSetup.analysisName}`,
       })
       await clipCollectionService.addClips(
-        uploadedVideo.id,
+        preparedSetup.video.id,
         collection.id,
         clips.map((clip) => ({
           startMs: Math.round(clip.startSecond * 1000),
           endMs: Math.round(clip.endSecond * 1000),
         })),
       )
-      preservedVideoUrlRef.current = videoUrl
+      // Setup intentionally defers player association while preserving the
+      // existing contract boundary for future workspace player tooling.
+      const relatedPlayerIds: string[] = []
       const session = await analysisService.saveManualAnalysis({
-        name: name.trim(),
-        video: { ...uploadedVideo, storageUrl: videoUrl || uploadedVideo.storageUrl },
+        name: preparedSetup.analysisName,
+        video: { ...preparedSetup.video, storageUrl: videoUrl || preparedSetup.video.storageUrl },
         clipCollectionId: collection.id,
-        team: selectedTeam,
-        rivalTeam: selectedRivalTeam,
-        teamId: selectedTeam.id,
-        rivalTeamId: selectedRivalTeam?.id,
-        playerIds: selectedPlayerIds,
+        team: preparedSetup.team,
+        rivalTeam: preparedSetup.rivalTeam,
+        teamId: preparedSetup.team.id,
+        rivalTeamId: preparedSetup.rivalTeam?.id,
+        playerIds: relatedPlayerIds,
         clips,
       })
 
+      // The mock persistence layer keeps the local blob URL as the playable
+      // source for this browser session. Transfer its lifetime to the saved
+      // analysis detail instead of revoking it as this page unmounts.
+      if (ownedVideoUrlRef.current === videoUrl) ownedVideoUrlRef.current = ''
       toast.success(`Análisis y ${clips.length} clips guardados`)
       navigate(`/analisis/${session.id}`)
     } catch (error) {
@@ -260,114 +228,44 @@ export function AnalysisNewPage() {
     groups[clip.label] = [...(groups[clip.label] ?? []), clip]
     return groups
   }, {})
-
-  const relatedPlayers = selectedPlayerIds.length > 0
-    ? players.filter((player) => selectedPlayerIds.includes(player.id))
-    : []
-  const localPlayers = teamId ? players.filter((player) => player.teamId === teamId) : players
-  const visitorPlayers = rivalTeamId === 'none'
-    ? []
-    : players.filter((player) => player.teamId === rivalTeamId)
-  const shownLocalPlayers = teamId ? localPlayers : players
   const previewStart = Number(clipStart)
   const previewEnd = Number(clipEnd)
 
+  if (!preparedSetup || editingSetup) {
+    return (
+      <AnalysisSetup
+        initialValue={preparedSetup}
+        lockMaterial={clips.length > 0}
+        onStart={handlePreparedSetup}
+        onCancel={preparedSetup ? () => setEditingSetup(false) : undefined}
+      />
+    )
+  }
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase text-primary">Playground de análisis</p>
           <h1 className="text-2xl font-bold">Nuevo análisis</h1>
-          <p className="text-sm text-muted-foreground">Carga un video, marca clips y organízalos por etiquetas.</p>
+          <p className="text-sm text-muted-foreground">
+            {preparedSetup.analysisName} · {preparedSetup.team.name}
+          </p>
+          {preparedSetup.uploadedDuringSetup && (
+            <p className="mt-1 text-xs font-medium text-information">
+              El video ya fue subido. El análisis todavía no está guardado.
+            </p>
+          )}
         </div>
-        <Button onClick={() => void saveAnalysis()} disabled={saving}>
-          <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar análisis'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setEditingSetup(true)} disabled={saving}>
+            <Pencil className="h-4 w-4" /> Editar preparación
+          </Button>
+          <Button onClick={() => void saveAnalysis()} disabled={saving}>
+            <Save className="h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar análisis'}
+          </Button>
+        </div>
       </div>
-
-      <Card className="overflow-visible">
-        <CardContent className="p-0">
-          <div className="grid divide-y xl:grid-cols-[minmax(240px,1.6fr)_minmax(190px,1fr)_minmax(170px,.9fr)_minmax(170px,.9fr)_minmax(190px,1fr)] xl:divide-x xl:divide-y-0">
-            <div className="p-4">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Análisis</Label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej: vs River Plate - 15/05/2025" className="mt-2" />
-            </div>
-
-            <div className="p-4">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Fuente de video</Label>
-              <label
-                className={`mt-2 flex h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition ${isDraggingVideo ? 'border-primary bg-primary/10' : 'bg-white hover:border-primary/30 hover:bg-accent'}`}
-                onDragOver={(event) => {
-                  event.preventDefault()
-                  setIsDraggingVideo(true)
-                }}
-                onDragLeave={() => setIsDraggingVideo(false)}
-                onDrop={handleVideoDrop}
-              >
-                <Upload className="h-4 w-4 shrink-0 text-primary" />
-                <span className="min-w-0 truncate">{file ? file.name : 'Seleccionar archivo'}</span>
-                <input type="file" accept="video/*" className="hidden" onChange={handleFile} />
-              </label>
-            </div>
-
-            <div className="p-4">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Equipo local</Label>
-              <Select value={teamId} onValueChange={setTeamId}>
-                <SelectTrigger className="mt-2"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-
-            <div className="p-4">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Equipo visitante</Label>
-              <Select value={rivalTeamId} onValueChange={setRivalTeamId}>
-                <SelectTrigger className="mt-2"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin rival</SelectItem>
-                  {teams.filter((team) => team.id !== teamId).map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="relative p-4">
-              <Label className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Plantel relacionado</Label>
-              <details className="group mt-2">
-                <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-lg border bg-white px-3 text-sm font-medium shadow-sm transition hover:border-primary/30 hover:bg-accent">
-                  <span>Jugadores</span>
-                  <Badge variant="outline">{selectedPlayerIds.length}</Badge>
-                </summary>
-                <div className="absolute left-4 right-4 top-[76px] z-30 max-h-80 space-y-3 overflow-y-auto rounded-xl border bg-white p-3 text-sm shadow-xl xl:left-auto xl:w-72">
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground">Equipo local</p>
-                    {shownLocalPlayers.length === 0 && (
-                      <p className="text-xs text-muted-foreground">No hay jugadores para este equipo.</p>
-                    )}
-                    {shownLocalPlayers.map((player) => (
-                      <label key={player.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-                        <input type="checkbox" checked={selectedPlayerIds.includes(player.id)} onChange={() => togglePlayer(player.id)} />
-                        <span className="font-medium">{player.jerseyNumber ? `#${player.jerseyNumber}` : 'S/N'}</span>
-                        <span className="truncate">{player.firstName} {player.lastName}</span>
-                      </label>
-                    ))}
-                  </div>
-                  {visitorPlayers.length > 0 && (
-                    <div className="space-y-2 border-t pt-3">
-                      <p className="text-xs font-semibold text-muted-foreground">Equipo visitante</p>
-                      {visitorPlayers.map((player) => (
-                        <label key={player.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
-                          <input type="checkbox" checked={selectedPlayerIds.includes(player.id)} onChange={() => togglePlayer(player.id)} />
-                          <span className="font-medium">{player.jerseyNumber ? `#${player.jerseyNumber}` : 'S/N'}</span>
-                          <span className="truncate">{player.firstName} {player.lastName}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </details>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="overflow-hidden border-foreground/10">
@@ -375,7 +273,7 @@ export function AnalysisNewPage() {
             <div>
               <CardTitle className="text-sm">Monitor y línea de tiempo</CardTitle>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {file?.name ?? 'Sin fuente de video seleccionada'}
+                {preparedSetup.sourceFile?.name ?? preparedSetup.video.title}
               </p>
             </div>
             <Badge variant="outline" className="shrink-0 bg-background">
@@ -493,18 +391,6 @@ export function AnalysisNewPage() {
               ))}
             </div>
 
-            {relatedPlayers.length > 0 && (
-              <div className="space-y-2 rounded-lg bg-accent p-3 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">Jugadores vinculados</p>
-                <div className="flex flex-wrap gap-2">
-                  {relatedPlayers.map((player) => (
-                    <span key={player.id} className="rounded-full border bg-white px-2 py-1 text-foreground">
-                      {player.jerseyNumber ? `#${player.jerseyNumber} ` : ''}{player.firstName} {player.lastName}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

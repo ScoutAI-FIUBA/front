@@ -10,6 +10,7 @@ Specs document current behavior and proposed changes before implementation.
 - `matches/current.md`
 - `videos/current.md`
 - `analysis/current.md`
+- `dashboard/current.md`
 - `clip-collections/current.md`
 - `ui-foundation/current.md`
 

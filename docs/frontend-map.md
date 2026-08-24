@@ -36,7 +36,7 @@
 
 - `src/pages/auth/LoginPage.tsx`: login form and redirect after authentication.
 - `src/pages/auth/RegisterPage.tsx`: registration form and password validation.
-- `src/pages/dashboard/DashboardPage.tsx`: stats, activity, quick actions, latest players.
+- `src/pages/dashboard/DashboardPage.tsx`: state-aware Inicio with saved manual-analysis work.
 - `src/pages/teams/TeamsPage.tsx`: teams management and player linking.
 - `src/pages/players/PlayersPage.tsx`: players table, filters, edit/delete dialog flows.
 - `src/pages/players/PlayerNewPage.tsx`: create player form.
@@ -45,7 +45,8 @@
 - `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.
 - `src/pages/videos/VideoCollectionsPage.tsx`: collections list and create flow for one video.
 - `src/pages/videos/VideoCollectionDetailPage.tsx`: clip playback, metadata creation, and deletion.
-- `src/pages/analysis/AnalysisNewPage.tsx`: manual-analysis playground and local time-range clips.
+- `src/pages/analysis/AnalysisSetup.tsx`: progressive material selection, validation, upload, inline team creation, and ready state.
+- `src/pages/analysis/AnalysisNewPage.tsx`: Setup/workspace orchestration and local time-range clips.
 - `src/pages/analysis/AnalysisPage.tsx`: analysis sessions list.
 - `src/pages/analysis/AnalysisDetailPage.tsx`: analysis detail, video preview placeholder, events, detected players.
 
