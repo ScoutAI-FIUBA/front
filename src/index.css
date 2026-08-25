@@ -40,6 +40,35 @@
     --radius: 0.5rem;
   }
 
+  .analysis-workspace-theme {
+    --workspace-background: 222 28% 8%;
+    --workspace-surface: 222 24% 11%;
+    --workspace-surface-elevated: 221 22% 14%;
+    --workspace-surface-subtle: 219 18% 17%;
+    --workspace-border: 218 16% 24%;
+    --workspace-border-strong: 216 15% 34%;
+    --workspace-foreground: 210 20% 96%;
+    --workspace-muted-foreground: 215 13% 65%;
+
+    --background: var(--workspace-background);
+    --foreground: var(--workspace-foreground);
+    --surface: var(--workspace-surface);
+    --surface-elevated: var(--workspace-surface-elevated);
+    --surface-subtle: var(--workspace-surface-subtle);
+    --border: var(--workspace-border);
+    --border-strong: var(--workspace-border-strong);
+    --primary: 217 91% 60%;
+    --primary-hover: 217 91% 67%;
+    --primary-subtle: 218 42% 18%;
+    --muted-foreground: var(--workspace-muted-foreground);
+    --success: 142 70% 45%;
+    --warning: 38 92% 52%;
+    --destructive: 0 72% 58%;
+    --information: 199 89% 55%;
+    --ring: var(--primary);
+    color-scheme: dark;
+  }
+
   * {
     @apply border-border;
   }

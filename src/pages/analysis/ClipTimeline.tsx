@@ -10,8 +10,8 @@ interface ClipTimelineProps {
   videoUrl: string
   duration: number
   currentTime: number
-  rangeStart: number
-  rangeEnd: number
+  rangeStart: number | null
+  rangeEnd: number | null
   maxRangeSeconds?: number
   onSeek: (time: number) => void
   onRangeChange: (start: number, end: number) => void
@@ -134,6 +134,7 @@ export function ClipTimeline({
   }
 
   const updateEdge = (edge: RangeEdge, nextTime: number) => {
+    if (rangeStart == null || rangeEnd == null) return
     if (edge === 'start') {
       const minimumStart = maxRangeSeconds == null ? 0 : Math.max(0, rangeEnd - maxRangeSeconds)
       onRangeChange(clamp(nextTime, minimumStart, Math.max(0, rangeEnd - MIN_RANGE_SECONDS)), rangeEnd)
@@ -167,29 +168,34 @@ export function ClipTimeline({
   }
 
   const handleEdgeKeyDown = (event: KeyboardEvent<HTMLButtonElement>, edge: RangeEdge) => {
+    const value = edge === 'start' ? rangeStart : rangeEnd
+    if (value == null) return
     const step = event.shiftKey ? 5 : 1
     if (event.key === 'ArrowLeft') {
       event.preventDefault()
-      updateEdge(edge, (edge === 'start' ? rangeStart : rangeEnd) - step)
+      updateEdge(edge, value - step)
     }
     if (event.key === 'ArrowRight') {
       event.preventDefault()
-      updateEdge(edge, (edge === 'start' ? rangeStart : rangeEnd) + step)
+      updateEdge(edge, value + step)
     }
   }
 
-  const hasRange = duration > 0 && rangeEnd > rangeStart
-  const startPercent = duration > 0 ? clamp((rangeStart / duration) * 100, 0, 100) : 0
-  const endPercent = duration > 0 ? clamp((rangeEnd / duration) * 100, 0, 100) : 0
+  const hasStart = duration > 0 && rangeStart != null
+  const hasRange = hasStart && rangeEnd != null && rangeEnd > rangeStart
+  const startPercent = duration > 0 && rangeStart != null ? clamp((rangeStart / duration) * 100, 0, 100) : 0
+  const endPercent = duration > 0 && rangeEnd != null ? clamp((rangeEnd / duration) * 100, 0, 100) : 0
   const currentPercent = duration > 0 ? clamp((currentTime / duration) * 100, 0, 100) : 0
   const tickCount = duration >= 300 ? 6 : 5
 
   return (
-    <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+    <div className="space-y-3 rounded-lg border bg-surface-subtle/55 p-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Línea de tiempo</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Haz clic para navegar o arrastra los extremos del clip.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {hasRange ? 'Navegá o arrastrá los extremos para ajustar la jugada.' : 'Navegá el video y marcá el inicio y el fin.'}
+          </p>
         </div>
         <span className="font-mono text-xs font-semibold text-foreground">
           {formatSeconds(currentTime)} / {formatSeconds(duration)}
@@ -205,7 +211,7 @@ export function ClipTimeline({
 
       <div
         ref={trackRef}
-        className={`relative h-24 touch-none select-none overflow-visible rounded-lg border bg-background shadow-inner ${duration > 0 ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
+        className={`relative h-20 touch-none select-none overflow-visible rounded-md border border-border-strong bg-black shadow-inner sm:h-24 ${duration > 0 ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
         onPointerDown={handleTrackPointerDown}
         role="slider"
         aria-label="Posición del video"
@@ -275,6 +281,17 @@ export function ClipTimeline({
           </>
         )}
 
+        {hasStart && !hasRange && (
+          <div
+            className="pointer-events-none absolute inset-y-0 z-20 w-0.5 -translate-x-1/2 bg-primary"
+            style={{ left: `${startPercent}%` }}
+          >
+            <span className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-primary px-1.5 py-0.5 font-mono text-[10px] font-semibold text-primary-foreground shadow-sm">
+              Inicio {formatSeconds(rangeStart ?? 0)}
+            </span>
+          </div>
+        )}
+
         {duration > 0 && (
           <div
             className="pointer-events-none absolute -bottom-1 -top-3 z-10 w-0.5 -translate-x-1/2 bg-foreground shadow-sm"
@@ -287,7 +304,10 @@ export function ClipTimeline({
 
       <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <span>Flechas: 1 s · Shift + flechas: 5 s</span>
-        {hasRange && <span className="font-medium text-foreground">Clip: {formatSeconds(rangeStart)}–{formatSeconds(rangeEnd)}</span>}
+        {hasRange && rangeStart != null && rangeEnd != null && (
+          <span className="font-medium text-foreground">Clip: {formatSeconds(rangeStart)}–{formatSeconds(rangeEnd)}</span>
+        )}
+        {hasStart && !hasRange && <span className="font-medium text-foreground">Inicio marcado</span>}
       </div>
     </div>
   )
