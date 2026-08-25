@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented Phase 6A foundation.
+Implemented Phase 6A foundation plus the Phase 6D scoped analysis-workspace theme.
 
 ## Area
 
@@ -17,10 +17,13 @@ Application shell, responsive navigation, and shared visual primitives.
 - The navigation footer exposes the authenticated user and logout action.
 - Shared cards, inputs, selects, buttons, and dialogs use consistent radius, surface, focus, and shadow treatments.
 - Feature pages retain their existing workflows and service boundaries.
+- The active analysis workspace applies dark tokens to the shell and workspace only.
+- On desktop, workspace focus mode collapses navigation to an accessible 72-pixel rail with an explicit expand control.
+- Returning to Setup or navigating to another route removes workspace tokens and resets the rail to the normal shell.
 
 ## Goal
 
-Provide a neutral, task-oriented visual foundation that can support ongoing backend integration and a future scoped dark analysis workspace without prematurely redesigning existing feature flows.
+Provide a neutral, task-oriented visual foundation with a scoped dark analysis workspace, without redesigning unrelated feature flows.
 
 ## Scope
 
@@ -37,12 +40,11 @@ Provide a neutral, task-oriented visual foundation that can support ongoing back
 
 ## Non-Scope
 
-- Analysis workspace redesign.
+- Redesigning workspace-adjacent feature pages.
 - New charts, imagery, or dependencies.
 - Backend, API, mock, or domain behavior changes.
 - Implementing search, configuration, or help features.
-- Applying the new page composition to Equipos, Jugadores, Videos, Partidos, Analysis Setup, Analysis Review, or Workspace.
-- Scoped workspace-theme activation; workspace tokens can be introduced when the workspace is redesigned.
+- Applying the new page composition to Equipos, Jugadores, Videos, Partidos, Analysis Setup, or Analysis Review.
 
 ## Routes
 
@@ -81,6 +83,9 @@ Provide a neutral, task-oriented visual foundation that can support ongoing back
 - The global creation action reads `Empezar análisis` and routes to `/analisis/nuevo`.
 - Tailwind color utilities use CSS-variable tokens rather than independent hardcoded brand values.
 - Compatibility aliases keep untouched pages functional and visually coherent during the phased migration.
+- Dark workspace variables are scoped under `.analysis-workspace-theme` and never mutate global light tokens.
+- Workspace rail labels remain accessible while visually collapsed, and users can expand the rail at desktop widths.
+- Setup and non-workspace routes restore the normal light shell and full desktop navigation.
 - Shared form controls remain clearly interactive and do not resemble disabled/error fields by default.
 - Existing feature routes and actions continue working.
 
@@ -90,9 +95,10 @@ Provide a neutral, task-oriented visual foundation that can support ongoing back
 - Run `npm run build`.
 - Visually inspect `/dashboard` and `/analisis/nuevo` at desktop and 390px widths.
 - Verify opening, navigating with, and dismissing the mobile drawer.
+- Verify entering/leaving the workspace and navigating elsewhere cannot leak its dark theme or compact rail.
 
 ## Risks Or Notes
 
 - The token migration intentionally changes the brand action color, but compatibility aliases minimize regressions in untouched pages.
 - Feature-specific layouts may still need later responsive refinements.
-- The wide outer canvas remains available so this phase does not indirectly redesign the analysis workspace or data-heavy pages.
+- The wide outer canvas remains available for the focused analysis workspace and untouched data-heavy pages.

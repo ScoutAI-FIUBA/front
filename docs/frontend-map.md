@@ -24,7 +24,7 @@
 
 ## Components
 
-- `src/components/layout/AppShell.tsx`: responsive protected app shell, desktop sidebar, mobile drawer, header, user summary, and logout.
+- `src/components/layout/AppShell.tsx`: responsive protected app shell, desktop sidebar/mobile drawer, scoped workspace focus mode, user summary, and logout.
 - `src/components/layout/ProtectedRoute.tsx`: protected route gate.
 - `src/components/ui/*.tsx`: local UI primitives such as button, card, input, dialog, select, badge, avatar, alert, progress, label, separator.
 
@@ -46,7 +46,9 @@
 - `src/pages/videos/VideoCollectionsPage.tsx`: collections list and create flow for one video.
 - `src/pages/videos/VideoCollectionDetailPage.tsx`: clip playback, metadata creation, and deletion.
 - `src/pages/analysis/AnalysisSetup.tsx`: progressive material selection, validation, upload, inline team creation, and ready state.
-- `src/pages/analysis/AnalysisNewPage.tsx`: Setup/workspace orchestration and local time-range clips.
+- `src/pages/analysis/AnalysisNewPage.tsx`: Setup/workspace orchestration, range state, staged clips, and save-state transitions.
+- `src/pages/analysis/AnalysisWorkspace.tsx`: focused dark video workspace with contextual range action, lightweight clip metadata, compact clip library, and analysis context.
+- `src/pages/analysis/ClipTimeline.tsx`: single-track video navigation, thumbnail preview, start-only marker, and valid-range adjustment.
 - `src/pages/analysis/AnalysisPage.tsx`: analysis sessions list.
 - `src/pages/analysis/AnalysisDetailPage.tsx`: analysis detail, video preview placeholder, events, detected players.
 
