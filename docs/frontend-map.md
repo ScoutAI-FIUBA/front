@@ -49,8 +49,8 @@
 - `src/pages/analysis/AnalysisNewPage.tsx`: Setup/workspace orchestration, range state, staged clips, and save-state transitions.
 - `src/pages/analysis/AnalysisWorkspace.tsx`: focused dark video workspace with contextual range action, lightweight clip metadata, compact clip library, and analysis context.
 - `src/pages/analysis/ClipTimeline.tsx`: single-track video navigation, thumbnail preview, start-only marker, and valid-range adjustment.
-- `src/pages/analysis/AnalysisPage.tsx`: analysis sessions list.
-- `src/pages/analysis/AnalysisDetailPage.tsx`: analysis detail, video preview placeholder, events, detected players.
+- `src/pages/analysis/AnalysisPage.tsx`: state-aware analysis work list using one list request without per-row hydration.
+- `src/pages/analysis/AnalysisDetailPage.tsx`: progressive Review with status-aware hierarchy, video or unavailable state, contextual moments, and secondary analysis details.
 
 ## Services
 
