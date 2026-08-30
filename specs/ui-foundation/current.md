@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented Phase 6A foundation plus the Phase 6D scoped analysis-workspace theme.
+Implemented Phase 6A foundation, the Phase 6D scoped analysis-workspace theme, and Phase 6E composition on Analysis list and Review.
 
 ## Area
 
@@ -20,6 +20,7 @@ Application shell, responsive navigation, and shared visual primitives.
 - The active analysis workspace applies dark tokens to the shell and workspace only.
 - On desktop, workspace focus mode collapses navigation to an accessible 72-pixel rail with an explicit expand control.
 - Returning to Setup or navigating to another route removes workspace tokens and resets the rail to the normal shell.
+- Analysis list and Review use the shared light page composition, semantic status indicator, empty state, and responsive spacing.
 
 ## Goal
 
@@ -44,7 +45,7 @@ Provide a neutral, task-oriented visual foundation with a scoped dark analysis w
 - New charts, imagery, or dependencies.
 - Backend, API, mock, or domain behavior changes.
 - Implementing search, configuration, or help features.
-- Applying the new page composition to Equipos, Jugadores, Videos, Partidos, Analysis Setup, or Analysis Review.
+- Applying the new page composition to Equipos, Jugadores, Videos, Partidos, or Analysis Setup.
 
 ## Routes
 

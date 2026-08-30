@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented behavior through Phase 6D Workspace redesign.
+Implemented behavior through Phase 6E Analysis list and Review redesign.
 
 ## Routes
 
@@ -29,9 +29,12 @@ Implemented behavior through Phase 6D Workspace redesign.
 
 ## Current Behavior
 
-- Analysis list loads sessions through `analysisService.listSessions()`.
-- Analysis list exposes a `Nuevo análisis` action.
-- Each session displays session code, status, progress, frame count, and a detail link.
+- Analysis list loads sessions through a single `analysisService.listSessions()` request and does not hydrate every row with detail requests.
+- Analysis list exposes an `Empezar análisis` action that keeps the global creation language consistent.
+- Analysis list is a single scannable work list rather than a grid of equally weighted cards.
+- Each row uses only reliable `AnalysisSession` fields: session code, pending/processing/completed status, and state-relevant progress metadata.
+- Completed rows omit the redundant 100% progress bar and lead to review; processing rows expose progress and remaining time; pending rows do not fabricate progress detail.
+- Analysis list distinguishes loading, retryable error, successful empty, and successful populated states.
 - New analysis uses progressive disclosure inside the existing `/analisis/nuevo` route.
 - Setup first asks which material the user wants to analyze and offers an existing video or a new local file.
 - The workspace, timeline, clip editor, roster, and `Guardar análisis` action are not rendered during Setup.
@@ -89,13 +92,21 @@ Implemented behavior through Phase 6D Workspace redesign.
 - The mock save creates an analysis session and game events from staged clips so the existing detail page can show the saved labels as detected events.
 - The mock save stores snapshots of the selected local and visitor teams before creating the synthetic match, so detail rendering works when teams came from the backend service instead of the mock store.
 - Optional visitor team remains empty when the user does not select one; the mock does not invent a rival team for manual analyses.
-- Detail page reads `id` from the route.
-- Detail page first tries `analysisService.getBySessionId(id)`.
+- Review reads `id` from the existing detail route.
+- Review first tries `analysisService.getBySessionId(id)`.
 - If no session detail is found, it tries to resolve the id as a video id through `videoService.getById(id)` and then loads analysis by match id.
-- Detail page displays a loading message while no detail is available.
-- Detail page displays session progress, match/video information, detected players, and detected events.
-- Detail page shows the saved manual analysis video and clips when the local video URL is still available in the current browser session; otherwise it falls back to the existing placeholder.
-- Events render labels and metadata such as quarter, minute, player number, and XP when present.
+- Review distinguishes loading, retryable request error, and not-found states.
+- Review uses the manual analysis name, match title, video title, or session code in that reliability order instead of a generic page title.
+- Review preserves pending, processing, and completed as distinct domain states and never labels a completed session as processing.
+- Processing review emphasizes its current progress and remaining time. Completed review removes processing metrics from the primary hierarchy.
+- The primary review surface is the playable video plus one contextual moments list: saved clips when they exist, otherwise detected events.
+- Saved clips with reliable ranges can seek and stop the video. Events without reliable numeric range metadata remain read-only.
+- When the video is unavailable, Review shows a compact notice and promotes the moments list instead of reserving the dominant surface for a large placeholder.
+- Match/video metadata and detected players remain available through secondary disclosure.
+- Detected-player review shows reliable name, jersey number, position, and count but suppresses the randomly generated mock heatmap percentage.
+- Collection navigation remains a secondary action and appears only when a saved manual analysis has a `clipCollectionId`.
+- Review does not expose `Editar análisis`: the current route and persistence state cannot safely restore a saved analysis into the local Workspace.
+- Review remains in the normal light application shell; only the active analysis Workspace uses the dark focus theme.
 
 ## Service Selection
 
@@ -112,6 +123,7 @@ Implemented behavior through Phase 6D Workspace redesign.
 - Optional per-clip notes are local workspace context and are not represented by the backend clip-range contract.
 - Setup date/free-form context is not persisted because the current contracts have no Partido persistence fields.
 - Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
+- Restoring or editing a persisted analysis in the Workspace because the current routes and contracts do not provide a reliable rehydration path.
 - Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
 
 ## Verification
@@ -125,4 +137,8 @@ Implemented behavior through Phase 6D Workspace redesign.
 - Verify initial guidance, start-only state, selected-range editor, staged clip playback, local edit, and confirmed removal.
 - Verify unsaved, saving, visible saved acknowledgement, and partial-failure presentations without changing service payloads.
 - Verify Setup is light, Workspace is dark, returning to Setup restores light mode, and navigating elsewhere restores the full normal shell.
-- Manually verify analysis list and detail loading with mock data.
+- Verify the analysis list performs one list request without per-row detail hydration.
+- Verify list loading, retryable error, empty, pending, processing, and completed presentations.
+- Verify Review loading, request error, not-found, processing, completed, playable-video, unavailable-video, clips, and event-only presentations.
+- Verify detected players never expose the random mock heatmap percentage.
+- Inspect the Analysis list and Review at desktop and approximately 390px widths.
