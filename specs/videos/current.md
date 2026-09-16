@@ -12,8 +12,12 @@ Current behavior documentation.
 ## Files Involved
 
 - `src/pages/videos/VideosPage.tsx`
+- `src/pages/videos/VideoAnalysisJobs.tsx`
+- `src/pages/videos/analysis-job-presentation.ts`
 - `src/pages/videos/VideoUploadPage.tsx`
 - `src/services/registry.ts`
+- `src/services/contracts/analysis-jobs.service.ts`
+- `src/services/api/analysis-jobs.api.ts`
 - `src/services/contracts/videos.service.ts`
 - `src/services/api/videos.api.ts`
 - `src/services/mock/videos.mock.ts`
@@ -27,6 +31,12 @@ Current behavior documentation.
 
 - Videos page loads videos, teams, and recent activity.
 - Videos can be filtered by team and status.
+- Each video row can disclose its own backend processing-job history without navigating to the global analysis list.
+- Opening a video's analysis history loads `analysisJobService.listForVideo(videoId, teamId)` once; users can retry failures or refresh the history manually.
+- While an open history contains at least one `QUEUED` or `RUNNING` job, it refreshes the complete per-video snapshot every 10 seconds through `listForVideo`. The next timer is scheduled only after the current request settles, so polling requests never overlap.
+- Polling stops when every returned job is `DONE` or `FAILED`, and its timer is cleaned up when the history panel closes or unmounts. Poll failures preserve the last successful snapshot and retry on the next interval.
+- Video job history distinguishes loading, retryable error, empty, and populated states.
+- Job rows render the backend statuses `QUEUED`, `RUNNING`, `DONE`, and `FAILED` directly. Running jobs show `progressPercent` only when present and otherwise show indeterminate activity. Failed jobs show the backend `errorMessage` when available.
 - Video statuses displayed include uploaded, processing, and analyzed.
 - Analyzed videos link to `/analisis/:id` using the video id.
 - Uploaded videos can request analysis through `videoService.requestAnalysis(id)`.
@@ -39,6 +49,7 @@ Current behavior documentation.
 ## Service Selection
 
 - `videoService` uses `apiVideoService` unless `VITE_USE_MOCK_API=true`.
+- `analysisJobService` uses the read-only real backend API implementation and is consumed only by the per-video history disclosure.
 - `matchService` currently always uses `mockMatchService`.
 - Team data comes from `teamService`, which can be API or mock depending on `VITE_USE_MOCK_API`.
 
@@ -56,6 +67,7 @@ Current behavior documentation.
 ## Non-Scope
 
 - No backend analysis request integration is implemented here.
+- No global processing-job history, job creation, job detail/results, stats, or shot-chart integration is implemented here. Polling exists only while an open per-video history has active jobs.
 - Matches remain mocked and are no longer required by the video upload form.
 - Adaptive streaming and transcoding are not implemented; playback uses the original browser-compatible file through a presigned URL.
 

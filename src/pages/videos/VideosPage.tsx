@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart2, Clock, Eye, FolderOpen, Lock, Plus } from 'lucide-react'
+import { BarChart2, ChevronDown, Clock, Eye, FolderOpen, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -15,6 +15,7 @@ import { videoService, teamService, analysisService } from '@/services/registry'
 import type { ActivityItem, Team, Video } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
+import { VideoAnalysisJobs } from './VideoAnalysisJobs'
 
 const statusVariant = (s: Video['status']) =>
   s === 'analyzed' ? 'analyzed' : s === 'processing' ? 'processing' : s === 'failed' ? 'failed' : 'uploaded'
@@ -28,6 +29,7 @@ export function VideosPage() {
   const [teamFilter, setTeamFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [activity, setActivity] = useState<ActivityItem[]>([])
+  const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
 
   const load = async () => {
     const [v, t, a] = await Promise.all([
@@ -104,39 +106,68 @@ export function VideosPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((v) => (
-                <tr key={v.id} className="border-t">
-                  <td className="p-4">
-                    <p className="font-medium">{v.title}</p>
-                    <p className="text-xs text-muted-foreground">{v.resolution}</p>
-                  </td>
-                  <td className="p-4">{teamName(v.teamId)}</td>
-                  <td className="p-4">{v.rivalName ?? '—'}</td>
-                  <td className="p-4">{formatDate(v.uploadedAt)}</td>
-                  <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
-                  <td className="p-4">
-                    <Button asChild variant="outline" size="sm" className="mb-2">
-                      <Link to={`/videos/${v.id}/colecciones`}>
-                        <FolderOpen className="h-4 w-4" /> Colecciones
-                      </Link>
-                    </Button>
-                    {v.status === 'analyzed' && (
-                      <div className="flex gap-2">
-                        <Link to={`/analisis/${v.id}`} className="text-primary hover:text-primary/80"><Eye className="h-4 w-4" /></Link>
-                        <BarChart2 className="h-4 w-4 text-primary" />
-                      </div>
+              {filtered.map((v) => {
+                const historyOpen = expandedVideoId === v.id
+
+                return (
+                  <Fragment key={v.id}>
+                    <tr className="border-t">
+                      <td className="p-4">
+                        <p className="font-medium">{v.title}</p>
+                        <p className="text-xs text-muted-foreground">{v.resolution}</p>
+                      </td>
+                      <td className="p-4">{teamName(v.teamId)}</td>
+                      <td className="p-4">{v.rivalName ?? '—'}</td>
+                      <td className="p-4">{formatDate(v.uploadedAt)}</td>
+                      <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
+                      <td className="p-4">
+                        <div className="flex flex-col items-start gap-2">
+                          <Button asChild variant="outline" size="sm">
+                            <Link to={`/videos/${v.id}/colecciones`}>
+                              <FolderOpen className="h-4 w-4" /> Colecciones
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-expanded={historyOpen}
+                            aria-controls={`video-analysis-history-${v.id}`}
+                            onClick={() => setExpandedVideoId(historyOpen ? null : v.id)}
+                          >
+                            <BarChart2 className="h-4 w-4" aria-hidden="true" />
+                            Historial de análisis
+                            <ChevronDown
+                              className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
+                              aria-hidden="true"
+                            />
+                          </Button>
+                          {v.status === 'analyzed' && (
+                            <div className="flex gap-2">
+                              <Link to={`/analisis/${v.id}`} className="text-primary hover:text-primary/80"><Eye className="h-4 w-4" /></Link>
+                              <BarChart2 className="h-4 w-4 text-primary" />
+                            </div>
+                          )}
+                          {v.status === 'processing' && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> En espera</span>}
+                          {v.status === 'uploaded' && videoService.canRequestAnalysis && (
+                            <Button size="sm" onClick={() => void requestAnalysis(v.id)}>Solicitar análisis</Button>
+                          )}
+                          {v.status === 'uploaded' && !videoService.canRequestAnalysis && (
+                            <span className="text-xs text-muted-foreground">Listo para reproducir</span>
+                          )}
+                          {v.status === 'failed' && <span className="text-xs text-red-600">Subida fallida</span>}
+                        </div>
+                      </td>
+                    </tr>
+                    {historyOpen && (
+                      <tr id={`video-analysis-history-${v.id}`}>
+                        <td colSpan={6} className="border-t p-0">
+                          <VideoAnalysisJobs videoId={v.id} teamId={v.teamId} videoTitle={v.title} />
+                        </td>
+                      </tr>
                     )}
-                    {v.status === 'processing' && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> En espera</span>}
-                    {v.status === 'uploaded' && videoService.canRequestAnalysis && (
-                      <Button size="sm" onClick={() => void requestAnalysis(v.id)}>Solicitar análisis</Button>
-                    )}
-                    {v.status === 'uploaded' && !videoService.canRequestAnalysis && (
-                      <span className="text-xs text-muted-foreground">Listo para reproducir</span>
-                    )}
-                    {v.status === 'failed' && <span className="text-xs text-red-600">Subida fallida</span>}
-                  </td>
-                </tr>
-              ))}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
           <p className="border-t p-3 text-xs text-muted-foreground">Mostrando {filtered.length} videos</p>

@@ -113,10 +113,15 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `analysisService` currently always uses `mockAnalysisService`.
 - `videoService` uses the configured video implementation from the registry.
 - Analysis session metadata remains mock/local, while its collection and clip ranges use the configured real or mock clip collection service.
+- A parallel, read-only `IAnalysisJobService` models backend processing jobs without replacing or registering the existing analysis service.
+- The API implementation exposes `listForVideo(videoId, teamId)` through `GET /videos/{video_id}/jobs?team_id=...` and `get(jobId, teamId)` through `GET /jobs/{job_id}?team_id=...`.
+- Processing job statuses remain the backend values `QUEUED`, `RUNNING`, `DONE`, and `FAILED`; nullable `progress_percent` is mapped to `progressPercent`.
+- The Videos page consumes only `listForVideo(videoId, teamId)` inside a per-video history disclosure; the global Analysis pages remain on `AnalysisSession` and the mock `analysisService`.
 
 ## Non-Scope
 
 - There is no real backend analysis API wired in the registry.
+- Creating processing jobs, listing jobs globally, and reading job stats or shot charts are not part of the read-only processing-job boundary.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
 - Manual-analysis labels are not persisted on backend collection items.
 - Persisted collection items cannot currently be updated through the frontend service contract; clip editing is limited to staged local drafts before analysis save.
