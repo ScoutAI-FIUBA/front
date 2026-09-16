@@ -144,6 +144,25 @@ export interface GameEvent {
 
 export type AnalysisStatus = 'pending' | 'processing' | 'completed'
 
+export type ProcessingJobStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED'
+
+export interface ProcessingJob {
+  id: string
+  videoId: string
+  teamId: string
+  requestedByUserId: string
+  status: ProcessingJobStatus
+  resultsKey: string | null
+  errorMessage: string | null
+  progressPercent: number | null
+  summary: Record<string, unknown> | null
+  ourTeamSide: 0 | 1 | null
+  startedAt: string | null
+  finishedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface AnalysisSession {
   id: string
   matchId: string

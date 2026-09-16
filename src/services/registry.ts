@@ -4,12 +4,14 @@ import type { IPlayerService } from './contracts/players.service'
 import type { IMatchService } from './contracts/matches.service'
 import type { IVideoService } from './contracts/videos.service'
 import type { IAnalysisService } from './contracts/analysis.service'
+import type { IAnalysisJobService } from './contracts/analysis-jobs.service'
 import type { IClipCollectionService } from './contracts/clip-collections.service'
 import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
 import { apiTeamService } from './api/teams.api'
 import { apiVideoService } from './api/videos.api'
 import { apiClipCollectionService } from './api/clip-collections.api'
+import { apiAnalysisJobService } from './api/analysis-jobs.api'
 import { mockAuthService } from './mock/auth.mock'
 import { mockTeamService } from './mock/teams.mock'
 import { mockPlayerService } from './mock/players.mock'
@@ -32,3 +34,6 @@ export const clipCollectionService: IClipCollectionService = useMockApi
   ? mockClipCollectionService
   : apiClipCollectionService
 export const analysisService: IAnalysisService = mockAnalysisService
+
+/** Read-only processing-job history from the real backend; not a replacement for analysisService. */
+export const analysisJobService: IAnalysisJobService = apiAnalysisJobService
