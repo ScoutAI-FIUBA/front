@@ -32,6 +32,10 @@ Current behavior documentation.
 - Videos page loads videos, teams, and recent activity.
 - Videos can be filtered by team and status.
 - Each video row can disclose its own backend processing-job history without navigating to the global analysis list.
+- Ready videos expose an `Iniciar análisis` action inside that history disclosure. It submits `POST /videos/{video_id}/jobs` with `{ team_id }`; the optional pipeline is omitted so the backend selects its default.
+- A successful submission inserts the returned `QUEUED` job into the existing history immediately. The active-job polling lifecycle then starts without converting the job to an `AnalysisSession`.
+- Analysis submission is single-flight: the action is disabled while its request is pending, and an existing `QUEUED` or `RUNNING` job also disables another submission in line with the backend's one-active-job constraint.
+- Submission errors are shown inside the history disclosure without clearing the last successfully loaded jobs.
 - Opening a video's analysis history loads `analysisJobService.listForVideo(videoId, teamId)` once; users can retry failures or refresh the history manually.
 - While an open history contains at least one `QUEUED` or `RUNNING` job, it refreshes the complete per-video snapshot every 10 seconds through `listForVideo`. The next timer is scheduled only after the current request settles, so polling requests never overlap.
 - Polling stops when every returned job is `DONE` or `FAILED`, and its timer is cleaned up when the history panel closes or unmounts. Poll failures preserve the last successful snapshot and retry on the next interval.
@@ -49,7 +53,7 @@ Current behavior documentation.
 ## Service Selection
 
 - `videoService` uses `apiVideoService` unless `VITE_USE_MOCK_API=true`.
-- `analysisJobService` uses the read-only real backend API implementation and is consumed only by the per-video history disclosure.
+- `analysisJobService` uses the real backend API implementation and is consumed only by the per-video history disclosure for listing and creating processing jobs.
 - `matchService` currently always uses `mockMatchService`.
 - Team data comes from `teamService`, which can be API or mock depending on `VITE_USE_MOCK_API`.
 
@@ -61,13 +65,13 @@ Current behavior documentation.
 - `apiVideoService.getById` retrieves `GET /videos/{video_id}?team_id=...` for uploaded videos and maps `presigned_playback_url` to the frontend `storageUrl` used by the native video player.
 - Videos that are not ready are returned from list metadata without requesting a playback URL.
 - Backend statuses are mapped to frontend statuses: `READY -> uploaded`, `PENDING_UPLOAD -> processing`, `FAILED -> failed`.
+- Only frontend videos mapped to `uploaded` expose real job creation, matching the backend requirement that the video be `READY`.
 - Backend `duration_ms` is mapped to `Video.durationMs` for clip-range validation.
-- `requestAnalysis(videoId)` has no backend counterpart and remains mock-only.
+- The legacy `videoService.requestAnalysis(videoId)` remains mock-only and separate from real `analysisJobService.create`.
 
 ## Non-Scope
 
-- No backend analysis request integration is implemented here.
-- No global processing-job history, job creation, job detail/results, stats, or shot-chart integration is implemented here. Polling exists only while an open per-video history has active jobs.
+- No global processing-job history, job detail/results, stats, or shot-chart integration is implemented here. Creation and polling exist only inside the per-video history.
 - Matches remain mocked and are no longer required by the video upload form.
 - Adaptive streaming and transcoding are not implemented; playback uses the original browser-compatible file through a presigned URL.
 

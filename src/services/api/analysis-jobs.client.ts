@@ -1,5 +1,8 @@
 import type { ProcessingJob, ProcessingJobStatus } from '../../types/index.ts'
-import type { IAnalysisJobService } from '../contracts/analysis-jobs.service.ts'
+import type {
+  CreateAnalysisJobDto,
+  IAnalysisJobService,
+} from '../contracts/analysis-jobs.service.ts'
 
 export interface ApiProcessingJob {
   id: string
@@ -26,7 +29,7 @@ interface ProcessingJobResponse {
   job: ApiProcessingJob
 }
 
-export type AnalysisJobRequest = <T>(path: string) => Promise<T>
+export type AnalysisJobRequest = <T>(path: string, init?: RequestInit) => Promise<T>
 
 export function mapProcessingJob(job: ApiProcessingJob): ProcessingJob {
   return {
@@ -53,6 +56,22 @@ function withTeamId(path: string, teamId: string): string {
 
 export function createAnalysisJobService(request: AnalysisJobRequest): IAnalysisJobService {
   return {
+    async create(videoId, dto: CreateAnalysisJobDto) {
+      const payload: { team_id: string; pipeline?: string } = {
+        team_id: dto.teamId,
+      }
+      if (dto.pipeline) payload.pipeline = dto.pipeline
+
+      const data = await request<ProcessingJobResponse>(
+        `/videos/${encodeURIComponent(videoId)}/jobs`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      )
+      return mapProcessingJob(data.job)
+    },
+
     async listForVideo(videoId, teamId) {
       const path = withTeamId(
         `/videos/${encodeURIComponent(videoId)}/jobs`,

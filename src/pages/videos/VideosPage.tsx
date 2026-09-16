@@ -161,7 +161,12 @@ export function VideosPage() {
                     {historyOpen && (
                       <tr id={`video-analysis-history-${v.id}`}>
                         <td colSpan={6} className="border-t p-0">
-                          <VideoAnalysisJobs videoId={v.id} teamId={v.teamId} videoTitle={v.title} />
+                          <VideoAnalysisJobs
+                            videoId={v.id}
+                            teamId={v.teamId}
+                            videoTitle={v.title}
+                            videoReady={v.status === 'uploaded'}
+                          />
                         </td>
                       </tr>
                     )}

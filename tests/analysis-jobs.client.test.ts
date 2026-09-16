@@ -57,6 +57,31 @@ test('listForVideo uses the video jobs endpoint and maps the response', async ()
   ])
 })
 
+test('create posts team_id in the body and maps the queued job', async () => {
+  const requests: Array<{ path: string; init?: RequestInit }> = []
+  const request: AnalysisJobRequest = async <T>(path: string, init?: RequestInit) => {
+    requests.push({ path, init })
+    return {
+      job: apiJob({
+        status: 'QUEUED',
+        progress_percent: null,
+        started_at: null,
+      }),
+    } as T
+  }
+  const service = createAnalysisJobService(request)
+
+  const created = await service.create('video/id', { teamId: 'team-1' })
+
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0]?.path, '/videos/video%2Fid/jobs')
+  assert.equal(requests[0]?.init?.method, 'POST')
+  assert.deepEqual(JSON.parse(String(requests[0]?.init?.body)), { team_id: 'team-1' })
+  assert.equal(created.status, 'QUEUED')
+  assert.equal(created.progressPercent, null)
+  assert.equal(created.videoId, 'video-1')
+})
+
 test('get uses the job endpoint and preserves nullable progress', async () => {
   const requestedPaths: string[] = []
   const request: AnalysisJobRequest = async <T>(path: string) => {

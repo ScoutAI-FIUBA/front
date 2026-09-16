@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { BarChart3, CircleAlert, LoaderCircle, RefreshCw } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BarChart3, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -7,8 +7,12 @@ import { Progress } from '@/components/ui/progress'
 import { StatusIndicator } from '@/components/ui/status-indicator'
 import { analysisJobService } from '@/services/registry'
 import type { ProcessingJob } from '@/types'
+import {
+  addCreatedAnalysisJob,
+  createAnalysisJobSubmission,
+} from './analysis-job-creation'
 import { getAnalysisJobPresentation } from './analysis-job-presentation'
-import { createAnalysisJobsPoller } from './analysis-jobs-polling'
+import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs-polling'
 
 type LoadState = 'loading' | 'success' | 'error'
 
@@ -16,6 +20,7 @@ interface VideoAnalysisJobsProps {
   videoId: string
   teamId: string
   videoTitle: string
+  videoReady: boolean
 }
 
 function formatJobDate(value: string): string {
@@ -28,10 +33,17 @@ function formatJobDate(value: string): string {
   })
 }
 
-export function VideoAnalysisJobs({ videoId, teamId, videoTitle }: VideoAnalysisJobsProps) {
+export function VideoAnalysisJobs({
+  videoId,
+  teamId,
+  videoTitle,
+  videoReady,
+}: VideoAnalysisJobsProps) {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [jobs, setJobs] = useState<ProcessingJob[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [creationError, setCreationError] = useState<string | null>(null)
   const requestInFlightRef = useRef<Promise<ProcessingJob[]> | null>(null)
 
   const requestJobs = useCallback((): Promise<ProcessingJob[]> => {
@@ -75,12 +87,27 @@ export function VideoAnalysisJobs({ videoId, teamId, videoTitle }: VideoAnalysis
     }
   }, [requestJobs])
 
+  const creationSubmission = useMemo(() => createAnalysisJobSubmission({
+    create: () => analysisJobService.create(videoId, { teamId }),
+    onCreated: (job) => {
+      setJobs((current) => addCreatedAnalysisJob(current, job))
+      setCreationError(null)
+      setLoadState('success')
+    },
+    onError: (error) => {
+      setCreationError(
+        error instanceof Error ? error.message : 'No se pudo iniciar el análisis.',
+      )
+    },
+    onSubmittingChange: setIsCreating,
+  }), [teamId, videoId])
+
   useEffect(() => {
     void loadJobs()
   }, [loadJobs])
 
   useEffect(() => {
-    if (loadState !== 'success') return
+    if (loadState !== 'success' || isCreating) return
 
     const poller = createAnalysisJobsPoller({
       load: requestJobs,
@@ -88,7 +115,9 @@ export function VideoAnalysisJobs({ videoId, teamId, videoTitle }: VideoAnalysis
     })
     poller.start(jobs)
     return () => poller.stop()
-  }, [jobs, loadState, requestJobs])
+  }, [isCreating, jobs, loadState, requestJobs])
+
+  const activeJobExists = hasActiveAnalysisJobs(jobs)
 
   return (
     <section className="bg-surface-subtle px-4 py-5 sm:px-6" aria-label={`Historial de análisis de ${videoTitle}`}>
@@ -99,13 +128,48 @@ export function VideoAnalysisJobs({ videoId, teamId, videoTitle }: VideoAnalysis
             Ejecuciones registradas únicamente para este video.
           </p>
         </div>
-        {loadState === 'success' && (
-          <Button variant="ghost" size="sm" disabled={isRefreshing} onClick={() => void refreshJobs()}>
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
-            {isRefreshing ? 'Actualizando…' : 'Actualizar'}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {videoReady && loadState === 'success' && (
+            <Button
+              size="sm"
+              disabled={isCreating || isRefreshing || activeJobExists}
+              onClick={() => void creationSubmission.submit()}
+            >
+              {isCreating ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Play className="h-4 w-4" aria-hidden="true" />
+              )}
+              {isCreating
+                ? 'Iniciando…'
+                : activeJobExists
+                  ? 'Análisis en curso'
+                  : 'Iniciar análisis'}
+            </Button>
+          )}
+          {loadState === 'success' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isRefreshing || isCreating}
+              onClick={() => void refreshJobs()}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+              {isRefreshing ? 'Actualizando…' : 'Actualizar'}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {creationError && (
+        <Alert className="mb-4 flex items-start gap-3 border-destructive/25 bg-destructive/5 p-4">
+          <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+          <div>
+            <p className="font-semibold text-foreground">No pudimos iniciar el análisis</p>
+            <p className="mt-1 text-destructive">{creationError}</p>
+          </div>
+        </Alert>
+      )}
 
       {loadState === 'loading' && (
         <div
