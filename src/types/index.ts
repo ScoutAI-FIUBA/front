@@ -163,6 +163,195 @@ export interface AnalysisJobTeamSides {
   rosterNumbersKnown: number
 }
 
+export interface ShootingZoneStats {
+  made: number
+  attempted: number
+  percentage: number | null
+}
+
+export interface ShootingTotals {
+  points: number
+  fieldGoalsMade: number
+  fieldGoalsAttempted: number
+  fieldGoalPercentage: number | null
+  twoPointMade: number
+  twoPointAttempted: number
+  twoPointPercentage: number | null
+  threePointMade: number
+  threePointAttempted: number
+  threePointPercentage: number | null
+  byZone: Record<string, ShootingZoneStats>
+}
+
+export interface AnalysisJobTeamShootingStats extends ShootingTotals {
+  teamSide: AnalysisJobTeamSide
+  playersTracked: number
+}
+
+export interface AnalysisJobPlayerShootingStats extends ShootingTotals {
+  trackId: number
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  rosterPlayerId: string | null
+  rosterName: string | null
+  displayName: string
+}
+
+export interface AnalysisJobShotStat {
+  shotId: string | number | null
+  trackId: number | null
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  rosterPlayerId: string | null
+  rosterName: string | null
+  made: boolean
+  outcome: string | null
+  points: 2 | 3
+  zone: string
+  distanceM: number
+  courtXM: number
+  courtYM: number
+  timestampSeconds: number | null
+  shotType: string | null
+  attribution: string | null
+}
+
+export interface AnalysisJobStatsCoverage {
+  shotsDetected: number
+  shotsScored: number
+  shotsWithoutCourtPosition: number
+  shotsWithoutShooter: number
+  playersTracked: number
+  playersWithJerseyNumber: number
+  playersLinkedToRoster: number
+  measures: string[]
+  notMeasured: string[]
+}
+
+export interface AnalysisJobShootingStats {
+  jobId: string
+  videoId: string
+  ourTeamSide: AnalysisJobTeamSide | null
+  teams: AnalysisJobTeamShootingStats[]
+  players: AnalysisJobPlayerShootingStats[]
+  shots: AnalysisJobShotStat[]
+  coverage: AnalysisJobStatsCoverage
+}
+
+export type ShotChartResult = 'made' | 'missed' | 'unknown'
+
+export interface ShotChartCourtPoint {
+  xM: number
+  yM: number
+}
+
+export interface AnalysisJobShotChartCourt {
+  lengthM: number
+  widthM: number
+  hoopInsetM: number
+  hoops: {
+    home: ShotChartCourtPoint
+    away: ShotChartCourtPoint
+  }
+  threePointRadiusM: number
+  cornerThreeLateralM: number
+}
+
+export interface AnalysisJobShotChartShot {
+  shotId: string | number | null
+  trackId: number | null
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  rosterPlayerId: string | null
+  rosterName: string | null
+  xM: number
+  yM: number
+  made: boolean
+  result: ShotChartResult
+  points: 2 | 3
+  zone: string
+  distanceM: number
+  shotType: string | null
+  timestampSeconds: number | null
+  attribution: string | null
+}
+
+export interface AnalysisJobShotChartPlayer {
+  trackId: number
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  displayName: string
+  shots: AnalysisJobShotChartShot[]
+}
+
+export interface AnalysisJobShotChartCoverage {
+  shotsDetected: number
+  shotsScored: number
+  shotsWithoutCourtPosition: number
+  shotsWithoutShooter: number
+  playersTracked: number
+  playersWithJerseyNumber: number
+  playersLinkedToRoster: number
+  measures: string[]
+  notMeasured: string[]
+  shotsCharted: number
+  filteredToTrackId: number | null
+}
+
+export interface AnalysisJobShotChart {
+  court: AnalysisJobShotChartCourt
+  shots: AnalysisJobShotChartShot[]
+  players: AnalysisJobShotChartPlayer[]
+  coverage: AnalysisJobShotChartCoverage
+}
+
+export interface AnalysisJobCourtPosition {
+  frameIndex: number | null
+  xM: number
+  yM: number
+}
+
+export interface AnalysisJobCourtMovement {
+  samples: number
+  distanceM: number
+  averagePosition: {
+    xM: number
+    yM: number
+  }
+}
+
+export interface AnalysisJobCourtPositionsPlayer {
+  trackId: number
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  positions: AnalysisJobCourtPosition[]
+  movement: AnalysisJobCourtMovement
+}
+
+export type AnalysisJobCourtPositionsSource =
+  | 'projected_tracks.jsonl'
+  | 'player_positions.jsonl'
+  | null
+
+export interface AnalysisJobCourtPositionsCoverage {
+  sourceFile: AnalysisJobCourtPositionsSource
+  recordsRead: number
+  recordsOffCourt: number
+  sampleEvery: number
+  truncated: boolean
+}
+
+export interface AnalysisJobCourtPositions {
+  jobId: string
+  videoId: string
+  court: {
+    lengthM: number
+    widthM: number
+  }
+  players: AnalysisJobCourtPositionsPlayer[]
+  coverage: AnalysisJobCourtPositionsCoverage
+}
+
 export interface ProcessingJob {
   id: string
   videoId: string

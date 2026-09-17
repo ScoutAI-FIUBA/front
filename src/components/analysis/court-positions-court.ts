@@ -1,0 +1,32 @@
+import type {
+  AnalysisJobCourtPosition,
+  AnalysisJobCourtPositions,
+} from '../../types/index.ts'
+
+export interface CourtPositionUiPoint {
+  leftPercent: number
+  topPercent: number
+}
+
+export function courtPositionPointToPercent(
+  court: AnalysisJobCourtPositions['court'],
+  position: Pick<AnalysisJobCourtPosition, 'xM' | 'yM'>,
+): CourtPositionUiPoint | null {
+  if (!Number.isFinite(court.lengthM) || court.lengthM <= 0) return null
+  if (!Number.isFinite(court.widthM) || court.widthM <= 0) return null
+  if (!Number.isFinite(position.xM) || !Number.isFinite(position.yM)) return null
+  if (position.xM < 0 || position.xM > court.lengthM) return null
+  if (position.yM < 0 || position.yM > court.widthM) return null
+
+  return {
+    leftPercent: (position.xM / court.lengthM) * 100,
+    topPercent: (position.yM / court.widthM) * 100,
+  }
+}
+
+export function validCourtPositions(
+  court: AnalysisJobCourtPositions['court'],
+  positions: AnalysisJobCourtPosition[],
+): AnalysisJobCourtPosition[] {
+  return positions.filter((position) => courtPositionPointToPercent(court, position) != null)
+}

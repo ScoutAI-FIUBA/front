@@ -1,5 +1,7 @@
 # Analysis Current Spec
 
+El estado operativo del working tree y el próximo punto de continuación están registrados en [`handoff.md`](./handoff.md).
+
 ## Status
 
 Implemented behavior through Phase 6E Analysis list and Review redesign.
@@ -23,9 +25,25 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/pages/analysis/analysis-job-detail.ts`
 - `src/pages/analysis/AnalysisJobTeamSide.tsx`
 - `src/pages/analysis/analysis-job-team-side.ts`
+- `src/pages/analysis/AnalysisJobShootingStats.tsx`
+- `src/pages/analysis/analysis-job-stats.ts`
+- `src/pages/analysis/AnalysisJobShotChart.tsx`
+- `src/pages/analysis/analysis-job-shot-chart.ts`
+- `src/pages/analysis/AnalysisJobCourtPositions.tsx`
+- `src/pages/analysis/analysis-job-court-positions.ts`
+- `src/components/analysis/ShotChartCourt.tsx`
+- `src/components/analysis/shot-chart-court.ts`
+- `src/components/analysis/CourtPositionsCourt.tsx`
+- `src/components/analysis/court-positions-court.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/analysis-job-team-sides.service.ts`
 - `src/services/api/analysis-job-team-sides.client.ts`
+- `src/services/contracts/analysis-job-stats.service.ts`
+- `src/services/api/analysis-job-stats.client.ts`
+- `src/services/contracts/analysis-job-shot-chart.service.ts`
+- `src/services/api/analysis-job-shot-chart.client.ts`
+- `src/services/contracts/analysis-job-court-positions.service.ts`
+- `src/services/api/analysis-job-court-positions.client.ts`
 - `src/services/contracts/analysis.service.ts`
 - `src/services/mock/analysis.mock.ts`
 - `src/services/contracts/videos.service.ts`
@@ -119,30 +137,53 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - After loading the job, video and team services resolve optional display context from the job's own `videoId` and `teamId`. Context lookup failures fall back to identifiers without hiding the job.
 - Job detail reuses the Phase 6E review hierarchy and UI primitives for loading, retryable error, not-found, status, progress, completion, and secondary metadata.
 - A direct refresh works when `jobId` and `team_id` remain in the URL. Missing parameters or a backend 404 render the not-found state.
-- Completed job detail includes a results section boundary, but it does not request or display backend results yet.
+- Completed job detail does not request the raw `/jobs/{jobId}/results` payload; real shooting stats use their dedicated endpoint and presentation boundary.
 - Completed job detail loads the pipeline's detected sides through `GET /jobs/{jobId}/team-sides?team_id=...`; non-completed jobs do not request team-side data.
 - Side 0 and side 1 expose only backend-provided track counts, detected jersey numbers, and roster-match counts. The UI does not infer player identities.
 - `suggested_team_side` preselects a side visually but remains explicitly unconfirmed until the user submits it.
 - `our_team_side` is the persisted selection. It is displayed as confirmed and can be changed by selecting the other side and submitting again.
 - Team-side loading and confirmation errors stay local to the selector. A failed confirmation preserves the visible selection and the loaded job detail.
+- Completed job detail requests shooting statistics only after `our_team_side` is confirmed. It never requests stats for a non-completed job or an unconfirmed side.
+- Shooting stats load through `GET /jobs/{jobId}/stats?team_id=...` and remain independent from the team-side service and component.
+- Changing the persisted team side updates the detail's `ProcessingJob`; the stats request key includes that persisted side, so the box score reloads with the backend's new roster mapping.
+- The shooting presentation includes only backend-provided team and player totals for points, field goals, two-pointers, three-pointers, percentages, and available zone breakdowns.
+- Player identity uses `roster_name` when linked and otherwise the backend's `display_name`; missing jersey and roster fields are never synthesized.
+- Coverage is shown separately and states both partial detection counts and `not_measured` categories without rendering fake values for rebounds, assists, turnovers, steals, fouls, or minutes.
+- Stats distinguish loading, retryable error, empty output, partial coverage, and the prerequisite to confirm a team side.
+- Completed job detail requests the shot chart only after `our_team_side` is confirmed. Shot chart loading remains independent from shooting stats and team-side persistence.
+- Shot chart loads through `GET /jobs/{jobId}/shot-chart?team_id=...` without per-player requests; player filtering uses the full response locally.
+- Changing the persisted team side remounts and reloads the shot-chart block so no player association from the previous side remains visible.
+- The court uses backend-provided metre dimensions as its SVG view box and converts each valid `x_m` / `y_m` position to responsive percentages. Invalid or out-of-court coordinates are never rendered.
+- Made, missed, and unknown shots use three separate marker and text treatments; unknown is never labelled or styled as a miss.
+- Shot-chart coverage reports charted shots, shots without a valid court position, and shots without an identified shooter. Empty, loading, retryable error, partial, and unconfirmed-team states are distinct.
+- Completed job detail loads Court Positions through `GET /jobs/{jobId}/court-positions?team_id=...&sample_every=...` independently from team-side, Stats, and Shot Chart.
+- Court Positions requires only a `DONE` job. Confirming or changing `our_team_side` never changes its request key and never refetches position data; a confirmed side is used only to highlight tracks already labelled by the backend.
+- The service owns the visualization sampling value. Movement distance, sample count, and average position are rendered exactly as returned and are never recalculated from the sampled path.
+- Court Positions draws responsive paths using the backend's court dimensions and real `x_m` / `y_m` values. It does not derive a heatmap or fabricate timestamps.
+- Tracks use a confirmed jersey number when present and otherwise the technical label `Track {track_id}`. No player name or roster identity is invented.
+- The local selector supports all tracks, side 0, side 1, tracks without a side, and one individual track without additional requests.
+- Loading, retryable error, empty output, truncated coverage, discarded off-court records, and a local filter with no matching tracks are distinct states.
 
 ## Service Selection
 
 - `analysisService` currently always uses `mockAnalysisService`.
 - `videoService` uses the configured video implementation from the registry.
 - Analysis session metadata remains mock/local, while its collection and clip ranges use the configured real or mock clip collection service.
-- A parallel, read-only `IAnalysisJobService` models backend processing jobs without replacing or registering the existing analysis service.
+- A parallel `IAnalysisJobService` models backend processing jobs without replacing the existing analysis-session service.
 - The API implementation exposes `listForVideo(videoId, teamId)` through `GET /videos/{video_id}/jobs?team_id=...` and `get(jobId, teamId)` through `GET /jobs/{job_id}?team_id=...`.
 - Processing job statuses remain the backend values `QUEUED`, `RUNNING`, `DONE`, and `FAILED`; nullable `progress_percent` is mapped to `progressPercent`.
 - The Videos page consumes only `listForVideo(videoId, teamId)` inside a per-video history disclosure; the global Analysis pages remain on `AnalysisSession` and the mock `analysisService`.
 - The job-specific detail consumes `get(jobId, teamId)` while `/analisis`, `/analisis/nuevo`, and `/analisis/:id` remain on the existing mock/session flow.
 - The dedicated `analysisJobTeamSideService` reads detected sides and persists side `0 | 1` without extending `AnalysisSession`.
 - Team-side confirmation sends `PUT /jobs/{jobId}/our-team?team_id=...` with `{ "team_side": 0 | 1 }` and maps the returned processing job.
+- The dedicated `analysisJobStatsService` maps the complete `/stats` response while remaining separate from both `AnalysisSession` and the team-side mutation boundary.
+- The dedicated `analysisJobShotChartService` maps court geometry, markers, per-player groups, and coverage without depending on the stats or team-side service contracts.
+- The dedicated `analysisJobCourtPositionsService` maps court paths, movement summaries, team-side metadata, and coverage without reading or mutating `our_team_side`.
 
 ## Non-Scope
 
 - There is no real backend `AnalysisSession` API wired in the registry.
-- Listing jobs globally and reading job stats or shot charts are not part of the current processing-job boundary.
+- Listing jobs globally is not part of the current processing-job boundary.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
 - Manual-analysis labels are not persisted on backend collection items.
 - Persisted collection items cannot currently be updated through the frontend service contract; clip editing is limited to staged local drafts before analysis save.
@@ -150,10 +191,18 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Setup date/free-form context is not persisted because the current contracts have no Partido persistence fields.
 - Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
 - Restoring or editing a persisted analysis in the Workspace because the current routes and contracts do not provide a reliable rehydration path.
-- Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
-- Job results, job statistics, shot charts, court positions, heatmaps, and similar-play data are not loaded by the job-specific detail.
+- Similar-play search, movement visualizations, and prompt-driven agents are future scope.
+- Job results, heatmaps, and similar-play data are not loaded by the job-specific detail.
 
 ## Verification
+
+- Automated processing-job suite: 63/63 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, gating and request keys that prevent stale data or unnecessary refetches.
+- Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
+- `npm run build`: passing; Vite keeps the known chunk-size warning.
+- `npm run lint`: 0 errors and the 2 preexisting Fast Refresh warnings in `button.tsx` and `AuthContext.tsx`.
+- Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.
+- The remaining real smoke test for team-side, Stats and Shot Chart is blocked only by the deployed backend being behind `origin/main`: the deployed API returns `404 {"detail":"Not Found"}` for `GET /jobs/{job_id}/team-sides`, while the route exists in the current backend contract and the frontend request matches it.
+- Production behavior must not add fallback mocks or synthetic results to hide that deployment mismatch.
 
 - Run `npm run build`.
 - Run `npm run lint`.
