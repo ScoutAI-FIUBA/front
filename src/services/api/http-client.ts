@@ -1,4 +1,4 @@
-import { parseApiError } from './errors'
+import { ApiResponseError, parseApiError } from './errors'
 import { clearStoredToken, getStoredToken, setStoredToken } from './token'
 
 export const API_BASE_URL =
@@ -119,6 +119,6 @@ export async function apiJson<T>(
 ): Promise<T> {
   const res = await apiFetch(path, init, options)
   if (res.status === 204) return undefined as T
-  if (!res.ok) throw new Error(await parseApiError(res))
+  if (!res.ok) throw new ApiResponseError(await parseApiError(res), res.status)
   return res.json() as Promise<T>
 }

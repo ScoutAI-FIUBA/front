@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart3, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, BarChart3, CircleAlert, LoaderCircle, Play, RefreshCw } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -11,6 +12,7 @@ import {
   addCreatedAnalysisJob,
   createAnalysisJobSubmission,
 } from './analysis-job-creation'
+import { analysisJobDetailPath, canOpenAnalysisJob } from '@/pages/analysis/analysis-job-detail'
 import { getAnalysisJobPresentation } from './analysis-job-presentation'
 import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs-polling'
 
@@ -249,6 +251,15 @@ export function VideoAnalysisJobs({
                   <p className={`mt-3 text-sm ${job.status === 'FAILED' ? 'text-destructive' : 'text-muted-foreground'}`}>
                     {presentation.message}
                   </p>
+                )}
+
+                {canOpenAnalysisJob(job) && (
+                  <Button asChild variant="outline" size="sm" className="mt-4">
+                    <Link to={analysisJobDetailPath(job)}>
+                      Ver análisis
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </Button>
                 )}
               </article>
             )

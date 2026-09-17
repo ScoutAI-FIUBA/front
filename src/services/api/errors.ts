@@ -1,3 +1,17 @@
+export class ApiResponseError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiResponseError'
+    this.status = status
+  }
+}
+
+export function isApiErrorStatus(error: unknown, status: number): boolean {
+  return error instanceof ApiResponseError && error.status === status
+}
+
 export async function parseApiError(response: Response): Promise<string> {
   const text = await response.text()
   if (!text) return response.statusText || 'Error de servidor'

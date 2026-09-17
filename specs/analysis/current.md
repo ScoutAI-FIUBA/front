@@ -9,6 +9,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `/analisis`: analysis sessions list.
 - `/analisis/nuevo`: manual analysis playground for demo use.
 - `/analisis/:id`: analysis detail page.
+- `/analisis/jobs/:jobId?team_id=...`: real processing-job detail.
 
 ## Files Involved
 
@@ -18,7 +19,13 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/pages/analysis/AnalysisWorkspace.tsx`
 - `src/pages/analysis/ClipTimeline.tsx`
 - `src/pages/analysis/AnalysisDetailPage.tsx`
+- `src/pages/analysis/AnalysisJobDetailPage.tsx`
+- `src/pages/analysis/analysis-job-detail.ts`
+- `src/pages/analysis/AnalysisJobTeamSide.tsx`
+- `src/pages/analysis/analysis-job-team-side.ts`
 - `src/services/registry.ts`
+- `src/services/contracts/analysis-job-team-sides.service.ts`
+- `src/services/api/analysis-job-team-sides.client.ts`
 - `src/services/contracts/analysis.service.ts`
 - `src/services/mock/analysis.mock.ts`
 - `src/services/contracts/videos.service.ts`
@@ -107,6 +114,17 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Collection navigation remains a secondary action and appears only when a saved manual analysis has a `clipCollectionId`.
 - Review does not expose `Editar análisis`: the current route and persistence state cannot safely restore a saved analysis into the local Workspace.
 - Review remains in the normal light application shell; only the active analysis Workspace uses the dark focus theme.
+- A completed processing job in a video's real history exposes `Ver análisis` and links to the job-specific detail route. Other job statuses do not expose this navigation.
+- Job detail loads `analysisJobService.get(jobId, teamId)` directly from route/query parameters and never creates an `AnalysisSession` or requires a match.
+- After loading the job, video and team services resolve optional display context from the job's own `videoId` and `teamId`. Context lookup failures fall back to identifiers without hiding the job.
+- Job detail reuses the Phase 6E review hierarchy and UI primitives for loading, retryable error, not-found, status, progress, completion, and secondary metadata.
+- A direct refresh works when `jobId` and `team_id` remain in the URL. Missing parameters or a backend 404 render the not-found state.
+- Completed job detail includes a results section boundary, but it does not request or display backend results yet.
+- Completed job detail loads the pipeline's detected sides through `GET /jobs/{jobId}/team-sides?team_id=...`; non-completed jobs do not request team-side data.
+- Side 0 and side 1 expose only backend-provided track counts, detected jersey numbers, and roster-match counts. The UI does not infer player identities.
+- `suggested_team_side` preselects a side visually but remains explicitly unconfirmed until the user submits it.
+- `our_team_side` is the persisted selection. It is displayed as confirmed and can be changed by selecting the other side and submitting again.
+- Team-side loading and confirmation errors stay local to the selector. A failed confirmation preserves the visible selection and the loaded job detail.
 
 ## Service Selection
 
@@ -117,11 +135,14 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - The API implementation exposes `listForVideo(videoId, teamId)` through `GET /videos/{video_id}/jobs?team_id=...` and `get(jobId, teamId)` through `GET /jobs/{job_id}?team_id=...`.
 - Processing job statuses remain the backend values `QUEUED`, `RUNNING`, `DONE`, and `FAILED`; nullable `progress_percent` is mapped to `progressPercent`.
 - The Videos page consumes only `listForVideo(videoId, teamId)` inside a per-video history disclosure; the global Analysis pages remain on `AnalysisSession` and the mock `analysisService`.
+- The job-specific detail consumes `get(jobId, teamId)` while `/analisis`, `/analisis/nuevo`, and `/analisis/:id` remain on the existing mock/session flow.
+- The dedicated `analysisJobTeamSideService` reads detected sides and persists side `0 | 1` without extending `AnalysisSession`.
+- Team-side confirmation sends `PUT /jobs/{jobId}/our-team?team_id=...` with `{ "team_side": 0 | 1 }` and maps the returned processing job.
 
 ## Non-Scope
 
-- There is no real backend analysis API wired in the registry.
-- Creating processing jobs, listing jobs globally, and reading job stats or shot charts are not part of the read-only processing-job boundary.
+- There is no real backend `AnalysisSession` API wired in the registry.
+- Listing jobs globally and reading job stats or shot charts are not part of the current processing-job boundary.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
 - Manual-analysis labels are not persisted on backend collection items.
 - Persisted collection items cannot currently be updated through the frontend service contract; clip editing is limited to staged local drafts before analysis save.
@@ -130,6 +151,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
 - Restoring or editing a persisted analysis in the Workspace because the current routes and contracts do not provide a reliable rehydration path.
 - Similar-play search, player tracking, statistics integration, and prompt-driven agents are future scope.
+- Job results, job statistics, shot charts, court positions, heatmaps, and similar-play data are not loaded by the job-specific detail.
 
 ## Verification
 

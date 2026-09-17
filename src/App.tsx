@@ -17,6 +17,7 @@ import { VideoCollectionDetailPage } from '@/pages/videos/VideoCollectionDetailP
 import { AnalysisPage } from '@/pages/analysis/AnalysisPage'
 import { AnalysisNewPage } from '@/pages/analysis/AnalysisNewPage'
 import { AnalysisDetailPage } from '@/pages/analysis/AnalysisDetailPage'
+import { AnalysisJobDetailPage } from '@/pages/analysis/AnalysisJobDetailPage'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/videos/:videoId/colecciones/:collectionId" element={<VideoCollectionDetailPage />} />
             <Route path="/analisis" element={<AnalysisPage />} />
             <Route path="/analisis/nuevo" element={<AnalysisNewPage />} />
+            <Route path="/analisis/jobs/:jobId" element={<AnalysisJobDetailPage />} />
             <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
           </Route>
         </Route>
