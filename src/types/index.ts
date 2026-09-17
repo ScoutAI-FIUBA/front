@@ -145,6 +145,23 @@ export interface GameEvent {
 export type AnalysisStatus = 'pending' | 'processing' | 'completed'
 
 export type ProcessingJobStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED'
+export type AnalysisJobTeamSide = 0 | 1
+
+export interface DetectedAnalysisJobTeamSide {
+  teamSide: AnalysisJobTeamSide
+  trackCount: number
+  numbers: string[]
+  rosterMatches: number
+}
+
+export interface AnalysisJobTeamSides {
+  jobId: string
+  videoId: string
+  ourTeamSide: AnalysisJobTeamSide | null
+  suggestedTeamSide: AnalysisJobTeamSide | null
+  sides: DetectedAnalysisJobTeamSide[]
+  rosterNumbersKnown: number
+}
 
 export interface ProcessingJob {
   id: string
@@ -156,7 +173,7 @@ export interface ProcessingJob {
   errorMessage: string | null
   progressPercent: number | null
   summary: Record<string, unknown> | null
-  ourTeamSide: 0 | 1 | null
+  ourTeamSide: AnalysisJobTeamSide | null
   startedAt: string | null
   finishedAt: string | null
   createdAt: string

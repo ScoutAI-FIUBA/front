@@ -60,6 +60,7 @@ src/
 - `/videos/:videoId/colecciones/:collectionId`: clip collection detail.
 - `/analisis`: analysis sessions page.
 - `/analisis/:id`: analysis detail page.
+- `/analisis/jobs/:jobId?team_id=...`: real processing-job detail without match/session assumptions.
 - `/`: redirects to `/login`.
 - `*`: redirects to `/dashboard`.
 
@@ -71,6 +72,7 @@ src/
 - `src/services/registry.ts` selects real or mock services.
 - `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
 - `matchService` and `analysisService` currently use mocks.
+- `analysisJobService` and `analysisJobTeamSideService` always use the real processing-job backend.
 
 ## Mocks
 
