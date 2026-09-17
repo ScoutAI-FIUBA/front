@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  BarChart3,
   CircleAlert,
   CircleCheck,
   LoaderCircle,
@@ -21,6 +20,8 @@ import {
 } from './analysis-job-detail'
 import { getAnalysisJobPresentation } from '@/pages/videos/analysis-job-presentation'
 import { AnalysisJobTeamSideSelector } from './AnalysisJobTeamSide'
+import { AnalysisJobShootingStatsView } from './AnalysisJobShootingStats'
+import { AnalysisJobShotChartView } from './AnalysisJobShotChart'
 import type { ProcessingJob } from '@/types'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -213,27 +214,14 @@ export function AnalysisJobDetailPage() {
           </section>
 
           <AnalysisJobTeamSideSelector job={job} onJobUpdated={handleJobUpdated} />
-
-          <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="job-results-title">
-          <div className="flex items-start gap-3">
-            <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <div>
-              <h2 id="job-results-title" className="font-semibold text-foreground">Resultados pendientes de integración</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Los resultados se incorporarán en este espacio en un próximo bloque.
-              </p>
-            </div>
-          </div>
-          <div className="mt-5 flex min-h-32 items-center justify-center rounded-lg border border-dashed bg-surface-subtle p-6 text-center">
-            <div>
-              <BarChart3 className="mx-auto h-5 w-5 text-muted-foreground" aria-hidden="true" />
-              <p className="mt-3 text-sm font-medium text-foreground">Sin resultados cargados todavía</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Este bloque todavía no consulta el endpoint de resultados del job.
-              </p>
-            </div>
-          </div>
-          </section>
+          <AnalysisJobShootingStatsView
+            key={`stats-${job.ourTeamSide ?? 'unconfirmed'}`}
+            job={job}
+          />
+          <AnalysisJobShotChartView
+            key={`shot-chart-${job.ourTeamSide ?? 'unconfirmed'}`}
+            job={job}
+          />
         </>
       )}
 

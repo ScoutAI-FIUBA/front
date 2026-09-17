@@ -6,6 +6,8 @@ import type { IVideoService } from './contracts/videos.service'
 import type { IAnalysisService } from './contracts/analysis.service'
 import type { IAnalysisJobService } from './contracts/analysis-jobs.service'
 import type { IAnalysisJobTeamSideService } from './contracts/analysis-job-team-sides.service'
+import type { IAnalysisJobStatsService } from './contracts/analysis-job-stats.service'
+import type { IAnalysisJobShotChartService } from './contracts/analysis-job-shot-chart.service'
 import type { IClipCollectionService } from './contracts/clip-collections.service'
 import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
@@ -14,6 +16,8 @@ import { apiVideoService } from './api/videos.api'
 import { apiClipCollectionService } from './api/clip-collections.api'
 import { apiAnalysisJobService } from './api/analysis-jobs.api'
 import { apiAnalysisJobTeamSideService } from './api/analysis-job-team-sides.api'
+import { apiAnalysisJobStatsService } from './api/analysis-job-stats.api'
+import { apiAnalysisJobShotChartService } from './api/analysis-job-shot-chart.api'
 import { mockAuthService } from './mock/auth.mock'
 import { mockTeamService } from './mock/teams.mock'
 import { mockPlayerService } from './mock/players.mock'
@@ -40,3 +44,5 @@ export const analysisService: IAnalysisService = mockAnalysisService
 /** Real processing-job boundary; it remains separate from the mock AnalysisSession service. */
 export const analysisJobService: IAnalysisJobService = apiAnalysisJobService
 export const analysisJobTeamSideService: IAnalysisJobTeamSideService = apiAnalysisJobTeamSideService
+export const analysisJobStatsService: IAnalysisJobStatsService = apiAnalysisJobStatsService
+export const analysisJobShotChartService: IAnalysisJobShotChartService = apiAnalysisJobShotChartService
