@@ -1,0 +1,242 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+import {
+  COURT_POSITIONS_SAMPLE_EVERY,
+  createAnalysisJobCourtPositionsService,
+  type ApiAnalysisJobCourtPositions,
+} from '../src/services/api/analysis-job-court-positions.client.ts'
+import type { AnalysisJobRequest } from '../src/services/api/analysis-jobs.client.ts'
+import {
+  analysisJobCourtPositionsContextForJob,
+  analysisJobCourtPositionsLoadKey,
+  courtPositionPlayerLabel,
+  filterCourtPositionPlayers,
+  loadAnalysisJobCourtPositions,
+} from '../src/pages/analysis/analysis-job-court-positions.ts'
+import { courtPositionPointToPercent } from '../src/components/analysis/court-positions-court.ts'
+import type { ProcessingJob } from '../src/types/index.ts'
+
+function apiPositions(
+  overrides: Partial<ApiAnalysisJobCourtPositions> = {},
+): ApiAnalysisJobCourtPositions {
+  return {
+    job_id: 'job-1',
+    video_id: 'video-1',
+    court: { length_m: 28, width_m: 15 },
+    players: [
+      {
+        track_id: 7,
+        team_id: 0,
+        jersey_number: '23',
+        positions: [
+          { frame_index: 0, x_m: 2, y_m: 3 },
+          { frame_index: 5, x_m: 4, y_m: 5 },
+        ],
+        movement: {
+          samples: 20,
+          distance_m: 8.25,
+          average_position: { x_m: 3.2, y_m: 4.1 },
+        },
+      },
+      {
+        track_id: 9,
+        team_id: 1,
+        jersey_number: null,
+        positions: [{ frame_index: 1, x_m: 14, y_m: 7.5 }],
+        movement: {
+          samples: 12,
+          distance_m: 4.5,
+          average_position: { x_m: 14, y_m: 7.5 },
+        },
+      },
+      {
+        track_id: 11,
+        team_id: null,
+        jersey_number: null,
+        positions: [{ frame_index: null, x_m: 20, y_m: 10 }],
+        movement: {
+          samples: 1,
+          distance_m: 0,
+          average_position: { x_m: 20, y_m: 10 },
+        },
+      },
+    ],
+    coverage: {
+      source_file: 'projected_tracks.jsonl',
+      records_read: 33,
+      records_off_court: 2,
+      sample_every: COURT_POSITIONS_SAMPLE_EVERY,
+      truncated: false,
+    },
+    ...overrides,
+  }
+}
+
+function doneJob(ourTeamSide: 0 | 1 | null): ProcessingJob {
+  return {
+    id: 'job-1',
+    videoId: 'video-1',
+    teamId: 'team-1',
+    requestedByUserId: 'user-1',
+    status: 'DONE',
+    resultsKey: 'results/team-1/job-1',
+    errorMessage: null,
+    progressPercent: 100,
+    summary: null,
+    ourTeamSide,
+    startedAt: null,
+    finishedAt: null,
+    createdAt: '2026-09-17T12:00:00+00:00',
+    updatedAt: '2026-09-17T12:01:00+00:00',
+  }
+}
+
+test('GET maps multiple tracks and keeps sampling encapsulated in the service', async () => {
+  const paths: string[] = []
+  const request: AnalysisJobRequest = async <T>(path: string) => {
+    paths.push(path)
+    return apiPositions() as T
+  }
+  const service = createAnalysisJobCourtPositionsService(request)
+
+  const result = await service.get('job/id', 'team id')
+
+  assert.deepEqual(paths, [
+    `/jobs/job%2Fid/court-positions?team_id=team%20id&sample_every=${COURT_POSITIONS_SAMPLE_EVERY}`,
+  ])
+  assert.equal(result.players.length, 3)
+  assert.deepEqual(result.court, { lengthM: 28, widthM: 15 })
+  assert.equal(result.coverage.sampleEvery, COURT_POSITIONS_SAMPLE_EVERY)
+})
+
+test('maps side 0, side 1, and null without treating them as team UUIDs', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const result = await service.get('job-1', 'team-1')
+
+  assert.deepEqual(result.players.map((player) => player.teamSide), [0, 1, null])
+})
+
+test('preserves jersey numbers and uses a technical track label when absent', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const result = await service.get('job-1', 'team-1')
+
+  assert.equal(courtPositionPlayerLabel(result.players[0]!), '#23 · Track 7')
+  assert.equal(courtPositionPlayerLabel(result.players[1]!), 'Track 9')
+})
+
+test('maps an empty response and a null source file without fabricating players', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions({
+    players: [],
+    coverage: {
+      source_file: null,
+      records_read: 0,
+      records_off_court: 0,
+      sample_every: COURT_POSITIONS_SAMPLE_EVERY,
+      truncated: false,
+    },
+  }) as T)
+
+  const result = await service.get('job-1', 'team-1')
+
+  assert.deepEqual(result.players, [])
+  assert.equal(result.coverage.sourceFile, null)
+  assert.equal(result.coverage.recordsRead, 0)
+})
+
+test('preserves truncation and off-court coverage', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions({
+    coverage: {
+      source_file: 'player_positions.jsonl',
+      records_read: 20_000,
+      records_off_court: 14,
+      sample_every: COURT_POSITIONS_SAMPLE_EVERY,
+      truncated: true,
+    },
+  }) as T)
+
+  const result = await service.get('job-1', 'team-1')
+
+  assert.equal(result.coverage.sourceFile, 'player_positions.jsonl')
+  assert.equal(result.coverage.truncated, true)
+  assert.equal(result.coverage.recordsOffCourt, 14)
+})
+
+test('a failed load can be retried without changing the request contract', async () => {
+  let attempts = 0
+  const service = createAnalysisJobCourtPositionsService(async <T>() => {
+    attempts += 1
+    if (attempts === 1) throw new Error('Positions unavailable')
+    return apiPositions() as T
+  })
+  const context = analysisJobCourtPositionsContextForJob(doneJob(null))
+
+  await assert.rejects(loadAnalysisJobCourtPositions(context, service), /Positions unavailable/)
+  const retried = await loadAnalysisJobCourtPositions(context, service)
+
+  assert.equal(attempts, 2)
+  assert.equal(retried?.players.length, 3)
+})
+
+test('does not request positions before the job is DONE', async () => {
+  let calls = 0
+  const service = { get: async () => { calls += 1; return {} as never } }
+  const context = { ...analysisJobCourtPositionsContextForJob(doneJob(null)), status: 'RUNNING' as const }
+
+  const result = await loadAnalysisJobCourtPositions(context, service)
+
+  assert.equal(result, null)
+  assert.equal(calls, 0)
+})
+
+test('filters locally by side, unassigned tracks, and individual track', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.deepEqual(filterCourtPositionPlayers(players, 'all').map((player) => player.trackId), [7, 9, 11])
+  assert.deepEqual(filterCourtPositionPlayers(players, 'side-0').map((player) => player.trackId), [7])
+  assert.deepEqual(filterCourtPositionPlayers(players, 'side-1').map((player) => player.trackId), [9])
+  assert.deepEqual(filterCourtPositionPlayers(players, 'unassigned').map((player) => player.trackId), [11])
+  assert.deepEqual(filterCourtPositionPlayers(players, 'track:9').map((player) => player.trackId), [9])
+})
+
+test('changing our_team_side keeps the same load identity and does not require refetch', async () => {
+  const sideZeroContext = analysisJobCourtPositionsContextForJob(doneJob(0))
+  const sideOneContext = analysisJobCourtPositionsContextForJob(doneJob(1))
+
+  assert.deepEqual(sideZeroContext, sideOneContext)
+  assert.equal(
+    analysisJobCourtPositionsLoadKey(sideZeroContext),
+    analysisJobCourtPositionsLoadKey(sideOneContext),
+  )
+})
+
+test('maps coordinates correctly inside a 28 by 15 metre court', () => {
+  const court = { lengthM: 28, widthM: 15 }
+
+  assert.deepEqual(
+    courtPositionPointToPercent(court, { xM: 14, yM: 7.5 }),
+    { leftPercent: 50, topPercent: 50 },
+  )
+  assert.deepEqual(
+    courtPositionPointToPercent(court, { xM: 28, yM: 15 }),
+    { leftPercent: 100, topPercent: 100 },
+  )
+  assert.equal(courtPositionPointToPercent(court, { xM: -0.1, yM: 7.5 }), null)
+})
+
+test('court and detail containers use responsive width guards without a mobile min-width', () => {
+  const courtSource = readFileSync(
+    new URL('../src/components/analysis/CourtPositionsCourt.tsx', import.meta.url),
+    'utf8',
+  )
+  const detailSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobCourtPositions.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(courtSource, /w-full max-w-full overflow-hidden/)
+  assert.match(detailSource, /min-w-0 rounded-lg/)
+  assert.doesNotMatch(courtSource, /min-w-\[/)
+  assert.doesNotMatch(detailSource, /min-w-\[/)
+})

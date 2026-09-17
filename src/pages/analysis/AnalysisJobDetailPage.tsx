@@ -22,6 +22,7 @@ import { getAnalysisJobPresentation } from '@/pages/videos/analysis-job-presenta
 import { AnalysisJobTeamSideSelector } from './AnalysisJobTeamSide'
 import { AnalysisJobShootingStatsView } from './AnalysisJobShootingStats'
 import { AnalysisJobShotChartView } from './AnalysisJobShotChart'
+import { AnalysisJobCourtPositionsView } from './AnalysisJobCourtPositions'
 import type { ProcessingJob } from '@/types'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -222,6 +223,7 @@ export function AnalysisJobDetailPage() {
             key={`shot-chart-${job.ourTeamSide ?? 'unconfirmed'}`}
             job={job}
           />
+          <AnalysisJobCourtPositionsView job={job} />
         </>
       )}
 

@@ -29,8 +29,12 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/pages/analysis/analysis-job-stats.ts`
 - `src/pages/analysis/AnalysisJobShotChart.tsx`
 - `src/pages/analysis/analysis-job-shot-chart.ts`
+- `src/pages/analysis/AnalysisJobCourtPositions.tsx`
+- `src/pages/analysis/analysis-job-court-positions.ts`
 - `src/components/analysis/ShotChartCourt.tsx`
 - `src/components/analysis/shot-chart-court.ts`
+- `src/components/analysis/CourtPositionsCourt.tsx`
+- `src/components/analysis/court-positions-court.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/analysis-job-team-sides.service.ts`
 - `src/services/api/analysis-job-team-sides.client.ts`
@@ -38,6 +42,8 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/services/api/analysis-job-stats.client.ts`
 - `src/services/contracts/analysis-job-shot-chart.service.ts`
 - `src/services/api/analysis-job-shot-chart.client.ts`
+- `src/services/contracts/analysis-job-court-positions.service.ts`
+- `src/services/api/analysis-job-court-positions.client.ts`
 - `src/services/contracts/analysis.service.ts`
 - `src/services/mock/analysis.mock.ts`
 - `src/services/contracts/videos.service.ts`
@@ -150,6 +156,13 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - The court uses backend-provided metre dimensions as its SVG view box and converts each valid `x_m` / `y_m` position to responsive percentages. Invalid or out-of-court coordinates are never rendered.
 - Made, missed, and unknown shots use three separate marker and text treatments; unknown is never labelled or styled as a miss.
 - Shot-chart coverage reports charted shots, shots without a valid court position, and shots without an identified shooter. Empty, loading, retryable error, partial, and unconfirmed-team states are distinct.
+- Completed job detail loads Court Positions through `GET /jobs/{jobId}/court-positions?team_id=...&sample_every=...` independently from team-side, Stats, and Shot Chart.
+- Court Positions requires only a `DONE` job. Confirming or changing `our_team_side` never changes its request key and never refetches position data; a confirmed side is used only to highlight tracks already labelled by the backend.
+- The service owns the visualization sampling value. Movement distance, sample count, and average position are rendered exactly as returned and are never recalculated from the sampled path.
+- Court Positions draws responsive paths using the backend's court dimensions and real `x_m` / `y_m` values. It does not derive a heatmap or fabricate timestamps.
+- Tracks use a confirmed jersey number when present and otherwise the technical label `Track {track_id}`. No player name or roster identity is invented.
+- The local selector supports all tracks, side 0, side 1, tracks without a side, and one individual track without additional requests.
+- Loading, retryable error, empty output, truncated coverage, discarded off-court records, and a local filter with no matching tracks are distinct states.
 
 ## Service Selection
 
@@ -165,6 +178,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Team-side confirmation sends `PUT /jobs/{jobId}/our-team?team_id=...` with `{ "team_side": 0 | 1 }` and maps the returned processing job.
 - The dedicated `analysisJobStatsService` maps the complete `/stats` response while remaining separate from both `AnalysisSession` and the team-side mutation boundary.
 - The dedicated `analysisJobShotChartService` maps court geometry, markers, per-player groups, and coverage without depending on the stats or team-side service contracts.
+- The dedicated `analysisJobCourtPositionsService` maps court paths, movement summaries, team-side metadata, and coverage without reading or mutating `our_team_side`.
 
 ## Non-Scope
 
@@ -178,11 +192,12 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
 - Restoring or editing a persisted analysis in the Workspace because the current routes and contracts do not provide a reliable rehydration path.
 - Similar-play search, movement visualizations, and prompt-driven agents are future scope.
-- Job results, court positions, heatmaps, and similar-play data are not loaded by the job-specific detail.
+- Job results, heatmaps, and similar-play data are not loaded by the job-specific detail.
 
 ## Verification
 
-- Automated processing-job suite: 52/52 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, gating and refresh keys that prevent stale data.
+- Automated processing-job suite: 63/63 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, gating and request keys that prevent stale data or unnecessary refetches.
+- Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
 - `npm run build`: passing; Vite keeps the known chunk-size warning.
 - `npm run lint`: 0 errors and the 2 preexisting Fast Refresh warnings in `button.tsx` and `AuthContext.tsx`.
 - Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.

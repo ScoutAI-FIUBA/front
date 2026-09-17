@@ -72,7 +72,7 @@ src/
 - `src/services/registry.ts` selects real or mock services.
 - `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
 - `matchService` and `analysisService` currently use mocks.
-- `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, and `analysisJobShotChartService` always use the real processing-job backend.
+- `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, `analysisJobShotChartService`, and `analysisJobCourtPositionsService` always use the real processing-job backend.
 
 ## Mocks
 

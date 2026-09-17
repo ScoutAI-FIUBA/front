@@ -305,6 +305,53 @@ export interface AnalysisJobShotChart {
   coverage: AnalysisJobShotChartCoverage
 }
 
+export interface AnalysisJobCourtPosition {
+  frameIndex: number | null
+  xM: number
+  yM: number
+}
+
+export interface AnalysisJobCourtMovement {
+  samples: number
+  distanceM: number
+  averagePosition: {
+    xM: number
+    yM: number
+  }
+}
+
+export interface AnalysisJobCourtPositionsPlayer {
+  trackId: number
+  teamSide: AnalysisJobTeamSide | null
+  jerseyNumber: string | null
+  positions: AnalysisJobCourtPosition[]
+  movement: AnalysisJobCourtMovement
+}
+
+export type AnalysisJobCourtPositionsSource =
+  | 'projected_tracks.jsonl'
+  | 'player_positions.jsonl'
+  | null
+
+export interface AnalysisJobCourtPositionsCoverage {
+  sourceFile: AnalysisJobCourtPositionsSource
+  recordsRead: number
+  recordsOffCourt: number
+  sampleEvery: number
+  truncated: boolean
+}
+
+export interface AnalysisJobCourtPositions {
+  jobId: string
+  videoId: string
+  court: {
+    lengthM: number
+    widthM: number
+  }
+  players: AnalysisJobCourtPositionsPlayer[]
+  coverage: AnalysisJobCourtPositionsCoverage
+}
+
 export interface ProcessingJob {
   id: string
   videoId: string

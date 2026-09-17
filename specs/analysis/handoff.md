@@ -6,7 +6,7 @@
 - Branch frontend: `dev`.
 - El bloque de Shooting Stats + Shot Chart queda cerrado en `dev` con commit y push.
 - Baseline backend verificado: `origin/main` en `c1a78ded97565080ada7fa435aa50744d469473f`.
-- Shooting Stats y Shot Chart están implementados y verificados localmente: 52/52 tests, build passing y lint sin errores.
+- Shooting Stats, Shot Chart y Court Positions están implementados y verificados localmente: 63/63 tests, build passing y lint sin errores.
 - El smoke test real posterior a `DONE` quedó bloqueado exclusivamente por un deploy backend desactualizado: el frontend llama correctamente a `GET /jobs/{job_id}/team-sides?team_id=...`, la ruta existe en `origin/main`, pero el backend desplegado responde `404 {"detail":"Not Found"}`.
 - `artifacts/` es contenido local preexistente sin trackear y no forma parte de estos bloques.
 
@@ -25,15 +25,17 @@ El frontend ya implementa el flujo real basado en `ProcessingJob`:
 7. Lectura y persistencia de `our_team_side`.
 8. Shooting Stats reales mediante `/jobs/{jobId}/stats`.
 9. Shot Chart real mediante `/jobs/{jobId}/shot-chart`, con filtro local por jugador.
+10. Court Positions reales mediante `/jobs/{jobId}/court-positions`, con trayectorias y filtros locales.
 
 Flujo validado hasta este punto:
 
 ```text
 Team → Video → iniciar análisis → QUEUED → RUNNING → DONE
-     → Ver análisis → confirmar team-side → shooting stats → shot chart
+     → Ver análisis → court positions
+                    → confirmar team-side → shooting stats → shot chart
 ```
 
-La creación, el polling y la transición hasta `DONE` fueron validados manualmente contra el backend real con el job `f504888a-978a-4f43-a130-280e730c5a04`. La validación automatizada cubre team-side `0`, team-side `1`, cambio de lado, Shooting Stats, Shot Chart y recarga sin datos stale. El smoke de los bloques posteriores a `DONE` sigue pendiente únicamente hasta que el backend desplegado publique el contrato ya presente en `origin/main`; esto no bloquea continuar la implementación frontend.
+La creación, el polling y la transición hasta `DONE` fueron validados manualmente contra el backend real con el job `f504888a-978a-4f43-a130-280e730c5a04`. La validación automatizada cubre team-side `0`, team-side `1`, cambio de lado, Shooting Stats, Shot Chart, Court Positions y recarga sin datos stale. El smoke de los bloques posteriores a `DONE` sigue pendiente únicamente hasta que el backend desplegado publique el contrato ya presente en `origin/main`; esto no bloquea continuar la implementación frontend.
 
 ## Arquitectura que debe conservarse
 
@@ -45,11 +47,13 @@ La creación, el polling y la transición hasta `DONE` fueron validados manualme
   - `analysisJobService`;
   - `analysisJobTeamSideService`;
   - `analysisJobStatsService`;
-  - `analysisJobShotChartService`.
-- `AnalysisJobDetailPage` coordina los bloques mediante el `ProcessingJob`; TeamSide, Stats y ShotChart no deben depender internamente unos de otros.
+  - `analysisJobShotChartService`;
+  - `analysisJobCourtPositionsService`.
+- `AnalysisJobDetailPage` coordina los bloques mediante el `ProcessingJob`; TeamSide, Stats, ShotChart y Court Positions no deben depender internamente unos de otros.
 - Stats y ShotChart sólo consultan un job `DONE` con `ourTeamSide` confirmado.
 - Cambiar `ourTeamSide` invalida y remonta Stats y ShotChart para evitar identidades del mapping anterior.
-- Las identidades se muestran únicamente desde `roster_name` / `display_name` del backend. No fabricar jugadores.
+- Court Positions consulta cualquier job `DONE`, no depende de `ourTeamSide` y no refetch al cambiar el lado confirmado.
+- Stats y Shot Chart muestran identidades únicamente desde `roster_name` / `display_name` del backend. Court Positions usa sólo dorsal backend o el identificador técnico `Track {track_id}`. No fabricar jugadores.
 
 ## Backend y decisiones vigentes
 
@@ -58,6 +62,7 @@ La creación, el polling y la transición hasta `DONE` fueron validados manualme
 - El historial real necesario es por video; actualmente no se necesita un historial global de jobs.
 - Clip Collections es el contrato vigente para clips y no debe mezclarse con el flujo job-centric.
 - Shooting, zonas y Shot Chart son datos reales del backend.
+- Court Positions usa `sample_every=5` encapsulado en el adapter; las métricas de movimiento permanecen exactamente como las calcula el backend sobre la trayectoria completa.
 - `coverage.not_measured` debe seguir representándose honestamente.
 - Pases, pérdidas, asistencias, robos, rebotes y otras métricas no medidas no deben mostrarse con valores inventados.
 - No agregar fallbacks, mocks de producción ni datos sintéticos para ocultar el `404` del deploy atrasado.
@@ -91,6 +96,17 @@ Archivos nuevos de Shot Chart:
 - `src/services/api/analysis-job-shot-chart.client.ts`
 - `src/services/api/analysis-job-shot-chart.api.ts`
 - `tests/analysis-job-shot-chart.test.ts`
+
+Archivos nuevos de Court Positions:
+
+- `src/components/analysis/CourtPositionsCourt.tsx`
+- `src/components/analysis/court-positions-court.ts`
+- `src/pages/analysis/AnalysisJobCourtPositions.tsx`
+- `src/pages/analysis/analysis-job-court-positions.ts`
+- `src/services/contracts/analysis-job-court-positions.service.ts`
+- `src/services/api/analysis-job-court-positions.client.ts`
+- `src/services/api/analysis-job-court-positions.api.ts`
+- `tests/analysis-job-court-positions.test.ts`
 
 `specs/analysis/handoff.md` también forma parte del cierre documental. `artifacts/` permanece local, sin trackear y excluido del commit.
 
@@ -131,7 +147,6 @@ Verificación del bloque:
 
 ## No implementado
 
-- Court positions.
 - Heatmap.
 - Similares.
 - `/jobs/{id}/results`.
@@ -141,18 +156,16 @@ Verificación del bloque:
 
 ## Próximo bloque recomendado
 
-El próximo bloque debe ser Court Positions reales usando el endpoint vigente del backend. Antes de tocar UI:
+Court Positions queda implementado. Antes de iniciar otro bloque:
 
-1. Mantener registrado el smoke pendiente como bloqueo de entorno; no reabrir Stats o Shot Chart ni inventar un fallback frontend.
-2. Actualizar `origin/main` y verificar el contrato actual de `/jobs/{jobId}/court-positions`.
-3. Informar endpoint, shape, artefactos fuente, estados vacíos/error y relación con `our_team_side` antes de implementar.
-4. Definir types, service y adapter independientes para Court Positions.
-5. Mantener el gating `DONE + ourTeamSide` sólo si el contrato real demuestra que el mapping depende del lado.
+1. Mantener registrado el smoke pendiente como bloqueo de entorno; no reabrir los bloques cerrados ni inventar fallbacks frontend.
+2. Ejecutar smoke desktop/mobile cuando el deploy backend publique los endpoints presentes en `origin/main`.
+3. No iniciar Heatmap sin una instrucción separada y sin definir primero si será una derivación local de Court Positions o un contrato backend propio.
 
 Secuencia posterior recomendada:
 
 ```text
-court positions → heatmap derivado → similares/comparaciones → pulido UI
+heatmap → similares/comparaciones → pulido UI
 ```
 
 No iniciar esas implementaciones desde este handoff.
