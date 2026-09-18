@@ -12,6 +12,7 @@ Current behavior documentation.
 ## Files Involved
 
 - `src/pages/videos/VideosPage.tsx`
+- `src/pages/videos/video-team-navigation.ts`
 - `src/pages/videos/VideoAnalysisJobs.tsx`
 - `src/pages/videos/analysis-job-presentation.ts`
 - `src/pages/videos/VideoUploadPage.tsx`
@@ -31,6 +32,10 @@ Current behavior documentation.
 
 - Videos page loads videos, teams, and recent activity.
 - Videos can be filtered by team and status.
+- `/videos?team_id={teamId}` preselects the existing local team filter when the
+  id belongs to a loaded team. Missing or invalid ids safely show all teams.
+- Changing the team selector updates `team_id` in the URL, and selecting
+  `Todos los equipos` removes it. This does not add backend requests.
 - Each video row can disclose its own backend processing-job history without navigating to the global analysis list.
 - Ready videos expose an `Iniciar análisis` action inside that history disclosure. It submits `POST /videos/{video_id}/jobs` with `{ team_id }`; the optional pipeline is omitted so the backend selects its default.
 - A successful submission inserts the returned `QUEUED` job into the existing history immediately. The active-job polling lifecycle then starts without converting the job to an `AnalysisSession`.
