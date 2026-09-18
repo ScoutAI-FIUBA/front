@@ -9,7 +9,7 @@ import {
 } from 'react'
 import type { RegisterDto, User, UserCredentials } from '@/types'
 import { authService } from '@/services/registry'
-import { getStoredToken } from '@/services/api/token'
+import { getStoredToken, subscribeToStoredToken } from '@/services/api/token'
 
 interface AuthContextValue {
   user: User | null
@@ -28,6 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(getStoredToken())
   const [isLoading, setIsLoading] = useState(true)
 
+  useEffect(
+    () =>
+      subscribeToStoredToken((nextToken) => {
+        setToken(nextToken)
+        if (!nextToken) setUser(null)
+      }),
+    [],
+  )
+
   useEffect(() => {
     async function restore() {
       const stored = getStoredToken()
@@ -39,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const current = await authService.getCurrentUser(stored)
         if (current) {
           setUser(current)
-          setToken(stored)
+          setToken(getStoredToken())
         } else {
           setToken(null)
         }

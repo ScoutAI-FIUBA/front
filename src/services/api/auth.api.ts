@@ -1,8 +1,12 @@
 import type { IAuthService, AuthResult } from '../contracts/auth.service'
 import type { RegisterDto, User } from '@/types'
-import { apiJson } from './http-client'
-import { mapApiUser, setProfileFullName, type ApiUser } from './mappers'
-import { clearStoredToken, setStoredToken } from './token'
+import { apiJson } from './http-client.ts'
+import { mapApiUser, setProfileFullName, type ApiUser } from './mappers.ts'
+import { clearStoredToken, setStoredToken } from './token.ts'
+
+export const LOGIN_REQUEST_TIMEOUT_MS = 60_000
+export const LOGIN_TIMEOUT_MESSAGE =
+  'El servidor está tardando más de lo habitual. Podés volver a intentarlo.'
 
 interface AuthUserResponse {
   user: ApiUser
@@ -30,7 +34,11 @@ export const apiAuthService: IAuthService = {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       },
-      { auth: false },
+      {
+        auth: false,
+        timeoutMs: LOGIN_REQUEST_TIMEOUT_MS,
+        timeoutMessage: LOGIN_TIMEOUT_MESSAGE,
+      },
     )
     return toAuthResult(data)
   },
@@ -77,4 +85,4 @@ export const apiAuthService: IAuthService = {
   },
 }
 
-export { getStoredToken } from './token'
+export { getStoredToken } from './token.ts'
