@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Link2, Plus, Shield, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -24,6 +25,7 @@ import { Alert } from '@/components/ui/alert'
 import { teamService, playerService } from '@/services/registry'
 import type { Player, Team } from '@/types'
 import { toast } from 'sonner'
+import { teamVideosPath } from '@/pages/videos/video-team-navigation'
 
 export function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -236,7 +238,9 @@ export function TeamsPage() {
               <p className="text-sm text-muted-foreground">{team.league}</p>
               <p className="mt-4 text-xs font-medium text-muted-foreground">JUGADORES {counts[team.id] ?? 0}</p>
               <div className="mt-4 flex gap-2">
-                <Button size="sm" className="flex-1">Ver equipo</Button>
+                <Button asChild size="sm" className="flex-1">
+                  <Link to={teamVideosPath(team.id)}>Ver videos</Link>
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => openEdit(team)}>Editar</Button>
                 <Button size="sm" variant="destructive" onClick={() => void handleDelete(team)}>Borrar</Button>
               </div>

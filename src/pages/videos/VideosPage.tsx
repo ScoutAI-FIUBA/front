@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BarChart2, ChevronDown, Clock, Eye, FolderOpen, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +16,12 @@ import type { ActivityItem, Team, Video } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { VideoAnalysisJobs } from './VideoAnalysisJobs'
+import {
+  ALL_VIDEO_TEAMS_FILTER,
+  resolveVideoTeamFilter,
+  VIDEO_TEAM_QUERY_PARAM,
+  withVideoTeamFilter,
+} from './video-team-navigation'
 
 const statusVariant = (s: Video['status']) =>
   s === 'analyzed' ? 'analyzed' : s === 'processing' ? 'processing' : s === 'failed' ? 'failed' : 'uploaded'
@@ -24,9 +30,10 @@ const statusLabel = (s: Video['status']) =>
   s === 'analyzed' ? 'Analizado' : s === 'processing' ? 'Procesando' : s === 'failed' ? 'Fallido' : 'Subido'
 
 export function VideosPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [videos, setVideos] = useState<Video[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-  const [teamFilter, setTeamFilter] = useState('all')
+  const [teamsLoaded, setTeamsLoaded] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
@@ -39,10 +46,23 @@ export function VideosPage() {
     ])
     setVideos(v)
     setTeams(t)
+    setTeamsLoaded(true)
     setActivity(a.filter((x) => x.type === 'video' || x.type === 'analysis'))
   }
 
   useEffect(() => { void load() }, [])
+
+  const teamFilter = resolveVideoTeamFilter(searchParams, teams)
+
+  useEffect(() => {
+    if (!teamsLoaded || !searchParams.has(VIDEO_TEAM_QUERY_PARAM)) return
+    if (teamFilter !== ALL_VIDEO_TEAMS_FILTER) return
+    setSearchParams(withVideoTeamFilter(searchParams, ALL_VIDEO_TEAMS_FILTER), { replace: true })
+  }, [searchParams, setSearchParams, teamFilter, teamsLoaded])
+
+  const handleTeamFilterChange = (nextTeamFilter: string) => {
+    setSearchParams(withVideoTeamFilter(searchParams, nextTeamFilter))
+  }
 
   const filtered = videos.filter((v) => {
     if (teamFilter !== 'all' && v.teamId !== teamFilter) return false
@@ -73,10 +93,10 @@ export function VideosPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Select value={teamFilter} onValueChange={setTeamFilter}>
+        <Select value={teamFilter} onValueChange={handleTeamFilterChange}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Equipo" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los equipos</SelectItem>
+            <SelectItem value={ALL_VIDEO_TEAMS_FILTER}>Todos los equipos</SelectItem>
             {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
           </SelectContent>
         </Select>
