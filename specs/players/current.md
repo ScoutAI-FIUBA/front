@@ -30,6 +30,7 @@ Current behavior documentation.
 - Edit dialog allows updating first name, last name, birth date, position, jersey number, height, and weight.
 - Jersey number is optional text of one or two digits: inputs strip non-digits, and `0` and `00` are distinct values.
 - Delete action uses browser confirmation before calling the service.
+- Player rows expose only functional actions: edit and delete.
 - Create player page loads teams for optional association.
 - Create player page calculates age from birth date for display.
 - Create player requires first name, last name, position, birth date, valid height, and valid weight.
@@ -57,7 +58,7 @@ Current position codes include:
 
 ## Non-Scope
 
-- Player detail view is shown as a button but no route is documented in the current app.
+- Player detail remains out of scope; no inert detail action is displayed.
 - Photo upload UI is displayed as optional placeholder in create flow.
 - No new player feature is requested here.
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -176,7 +176,6 @@ export function PlayersPage() {
                 <td className="p-4 text-muted-foreground">{p.teamName ?? '—'}</td>
                 <td className="p-4">
                   <div className="flex flex-wrap gap-2 text-primary">
-                    <button type="button" className="flex items-center gap-1 text-xs hover:underline"><Eye className="h-3 w-3" /> Ver detalle</button>
                     <button type="button" className="flex items-center gap-1 text-xs hover:underline" onClick={() => openEdit(p)}>
                       <Pencil className="h-3 w-3" /> Editar
                     </button>
