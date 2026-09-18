@@ -1,20 +1,24 @@
-import { ApiResponseError, parseApiError } from './errors'
-import { clearStoredToken, getStoredToken, setStoredToken } from './token'
+import { ApiResponseError, parseApiError } from './errors.ts'
+import { clearStoredToken, getStoredToken, setStoredToken } from './token.ts'
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  import.meta.env.VITE_API_URL ??
+  import.meta.env?.VITE_API_BASE_URL ??
+  import.meta.env?.VITE_API_URL ??
   'http://localhost:8005'
 
-const REQUEST_TIMEOUT_MS = 20_000
+export const DEFAULT_REQUEST_TIMEOUT_MS = 20_000
 
-function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
   const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
   if (init?.signal) {
     if (init.signal.aborted) {
-      window.clearTimeout(timeoutId)
+      globalThis.clearTimeout(timeoutId)
       controller.abort()
     } else {
       init.signal.addEventListener('abort', () => controller.abort(), { once: true })
@@ -22,13 +26,15 @@ function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   }
 
   return fetch(url, { ...init, signal: controller.signal }).finally(() => {
-    window.clearTimeout(timeoutId)
+    globalThis.clearTimeout(timeoutId)
   })
 }
 
-interface ApiFetchOptions {
+export interface ApiFetchOptions {
   auth?: boolean
   skipRefresh?: boolean
+  timeoutMs?: number
+  timeoutMessage?: string
 }
 
 interface LoginResponse {
@@ -49,15 +55,23 @@ async function tryRefreshToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
       try {
-        const res = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          credentials: 'include',
-        })
-        if (!res.ok) return null
+        const res = await fetchWithTimeout(
+          `${API_BASE_URL}/auth/refresh`,
+          {
+            method: 'POST',
+            credentials: 'include',
+          },
+          DEFAULT_REQUEST_TIMEOUT_MS,
+        )
+        if (!res.ok) {
+          clearStoredToken()
+          return null
+        }
         const data = (await res.json()) as LoginResponse
         setStoredToken(data.access_token)
         return data.access_token
       } catch {
+        clearStoredToken()
         return null
       } finally {
         refreshPromise = null
@@ -72,7 +86,12 @@ export async function apiFetch(
   init?: RequestInit,
   options: ApiFetchOptions = {},
 ): Promise<Response> {
-  const { auth = true, skipRefresh = false } = options
+  const {
+    auth = true,
+    skipRefresh = false,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    timeoutMessage,
+  } = options
   const token = auth ? getStoredToken() : null
 
   const headers = new Headers(init?.headers)
@@ -85,28 +104,31 @@ export async function apiFetch(
 
   let res: Response
   try {
-    res = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
-      ...init,
-      headers,
-      credentials: 'include',
-    })
+    res = await fetchWithTimeout(
+      `${API_BASE_URL}${path}`,
+      {
+        ...init,
+        headers,
+        credentials: 'include',
+      },
+      timeoutMs,
+    )
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(
-        `El servidor no respondió a tiempo (${API_BASE_URL}). Verificá que el backend esté activo.`,
-      )
+      throw new Error(timeoutMessage ?? 'El servidor no respondió a tiempo. Intentá nuevamente.')
     }
     throw new Error(
       `No se pudo conectar con el backend (${API_BASE_URL}). Verificá tu conexión o la URL de la API.`,
     )
   }
 
-  if (res.status === 401 && auth && !skipRefresh) {
+  if (res.status === 401 && auth && skipRefresh) {
+    clearStoredToken()
+  } else if (res.status === 401 && auth && token) {
     const newToken = await tryRefreshToken()
     if (newToken) {
       return apiFetch(path, init, { ...options, skipRefresh: true })
     }
-    clearStoredToken()
   }
 
   return res
