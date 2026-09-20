@@ -23,6 +23,7 @@ import { AnalysisJobTeamSideSelector } from './AnalysisJobTeamSide'
 import { AnalysisJobShootingStatsView } from './AnalysisJobShootingStats'
 import { AnalysisJobShotChartView } from './AnalysisJobShotChart'
 import { AnalysisJobCourtPositionsView } from './AnalysisJobCourtPositions'
+import { AnalysisJobSimilarAnalysesView } from './AnalysisJobSimilarAnalyses'
 import type { ProcessingJob } from '@/types'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -224,6 +225,7 @@ export function AnalysisJobDetailPage() {
             job={job}
           />
           <AnalysisJobCourtPositionsView job={job} />
+          <AnalysisJobSimilarAnalysesView job={job} />
         </>
       )}
 
