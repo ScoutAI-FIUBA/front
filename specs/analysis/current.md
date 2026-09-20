@@ -31,10 +31,14 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/pages/analysis/analysis-job-shot-chart.ts`
 - `src/pages/analysis/AnalysisJobCourtPositions.tsx`
 - `src/pages/analysis/analysis-job-court-positions.ts`
+- `src/pages/analysis/AnalysisJobSimilarAnalyses.tsx`
+- `src/pages/analysis/analysis-job-similar.ts`
 - `src/components/analysis/ShotChartCourt.tsx`
 - `src/components/analysis/shot-chart-court.ts`
 - `src/components/analysis/CourtPositionsCourt.tsx`
 - `src/components/analysis/court-positions-court.ts`
+- `src/components/analysis/CourtPositionsHeatmap.tsx`
+- `src/components/analysis/court-positions-heatmap.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/analysis-job-team-sides.service.ts`
 - `src/services/api/analysis-job-team-sides.client.ts`
@@ -44,6 +48,8 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/services/api/analysis-job-shot-chart.client.ts`
 - `src/services/contracts/analysis-job-court-positions.service.ts`
 - `src/services/api/analysis-job-court-positions.client.ts`
+- `src/services/contracts/analysis-job-similar.service.ts`
+- `src/services/api/analysis-job-similar.client.ts`
 - `src/services/contracts/analysis.service.ts`
 - `src/services/mock/analysis.mock.ts`
 - `src/services/contracts/videos.service.ts`
@@ -159,10 +165,19 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Completed job detail loads Court Positions through `GET /jobs/{jobId}/court-positions?team_id=...&sample_every=...` independently from team-side, Stats, and Shot Chart.
 - Court Positions requires only a `DONE` job. Confirming or changing `our_team_side` never changes its request key and never refetches position data; a confirmed side is used only to highlight tracks already labelled by the backend.
 - The service owns the visualization sampling value. Movement distance, sample count, and average position are rendered exactly as returned and are never recalculated from the sampled path.
-- Court Positions draws responsive paths using the backend's court dimensions and real `x_m` / `y_m` values. It does not derive a heatmap or fabricate timestamps.
+- Court Positions draws responsive paths using the backend's court dimensions and real `x_m` / `y_m` values. It does not fabricate timestamps.
+- The Court Positions block also exposes a local `Trayectorias` / `Mapa de calor` view switch. `Trayectorias` remains the initial view, both views share the same track/side filter, and changing either control never triggers another request.
+- The heatmap derives only from valid samples already present in `players[].positions[]`. It groups them into approximately 1 m × 1 m cells and normalizes each cell against the highest sample count in the active filter.
+- Heatmap intensity represents relative concentration of the received spatial samples. It does not represent seconds in a zone, percentage of time, possession, exact temporal occupancy, or reconstructed values from `movement.samples`; maps produced with different filters do not share an absolute scale.
+- The heatmap keeps the backend court dimensions, boundary and half-court line, reports the number of valid samples used, and preserves truncated and off-court coverage notices. Visible tracks with no valid positions render a dedicated heatmap empty state.
 - Tracks use a confirmed jersey number when present and otherwise the technical label `Track {track_id}`. No player name or roster identity is invented.
 - The local selector supports all tracks, side 0, side 1, tracks without a side, and one individual track without additional requests.
 - Loading, retryable error, empty output, truncated coverage, discarded off-court records, and a local filter with no matching tracks are distinct states.
+- A completed job loads `Análisis similares` through `GET /jobs/{jobId}/similar?team_id=...&limit=5&movement_weight=0.5` after the Court Positions block. Non-completed jobs do not request this endpoint.
+- Similar analyses are other completed processing jobs from the same team. The block preserves the backend result order, renders at most five results, and labels `score`, `shot_score`, and `movement_score` as similarity scores rather than accuracy, probability, or confidence.
+- Similar analyses have local loading, retryable error, empty, and populated states. A failure, including a deployed-backend `404`, does not hide or break the rest of the job detail and has no mock fallback.
+- Each similar-analysis result links to `/analisis/jobs/{jobId}?team_id=...` with the current team id. The UI does not synthesize names, dates, opponents, thumbnails, recommendations, or qualitative similarity levels from the returned identifiers and scores.
+- Similar-analysis loading depends only on the completed job id and team id. It is independent from `our_team_side`, Shooting Stats, Shot Chart, Court Positions, and Heatmap.
 
 ## Service Selection
 
@@ -179,6 +194,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - The dedicated `analysisJobStatsService` maps the complete `/stats` response while remaining separate from both `AnalysisSession` and the team-side mutation boundary.
 - The dedicated `analysisJobShotChartService` maps court geometry, markers, per-player groups, and coverage without depending on the stats or team-side service contracts.
 - The dedicated `analysisJobCourtPositionsService` maps court paths, movement summaries, team-side metadata, and coverage without reading or mutating `our_team_side`.
+- The dedicated `analysisJobSimilarService` maps processing-job similarity scores and keeps `limit=5` and `movement_weight=0.5` encapsulated in its request boundary.
 
 ## Non-Scope
 
@@ -191,13 +207,15 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Setup date/free-form context is not persisted because the current contracts have no Partido persistence fields.
 - Successfully uploaded videos are not rolled back if the user leaves before saving the analysis.
 - Restoring or editing a persisted analysis in the Workspace because the current routes and contracts do not provide a reliable rehydration path.
-- Similar-play search, movement visualizations, and prompt-driven agents are future scope.
-- Job results, heatmaps, and similar-play data are not loaded by the job-specific detail.
+- Player comparison, team comparison, player/team similarity, recommendations, scouting automation, and prompt-driven agents are future scope.
+- Raw job results are not loaded by the job-specific detail. The heatmap is derived locally from the already-loaded Court Positions response and has no separate backend contract.
 
 ## Verification
 
-- Automated processing-job suite: 63/63 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, gating and request keys that prevent stale data or unnecessary refetches.
+- Automated frontend suite: 94/94 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, gating and request keys that prevent stale data or unnecessary refetches.
 - Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
+- Heatmap adds 10 focused tests for one-metre binning, boundary and invalid coordinates, out-of-court samples, dynamic court dimensions, relative intensity, filter-scoped normalization, empty valid samples, and request reuse across view and filter changes.
+- Similar analyses adds 9 focused tests for the fixed request contract, `DONE` gating, mapping, backend order, five-result display limit, score labels, empty state, retry, team-scoped navigation, side independence, and placement after Court Positions.
 - `npm run build`: passing; Vite keeps the known chunk-size warning.
 - `npm run lint`: 0 errors and the 2 preexisting Fast Refresh warnings in `button.tsx` and `AuthContext.tsx`.
 - Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.

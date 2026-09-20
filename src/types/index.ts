@@ -352,6 +352,22 @@ export interface AnalysisJobCourtPositions {
   coverage: AnalysisJobCourtPositionsCoverage
 }
 
+export interface AnalysisJobSimilarResult {
+  jobId: string
+  videoId: string
+  score: number
+  shotScore: number
+  movementScore: number
+}
+
+export interface AnalysisJobSimilarAnalyses {
+  jobId: string
+  videoId: string
+  movementWeight: number
+  candidatesCompared: number
+  results: AnalysisJobSimilarResult[]
+}
+
 export interface ProcessingJob {
   id: string
   videoId: string

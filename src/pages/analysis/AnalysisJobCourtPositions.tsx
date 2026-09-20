@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CircleAlert, Info, LoaderCircle, MapPinned } from 'lucide-react'
 import { CourtPositionsCourt } from '@/components/analysis/CourtPositionsCourt'
+import { CourtPositionsHeatmap } from '@/components/analysis/CourtPositionsHeatmap'
+import { buildCourtPositionsHeatmap } from '@/components/analysis/court-positions-heatmap'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -33,6 +35,7 @@ interface AnalysisJobCourtPositionsProps {
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
+type CourtPositionsView = 'trajectories' | 'heatmap'
 
 function formatMetres(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 2 })} m`
@@ -112,6 +115,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
   const [loadState, setLoadState] = useState<LoadState>(loadKey ? 'loading' : 'idle')
   const [positions, setPositions] = useState<AnalysisJobCourtPositions | null>(null)
   const [filter, setFilter] = useState<CourtPositionsFilter>('all')
+  const [view, setView] = useState<CourtPositionsView>('trajectories')
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
 
@@ -121,6 +125,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
     if (!loadKey) {
       setPositions(null)
       setFilter('all')
+      setView('trajectories')
       setError('')
       setLoadState('idle')
       return () => {
@@ -130,6 +135,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
 
     setPositions(null)
     setFilter('all')
+    setView('trajectories')
     setError('')
     setLoadState('loading')
     void loadAnalysisJobCourtPositions(context, analysisJobCourtPositionsService).then(
@@ -153,6 +159,12 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
   const visiblePlayers = useMemo(
     () => filterCourtPositionPlayers(positions?.players ?? [], filter),
     [filter, positions?.players],
+  )
+  const heatmap = useMemo(
+    () => positions
+      ? buildCourtPositionsHeatmap(positions.court, visiblePlayers)
+      : { cells: [], totalSamples: 0, maxSamplesPerCell: 0 },
+    [positions, visiblePlayers],
   )
 
   if (jobStatus !== 'DONE') return null
@@ -207,39 +219,78 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
         <div>
           <h2 id="court-positions-title" className="font-semibold text-foreground">Posiciones en cancha</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Trayectorias proyectadas por el backend. La distancia y la posición promedio usan la trayectoria completa analizada.
+            {view === 'trajectories'
+              ? 'Trayectorias proyectadas por el backend. La distancia y la posición promedio usan la trayectoria completa analizada.'
+              : 'Concentración relativa de las muestras espaciales recibidas desde Court Positions.'}
           </p>
         </div>
-        <div className="w-full sm:w-64">
-          <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="court-positions-filter">
-            Mostrar
-          </label>
-          <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
-            <SelectTrigger id="court-positions-filter" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos los tracks</SelectItem>
-              <SelectItem value="side-0">Lado 0</SelectItem>
-              <SelectItem value="side-1">Lado 1</SelectItem>
-              <SelectItem value="unassigned">Sin lado</SelectItem>
-              {positions.players.map((player) => (
-                <SelectItem key={player.trackId} value={`track:${player.trackId}`}>
-                  {courtPositionPlayerLabel(player)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="grid w-full gap-3 sm:w-72">
+          <div>
+            <p id="court-positions-view-label" className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Vista
+            </p>
+            <div className="flex gap-2" role="group" aria-labelledby="court-positions-view-label">
+              <Button
+                type="button"
+                size="sm"
+                variant={view === 'trajectories' ? 'default' : 'outline'}
+                className="flex-1"
+                aria-pressed={view === 'trajectories'}
+                onClick={() => setView('trajectories')}
+              >
+                Trayectorias
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={view === 'heatmap' ? 'default' : 'outline'}
+                className="flex-1"
+                aria-pressed={view === 'heatmap'}
+                onClick={() => setView('heatmap')}
+              >
+                Mapa de calor
+              </Button>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="court-positions-filter">
+              Mostrar
+            </label>
+            <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
+              <SelectTrigger id="court-positions-filter" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los tracks</SelectItem>
+                <SelectItem value="side-0">Lado 0</SelectItem>
+                <SelectItem value="side-1">Lado 1</SelectItem>
+                <SelectItem value="unassigned">Sin lado</SelectItem>
+                {positions.players.map((player) => (
+                  <SelectItem key={player.trackId} value={`track:${player.trackId}`}>
+                    {courtPositionPlayerLabel(player)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       <div className="mt-5 min-w-0">
         {visiblePlayers.length > 0 ? (
-          <CourtPositionsCourt
-            court={positions.court}
-            players={visiblePlayers}
-            ourTeamSide={job.ourTeamSide}
-          />
+          view === 'trajectories' ? (
+            <CourtPositionsCourt
+              court={positions.court}
+              players={visiblePlayers}
+              ourTeamSide={job.ourTeamSide}
+            />
+          ) : heatmap.totalSamples > 0 ? (
+            <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} />
+          ) : (
+            <div className="rounded-lg border border-dashed bg-surface-subtle px-4 py-8 text-center text-sm text-muted-foreground">
+              No hay posiciones válidas para construir el mapa de calor.
+            </div>
+          )
         ) : (
           <div className="rounded-lg border border-dashed bg-surface-subtle px-4 py-8 text-center text-sm text-muted-foreground">
             No hay tracks que coincidan con este filtro.
