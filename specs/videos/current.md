@@ -12,6 +12,7 @@ Current behavior documentation.
 ## Files Involved
 
 - `src/pages/videos/VideosPage.tsx`
+- `src/pages/videos/videos-page-data.ts`
 - `src/pages/videos/video-team-navigation.ts`
 - `src/pages/videos/video-responsive.ts`
 - `src/pages/videos/VideoAnalysisJobs.tsx`
@@ -31,7 +32,8 @@ Current behavior documentation.
 
 ## Current Behavior
 
-- Videos page loads videos, teams, and recent activity.
+- Videos page loads videos and teams as the real primary dataset. Mock recent activity is requested and rendered only when `VITE_USE_MOCK_API=true`; API mode does not display synthetic activity and does not invent a replacement endpoint.
+- The primary Videos + Teams load distinguishes loading, retryable error, successful empty, filtered empty, and populated states. A failed request never masquerades as an empty video list.
 - Videos can be filtered by team and status.
 - `/videos?team_id={teamId}` preselects the existing local team filter when the
   id belongs to a loaded team. Missing or invalid ids safely show all teams.
@@ -63,6 +65,7 @@ Current behavior documentation.
 - `analysisJobService` uses the real backend API implementation and is consumed only by the per-video history disclosure for listing and creating processing jobs.
 - `matchService` currently always uses `mockMatchService`.
 - Team data comes from `teamService`, which can be API or mock depending on `VITE_USE_MOCK_API`.
+- `isMockApiEnabled` exposes the registry's existing environment selection so presentation code can omit mock-only activity in API mode without changing any service contract.
 
 ## Backend Alignment Notes
 
@@ -87,3 +90,5 @@ Current behavior documentation.
 - Run `npm run build`.
 - Run `npm run lint`.
 - Manually verify video filtering, request analysis, and upload form with mocks available.
+- Verify API mode never requests or renders mock recent activity.
+- Verify loading, retry, no-video, filtered-empty, card, and table states for the main Videos + Teams load.

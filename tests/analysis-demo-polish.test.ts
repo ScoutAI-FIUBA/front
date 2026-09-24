@@ -19,9 +19,29 @@ test('videos use cards at mobile widths and preserve the desktop table', () => {
   const source = readSource('../src/pages/videos/VideosPage.tsx')
   assert.match(source, /videosLayout === 'table'/)
   assert.match(source, /<article key=\{video\.id\}/)
-  assert.match(source, /space-y-4 lg:col-span-3/)
+  assert.match(source, /contentColumnClass/)
   assert.match(source, /Historial de análisis/)
   assert.match(source, /<VideoAnalysisJobs/)
+})
+
+test('videos distinguish primary loading, error, retry, and empty states', () => {
+  const source = readSource('../src/pages/videos/VideosPage.tsx')
+
+  assert.match(source, /Cargando videos y equipos/)
+  assert.match(source, /No pudimos cargar los videos/)
+  assert.match(source, />\s*Reintentar\s*</)
+  assert.match(source, /Todavía no hay videos/)
+  assert.match(source, /No hay videos para estos filtros/)
+  assert.match(source, /loadVideosPageData/)
+})
+
+test('recent activity is visibly restricted to mock mode', () => {
+  const pageSource = readSource('../src/pages/videos/VideosPage.tsx')
+  const dataSource = readSource('../src/pages/videos/videos-page-data.ts')
+
+  assert.match(pageSource, /isMockApiEnabled && \(/)
+  assert.match(pageSource, /loadVideosRecentActivity\(isMockApiEnabled, analysisService\)/)
+  assert.match(dataSource, /if \(!mockModeEnabled\) return \[\]/)
 })
 
 test('videos expose ProcessingJob history as the only visible analysis entry', () => {
