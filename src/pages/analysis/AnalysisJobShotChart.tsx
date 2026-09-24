@@ -41,7 +41,7 @@ function ShotChartCoverage({
   return (
     <div className="mt-5 rounded-lg border bg-surface-subtle p-4 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="font-semibold text-foreground">Cobertura del shot chart</p>
+        <p className="font-semibold text-foreground">Cobertura del mapa de tiros</p>
         {partial && <Badge variant="processing">Parcial</Badge>}
       </div>
       <dl className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-3">
@@ -104,9 +104,9 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
         setChart(loaded)
         setLoadState('success')
       },
-      (loadError: unknown) => {
+      () => {
         if (!active) return
-        setError(loadError instanceof Error ? loadError.message : 'No se pudo cargar el shot chart.')
+        setError('No pudimos cargar esta información. Reintentá en unos segundos.')
         setLoadState('error')
       },
     )
@@ -124,9 +124,9 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
         <div className="flex items-start gap-3">
           <MapPinned className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div>
-            <h2 id="shot-chart-title" className="font-semibold text-foreground">Shot chart</h2>
+            <h2 id="shot-chart-title" className="font-semibold text-foreground">Mapa de tiros</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Confirmá primero cuál de los lados corresponde a tu equipo para resolver correctamente los jugadores.
+              Confirmá primero qué grupo corresponde a tu equipo para asociar correctamente los jugadores.
             </p>
           </div>
         </div>
@@ -139,7 +139,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-busy="true" aria-live="polite">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
-          Cargando shot chart…
+          Cargando mapa de tiros…
         </div>
       </section>
     )
@@ -148,11 +148,11 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
   if (loadState === 'error' || !chart) {
     return (
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="shot-chart-title">
-        <h2 id="shot-chart-title" className="font-semibold text-foreground">Shot chart</h2>
+        <h2 id="shot-chart-title" className="font-semibold text-foreground">Mapa de tiros</h2>
         <Alert className="mt-4 flex flex-col gap-4 border-destructive/25 bg-destructive/5 sm:flex-row sm:items-center">
           <CircleAlert className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">No pudimos cargar el shot chart</p>
+            <p className="font-semibold text-foreground">No pudimos cargar el mapa de tiros</p>
             <p className="mt-1 text-muted-foreground">{error}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setReloadKey((key) => key + 1)}>
@@ -175,9 +175,9 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
     <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="shot-chart-title">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 id="shot-chart-title" className="font-semibold text-foreground">Shot chart</h2>
+          <h2 id="shot-chart-title" className="font-semibold text-foreground">Mapa de tiros</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ubicación de los tiros proyectada sobre las dimensiones reales informadas por el backend.
+            Ubicación de los tiros proyectada sobre las dimensiones de cancha informadas por el sistema.
           </p>
         </div>
         {chart.players.length > 0 && (
@@ -202,7 +202,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
           className="py-8"
           icon={<MapPinned className="h-5 w-5" aria-hidden="true" />}
           title="No hay tiros para ubicar"
-          description="El análisis no devolvió tiros con posición válida para este shot chart."
+          description="El análisis no devolvió tiros con posición válida para este mapa."
         />
       ) : validShots.length === 0 ? (
         <EmptyState

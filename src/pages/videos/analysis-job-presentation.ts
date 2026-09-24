@@ -38,7 +38,7 @@ export function getAnalysisJobPresentation(job: ProcessingJob): AnalysisJobPrese
       return {
         label: 'Fallido',
         indicatorState: 'destructive',
-        message: job.errorMessage || 'El procesamiento finalizó con un error.',
+        message: 'El procesamiento finalizó con un error. Reintentá en unos segundos.',
       }
   }
 }

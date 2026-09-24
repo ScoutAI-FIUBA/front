@@ -139,6 +139,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Review does not expose `Editar análisis`: the current route and persistence state cannot safely restore a saved analysis into the local Workspace.
 - Review remains in the normal light application shell; only the active analysis Workspace uses the dark focus theme.
 - A completed processing job in a video's real history exposes `Ver análisis` and links to the job-specific detail route. Other job statuses do not expose this navigation.
+- User-facing processing-job detail copy uses product language: `Análisis de video`, `Estadísticas de tiro detectadas`, `Mapa de tiros`, `plantel`, `sistema`, `seguimientos`, and `Grupo detectado A/B`. Internal endpoint, type, and side `0 | 1` contracts remain unchanged.
 - Job detail loads `analysisJobService.get(jobId, teamId)` directly from route/query parameters and never creates an `AnalysisSession` or requires a match.
 - After loading the job, video and team services resolve optional display context from the job's own `videoId` and `teamId`. Context lookup failures fall back to identifiers without hiding the job.
 - Job detail reuses the Phase 6E review hierarchy and UI primitives for loading, retryable error, not-found, status, progress, completion, and secondary metadata.
@@ -148,6 +149,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Side 0 and side 1 expose only backend-provided track counts, detected jersey numbers, and roster-match counts. The UI does not infer player identities.
 - `suggested_team_side` preselects a side visually but remains explicitly unconfirmed until the user submits it.
 - `our_team_side` is the persisted selection. It is displayed as confirmed and can be changed by selecting the other side and submitting again.
+- A persisted team side is initially summarized as `Tu equipo: Grupo detectado A/B`; `Cambiar` expands the existing selector, and confirming or cancelling returns to the compact summary without changing the service contract.
 - Team-side loading and confirmation errors stay local to the selector. A failed confirmation preserves the visible selection and the loaded job detail.
 - Completed job detail requests shooting statistics only after `our_team_side` is confirmed. It never requests stats for a non-completed job or an unconfirmed side.
 - Shooting stats load through `GET /jobs/{jobId}/stats?team_id=...` and remain independent from the team-side service and component.
@@ -178,6 +180,9 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Similar analyses have local loading, retryable error, empty, and populated states. A failure, including a deployed-backend `404`, does not hide or break the rest of the job detail and has no mock fallback.
 - Each similar-analysis result links to `/analisis/jobs/{jobId}?team_id=...` with the current team id. The UI does not synthesize names, dates, opponents, thumbnails, recommendations, or qualitative similarity levels from the returned identifiers and scores.
 - Similar-analysis loading depends only on the completed job id and team id. It is independent from `our_team_side`, Shooting Stats, Shot Chart, Court Positions, and Heatmap.
+- The completed status is represented once in the detail header/status indicator rather than repeated in a separate completion card. Secondary execution information is collapsed by default.
+- Module failures keep their existing local retry boundary but render brief product-facing messages instead of raw backend responses such as `Not Found`.
+- Shooting totals are explicitly presented as detected metrics rather than an official box score; the qualification appears next to the section heading and coverage remains visible.
 
 ## Service Selection
 

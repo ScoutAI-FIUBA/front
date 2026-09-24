@@ -49,13 +49,13 @@ test('running jobs never fabricate progress', () => {
   )
 })
 
-test('failed jobs prefer the backend error message and have a safe fallback', () => {
+test('failed jobs expose a product-safe message instead of backend details', () => {
   assert.equal(
     getAnalysisJobPresentation(job('FAILED', { errorMessage: 'GPU unavailable' })).message,
-    'GPU unavailable',
+    'El procesamiento finalizó con un error. Reintentá en unos segundos.',
   )
   assert.equal(
     getAnalysisJobPresentation(job('FAILED')).message,
-    'El procesamiento finalizó con un error.',
+    'El procesamiento finalizó con un error. Reintentá en unos segundos.',
   )
 })

@@ -45,7 +45,7 @@ function SimilarAnalysisCard({
   return (
     <article className="flex min-w-0 flex-col gap-4 rounded-lg border bg-surface p-4 sm:p-5">
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">ProcessingJob</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Análisis de video</p>
         <h3 className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
           {result.jobId}
         </h3>
@@ -101,9 +101,9 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
         setSimilar(loaded)
         setLoadState('success')
       },
-      (loadError: unknown) => {
+      () => {
         if (!active) return
-        setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar los análisis similares.')
+        setError('No pudimos cargar esta información. Reintentá en unos segundos.')
         setLoadState('error')
       },
     )
@@ -153,7 +153,7 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
         <div className="min-w-0">
           <h2 id="similar-analyses-title" className="font-semibold text-foreground">Análisis similares</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Otros análisis completados del mismo equipo, en el orden entregado por el backend.
+            Otros análisis completados del mismo equipo, en el orden informado por el sistema.
           </p>
         </div>
       </div>
@@ -163,7 +163,7 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
           className="py-8"
           icon={<GitCompareArrows className="h-5 w-5" aria-hidden="true" />}
           title="No encontramos otros análisis comparables para este equipo."
-          description="El backend no devolvió resultados similares para esta ejecución."
+          description="El sistema no encontró resultados similares para este análisis."
         />
       ) : (
         <div className="mt-5 space-y-3">
@@ -174,7 +174,7 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
       )}
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Candidatos comparados por el backend: {similar.candidatesCompared}.
+        Análisis comparados por el sistema: {similar.candidatesCompared}.
       </p>
     </section>
   )

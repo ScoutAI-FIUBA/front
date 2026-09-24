@@ -117,12 +117,12 @@ test('maps side 0, side 1, and null without treating them as team UUIDs', async 
   assert.deepEqual(result.players.map((player) => player.teamSide), [0, 1, null])
 })
 
-test('preserves jersey numbers and uses a technical track label when absent', async () => {
+test('preserves jersey numbers and uses a product-facing tracking label when absent', async () => {
   const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
   const result = await service.get('job-1', 'team-1')
 
-  assert.equal(courtPositionPlayerLabel(result.players[0]!), '#23 · Track 7')
-  assert.equal(courtPositionPlayerLabel(result.players[1]!), 'Track 9')
+  assert.equal(courtPositionPlayerLabel(result.players[0]!), '#23 · Seguimiento 7')
+  assert.equal(courtPositionPlayerLabel(result.players[1]!), 'Seguimiento 9')
 })
 
 test('maps an empty response and a null source file without fabricating players', async () => {

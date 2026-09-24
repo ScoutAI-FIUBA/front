@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { BarChart2, ChevronDown, Clock, Eye, FolderOpen, Lock, Plus } from 'lucide-react'
+import { BarChart2, ChevronDown, Clock, FolderOpen, Lock, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -22,12 +22,83 @@ import {
   VIDEO_TEAM_QUERY_PARAM,
   withVideoTeamFilter,
 } from './video-team-navigation'
+import {
+  VIDEOS_DESKTOP_BREAKPOINT_PX,
+  videosLayoutForViewport,
+  type VideosLayout,
+} from './video-responsive'
 
 const statusVariant = (s: Video['status']) =>
   s === 'analyzed' ? 'analyzed' : s === 'processing' ? 'processing' : s === 'failed' ? 'failed' : 'uploaded'
 
 const statusLabel = (s: Video['status']) =>
   s === 'analyzed' ? 'Analizado' : s === 'processing' ? 'Procesando' : s === 'failed' ? 'Fallido' : 'Subido'
+
+interface VideoActionsProps {
+  video: Video
+  historyOpen: boolean
+  onToggleHistory: () => void
+  onRequestAnalysis: (videoId: string) => void
+}
+
+function VideoActions({
+  video,
+  historyOpen,
+  onToggleHistory,
+  onRequestAnalysis,
+}: VideoActionsProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-start">
+      <Button asChild variant="outline" size="sm">
+        <Link to={`/videos/${video.id}/colecciones`}>
+          <FolderOpen className="h-4 w-4" /> Colecciones
+        </Link>
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-expanded={historyOpen}
+        aria-controls={`video-analysis-history-${video.id}`}
+        onClick={onToggleHistory}
+      >
+        <BarChart2 className="h-4 w-4" aria-hidden="true" />
+        Historial de análisis
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </Button>
+      {video.status === 'processing' && (
+        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Lock className="h-3 w-3" /> En espera
+        </span>
+      )}
+      {video.status === 'uploaded' && videoService.canRequestAnalysis && (
+        <Button size="sm" onClick={() => onRequestAnalysis(video.id)}>Solicitar análisis</Button>
+      )}
+      {video.status === 'uploaded' && !videoService.canRequestAnalysis && (
+        <span className="text-xs text-muted-foreground">Listo para reproducir</span>
+      )}
+      {video.status === 'failed' && <span className="text-xs text-red-600">Subida fallida</span>}
+    </div>
+  )
+}
+
+function useVideosLayout(): VideosLayout {
+  const [layout, setLayout] = useState<VideosLayout>(() => (
+    typeof window === 'undefined' ? 'table' : videosLayoutForViewport(window.innerWidth)
+  ))
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(min-width: ${VIDEOS_DESKTOP_BREAKPOINT_PX}px)`)
+    const updateLayout = () => setLayout(mediaQuery.matches ? 'table' : 'cards')
+    updateLayout()
+    mediaQuery.addEventListener('change', updateLayout)
+    return () => mediaQuery.removeEventListener('change', updateLayout)
+  }, [])
+
+  return layout
+}
 
 export function VideosPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -37,6 +108,7 @@ export function VideosPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
+  const videosLayout = useVideosLayout()
 
   const load = async () => {
     const [v, t, a] = await Promise.all([
@@ -77,8 +149,8 @@ export function VideosPage() {
       await videoService.requestAnalysis(id)
       toast.success('Análisis solicitado')
       void load()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo solicitar el análisis')
+    } catch {
+      toast.error('No pudimos solicitar el análisis. Reintentá en unos segundos.')
     }
   }
 
@@ -113,90 +185,121 @@ export function VideosPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-4">
-        <div className="lg:col-span-3 overflow-hidden rounded-lg border bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-accent/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="p-4 text-left">Partido / Video</th>
-                <th className="p-4 text-left">Equipo</th>
-                <th className="p-4 text-left">Rival</th>
-                <th className="p-4 text-left">Fecha</th>
-                <th className="p-4 text-left">Estado</th>
-                <th className="p-4 text-left">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((v) => {
-                const historyOpen = expandedVideoId === v.id
+        {videosLayout === 'table' ? (
+          <div className="overflow-hidden rounded-lg border bg-white lg:col-span-3">
+            <table className="w-full text-sm">
+              <thead className="bg-accent/50 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="p-4 text-left">Partido / Video</th>
+                  <th className="p-4 text-left">Equipo</th>
+                  <th className="p-4 text-left">Rival</th>
+                  <th className="p-4 text-left">Fecha</th>
+                  <th className="p-4 text-left">Estado</th>
+                  <th className="p-4 text-left">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((v) => {
+                  const historyOpen = expandedVideoId === v.id
 
-                return (
-                  <Fragment key={v.id}>
-                    <tr className="border-t">
-                      <td className="p-4">
-                        <p className="font-medium">{v.title}</p>
-                        <p className="text-xs text-muted-foreground">{v.resolution}</p>
-                      </td>
-                      <td className="p-4">{teamName(v.teamId)}</td>
-                      <td className="p-4">{v.rivalName ?? '—'}</td>
-                      <td className="p-4">{formatDate(v.uploadedAt)}</td>
-                      <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
-                      <td className="p-4">
-                        <div className="flex flex-col items-start gap-2">
-                          <Button asChild variant="outline" size="sm">
-                            <Link to={`/videos/${v.id}/colecciones`}>
-                              <FolderOpen className="h-4 w-4" /> Colecciones
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            aria-expanded={historyOpen}
-                            aria-controls={`video-analysis-history-${v.id}`}
-                            onClick={() => setExpandedVideoId(historyOpen ? null : v.id)}
-                          >
-                            <BarChart2 className="h-4 w-4" aria-hidden="true" />
-                            Historial de análisis
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform ${historyOpen ? 'rotate-180' : ''}`}
-                              aria-hidden="true"
-                            />
-                          </Button>
-                          {v.status === 'analyzed' && (
-                            <div className="flex gap-2">
-                              <Link to={`/analisis/${v.id}`} className="text-primary hover:text-primary/80"><Eye className="h-4 w-4" /></Link>
-                              <BarChart2 className="h-4 w-4 text-primary" />
-                            </div>
-                          )}
-                          {v.status === 'processing' && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> En espera</span>}
-                          {v.status === 'uploaded' && videoService.canRequestAnalysis && (
-                            <Button size="sm" onClick={() => void requestAnalysis(v.id)}>Solicitar análisis</Button>
-                          )}
-                          {v.status === 'uploaded' && !videoService.canRequestAnalysis && (
-                            <span className="text-xs text-muted-foreground">Listo para reproducir</span>
-                          )}
-                          {v.status === 'failed' && <span className="text-xs text-red-600">Subida fallida</span>}
-                        </div>
-                      </td>
-                    </tr>
-                    {historyOpen && (
-                      <tr id={`video-analysis-history-${v.id}`}>
-                        <td colSpan={6} className="border-t p-0">
-                          <VideoAnalysisJobs
-                            videoId={v.id}
-                            teamId={v.teamId}
-                            videoTitle={v.title}
-                            videoReady={v.status === 'uploaded'}
+                  return (
+                    <Fragment key={v.id}>
+                      <tr className="border-t">
+                        <td className="p-4">
+                          <p className="font-medium">{v.title}</p>
+                          <p className="text-xs text-muted-foreground">{v.resolution}</p>
+                        </td>
+                        <td className="p-4">{teamName(v.teamId)}</td>
+                        <td className="p-4">{v.rivalName ?? '—'}</td>
+                        <td className="p-4">{formatDate(v.uploadedAt)}</td>
+                        <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
+                        <td className="p-4">
+                          <VideoActions
+                            video={v}
+                            historyOpen={historyOpen}
+                            onToggleHistory={() => setExpandedVideoId(historyOpen ? null : v.id)}
+                            onRequestAnalysis={(videoId) => void requestAnalysis(videoId)}
                           />
                         </td>
                       </tr>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </tbody>
-          </table>
-          <p className="border-t p-3 text-xs text-muted-foreground">Mostrando {filtered.length} videos</p>
-        </div>
+                      {historyOpen && (
+                        <tr id={`video-analysis-history-${v.id}`}>
+                          <td colSpan={6} className="border-t p-0">
+                            <VideoAnalysisJobs
+                              videoId={v.id}
+                              teamId={v.teamId}
+                              videoTitle={v.title}
+                              videoReady={v.status === 'uploaded'}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+            <p className="border-t p-3 text-xs text-muted-foreground">Mostrando {filtered.length} videos</p>
+          </div>
+        ) : (
+          <div className="space-y-4 lg:col-span-3">
+            {filtered.map((video) => {
+              const historyOpen = expandedVideoId === video.id
+
+              return (
+                <article key={video.id} className="overflow-hidden rounded-lg border bg-white">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="font-semibold text-foreground">{video.title}</h2>
+                        {video.resolution && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">{video.resolution}</p>
+                        )}
+                      </div>
+                      <Badge variant={statusVariant(video.status)}>{statusLabel(video.status)}</Badge>
+                    </div>
+
+                    <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Equipo</dt>
+                        <dd className="mt-0.5 text-foreground">{teamName(video.teamId)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Rival</dt>
+                        <dd className="mt-0.5 text-foreground">{video.rivalName ?? '—'}</dd>
+                      </div>
+                      <div className="col-span-2">
+                        <dt className="text-xs text-muted-foreground">Fecha</dt>
+                        <dd className="mt-0.5 text-foreground">{formatDate(video.uploadedAt)}</dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-4 border-t pt-4">
+                      <VideoActions
+                        video={video}
+                        historyOpen={historyOpen}
+                        onToggleHistory={() => setExpandedVideoId(historyOpen ? null : video.id)}
+                        onRequestAnalysis={(videoId) => void requestAnalysis(videoId)}
+                      />
+                    </div>
+                  </div>
+
+                  {historyOpen && (
+                    <div id={`video-analysis-history-${video.id}`} className="border-t">
+                      <VideoAnalysisJobs
+                        videoId={video.id}
+                        teamId={video.teamId}
+                        videoTitle={video.title}
+                        videoReady={video.status === 'uploaded'}
+                      />
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+            <p className="px-1 text-xs text-muted-foreground">Mostrando {filtered.length} videos</p>
+          </div>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">

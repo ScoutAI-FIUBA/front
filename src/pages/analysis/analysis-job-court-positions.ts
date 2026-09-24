@@ -6,6 +6,7 @@ import type {
   ProcessingJob,
   ProcessingJobStatus,
 } from '../../types/index.ts'
+import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
 
 export interface AnalysisJobCourtPositionsLoadContext {
   jobId: string
@@ -62,10 +63,10 @@ export function courtPositionPlayerLabel(
   player: Pick<AnalysisJobCourtPositionsPlayer, 'jerseyNumber' | 'trackId'>,
 ): string {
   return player.jerseyNumber
-    ? `#${player.jerseyNumber} · Track ${player.trackId}`
-    : `Track ${player.trackId}`
+    ? `#${player.jerseyNumber} · Seguimiento ${player.trackId}`
+    : `Seguimiento ${player.trackId}`
 }
 
 export function courtPositionSideLabel(side: AnalysisJobTeamSide | null): string {
-  return side == null ? 'Sin lado' : `Lado ${side}`
+  return side == null ? 'Sin grupo' : analysisJobTeamGroupLabel(side)
 }

@@ -96,10 +96,8 @@ export function VideoAnalysisJobs({
       setCreationError(null)
       setLoadState('success')
     },
-    onError: (error) => {
-      setCreationError(
-        error instanceof Error ? error.message : 'No se pudo iniciar el análisis.',
-      )
+    onError: () => {
+      setCreationError('No pudimos iniciar el análisis. Reintentá en unos segundos.')
     },
     onSubmittingChange: setIsCreating,
   }), [teamId, videoId])
@@ -127,7 +125,7 @@ export function VideoAnalysisJobs({
         <div>
           <h2 className="font-semibold text-foreground">Historial de análisis del video</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ejecuciones registradas únicamente para este video.
+            Análisis registrados únicamente para este video.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -219,7 +217,7 @@ export function VideoAnalysisJobs({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h3 className="font-semibold text-foreground">
-                      Ejecución <span className="font-mono text-sm">{job.id.slice(0, 8)}</span>
+                      Análisis <span className="font-mono text-sm">{job.id.slice(0, 8)}</span>
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Solicitada {formatJobDate(job.createdAt)}

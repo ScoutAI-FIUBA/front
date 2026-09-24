@@ -10,6 +10,7 @@ import type {
   ApiProcessingJob,
 } from '../src/services/api/analysis-jobs.client.ts'
 import {
+  analysisJobTeamGroupLabel,
   createAnalysisJobTeamSideConfirmation,
   initialAnalysisJobTeamSide,
 } from '../src/pages/analysis/analysis-job-team-side.ts'
@@ -87,6 +88,11 @@ test('a previously confirmed side takes precedence over the suggestion', () => {
 
   assert.equal(result.ourTeamSide, 0)
   assert.equal(initialAnalysisJobTeamSide(result), 0)
+})
+
+test('presents internal team sides as detected product groups', () => {
+  assert.equal(analysisJobTeamGroupLabel(0), 'Grupo detectado A')
+  assert.equal(analysisJobTeamGroupLabel(1), 'Grupo detectado B')
 })
 
 for (const side of [0, 1] as const) {

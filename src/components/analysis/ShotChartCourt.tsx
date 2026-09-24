@@ -24,7 +24,7 @@ function shotPlayerLabel(
   playersByTrack: Map<number, string>,
 ): string {
   if (shot.rosterName) return shot.rosterName
-  if (shot.trackId != null) return playersByTrack.get(shot.trackId) ?? `Track ${shot.trackId}`
+  if (shot.trackId != null) return playersByTrack.get(shot.trackId) ?? `Seguimiento ${shot.trackId}`
   if (shot.jerseyNumber) return `#${shot.jerseyNumber}`
   return 'Tirador no identificado'
 }
