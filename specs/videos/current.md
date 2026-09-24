@@ -12,7 +12,9 @@ Current behavior documentation.
 ## Files Involved
 
 - `src/pages/videos/VideosPage.tsx`
+- `src/pages/videos/videos-page-data.ts`
 - `src/pages/videos/video-team-navigation.ts`
+- `src/pages/videos/video-responsive.ts`
 - `src/pages/videos/VideoAnalysisJobs.tsx`
 - `src/pages/videos/analysis-job-presentation.ts`
 - `src/pages/videos/VideoUploadPage.tsx`
@@ -30,13 +32,16 @@ Current behavior documentation.
 
 ## Current Behavior
 
-- Videos page loads videos, teams, and recent activity.
+- Videos page loads videos and teams as the real primary dataset. Mock recent activity is requested and rendered only when `VITE_USE_MOCK_API=true`; API mode does not display synthetic activity and does not invent a replacement endpoint.
+- The primary Videos + Teams load distinguishes loading, retryable error, successful empty, filtered empty, and populated states. A failed request never masquerades as an empty video list.
 - Videos can be filtered by team and status.
 - `/videos?team_id={teamId}` preselects the existing local team filter when the
   id belongs to a loaded team. Missing or invalid ids safely show all teams.
 - Changing the team selector updates `team_id` in the URL, and selecting
   `Todos los equipos` removes it. This does not add backend requests.
 - Each video row can disclose its own backend processing-job history without navigating to the global analysis list.
+- Desktop keeps the scannable video table, while narrow viewports render each video as a responsive card with its title, team, rival, date, status, collections, and processing-job history action available without horizontal clipping.
+- The processing-job history is the single visible entry point from Videos into completed analysis results. The legacy `/analisis/:id` route remains available internally but its ambiguous icon-only link is not rendered in the primary Videos experience.
 - Ready videos expose an `Iniciar análisis` action inside that history disclosure. It submits `POST /videos/{video_id}/jobs` with `{ team_id }`; the optional pipeline is omitted so the backend selects its default.
 - A successful submission inserts the returned `QUEUED` job into the existing history immediately. The active-job polling lifecycle then starts without converting the job to an `AnalysisSession`.
 - Analysis submission is single-flight: the action is disabled while its request is pending, and an existing `QUEUED` or `RUNNING` job also disables another submission in line with the backend's one-active-job constraint.
@@ -45,9 +50,8 @@ Current behavior documentation.
 - While an open history contains at least one `QUEUED` or `RUNNING` job, it refreshes the complete per-video snapshot every 10 seconds through `listForVideo`. The next timer is scheduled only after the current request settles, so polling requests never overlap.
 - Polling stops when every returned job is `DONE` or `FAILED`, and its timer is cleaned up when the history panel closes or unmounts. Poll failures preserve the last successful snapshot and retry on the next interval.
 - Video job history distinguishes loading, retryable error, empty, and populated states.
-- Job rows render the backend statuses `QUEUED`, `RUNNING`, `DONE`, and `FAILED` directly. Running jobs show `progressPercent` only when present and otherwise show indeterminate activity. Failed jobs show the backend `errorMessage` when available.
+- Job rows render the backend statuses `QUEUED`, `RUNNING`, `DONE`, and `FAILED` directly. Running jobs show `progressPercent` only when present and otherwise show indeterminate activity. Failed jobs show a brief product-facing message without exposing the backend `errorMessage`.
 - Video statuses displayed include uploaded, processing, and analyzed.
-- Analyzed videos link to `/analisis/:id` using the video id.
 - Uploaded videos can request analysis through `videoService.requestAnalysis(id)`.
 - Upload page loads teams.
 - Upload page collects title, team, optional description, and a selected video file.
@@ -61,6 +65,7 @@ Current behavior documentation.
 - `analysisJobService` uses the real backend API implementation and is consumed only by the per-video history disclosure for listing and creating processing jobs.
 - `matchService` currently always uses `mockMatchService`.
 - Team data comes from `teamService`, which can be API or mock depending on `VITE_USE_MOCK_API`.
+- `isMockApiEnabled` exposes the registry's existing environment selection so presentation code can omit mock-only activity in API mode without changing any service contract.
 
 ## Backend Alignment Notes
 
@@ -85,3 +90,5 @@ Current behavior documentation.
 - Run `npm run build`.
 - Run `npm run lint`.
 - Manually verify video filtering, request analysis, and upload form with mocks available.
+- Verify API mode never requests or renders mock recent activity.
+- Verify loading, retry, no-video, filtered-empty, card, and table states for the main Videos + Teams load.

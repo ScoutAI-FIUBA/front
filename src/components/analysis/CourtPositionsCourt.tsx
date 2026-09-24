@@ -33,7 +33,7 @@ export function CourtPositionsCourt({
           viewBox={`0 0 ${court.lengthM} ${court.widthM}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label="Cancha con trayectorias reales de jugadores"
+          aria-label="Cancha con trayectorias detectadas de jugadores"
         >
           <rect
             x="0.08"
@@ -101,7 +101,7 @@ export function CourtPositionsCourt({
         </svg>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Tracks visibles">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Seguimientos visibles">
         {players.map((player) => (
           <span key={player.trackId} className="inline-flex items-center gap-1.5">
             <span

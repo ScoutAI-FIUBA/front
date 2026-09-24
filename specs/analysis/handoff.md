@@ -1,171 +1,179 @@
-# Analysis Integration Handoff
+# Analysis Final Handoff
 
 ## Snapshot
 
-- Fecha de cierre: 2026-09-17.
+- Fecha de cierre: 2026-09-23.
 - Branch frontend: `dev`.
-- El bloque de Shooting Stats + Shot Chart queda cerrado en `dev` con commit y push.
-- Baseline backend verificado: `origin/main` en `c1a78ded97565080ada7fa435aa50744d469473f`.
-- Shooting Stats, Shot Chart y Court Positions están implementados y verificados localmente: 63/63 tests, build passing y lint sin errores.
-- El smoke test real posterior a `DONE` quedó bloqueado exclusivamente por un deploy backend desactualizado: el frontend llama correctamente a `GET /jobs/{job_id}/team-sides?team_id=...`, la ruta existe en `origin/main`, pero el backend desplegado responde `404 {"detail":"Not Found"}`.
-- `artifacts/` es contenido local preexistente sin trackear y no forma parte de estos bloques.
+- HEAD: `acf061cc959b0d564f7511e6a28885847c34ebce` (`fix: finalize videos analysis flow`).
+- `dev` y `origin/dev`: `0` ahead / `0` behind.
+- Suite frontend: 106/106 tests passing.
+- Build: passing.
+- Lint: 0 errores; permanecen 2 warnings preexistentes de Fast Refresh en `button.tsx` y `AuthContext.tsx`.
+- Vite mantiene el warning conocido por un chunk mayor a 500 kB.
+- `specs/analysis/handoff.md` es el único archivo tracked pendiente al preparar este cierre documental.
+- `artifacts/` es contenido local preexistente sin trackear y debe permanecer fuera de cualquier commit.
 
-La descripción detallada del comportamiento vigente permanece en `specs/analysis/current.md`. Este documento registra solamente el punto de continuación y el estado operativo del working tree.
+La especificación funcional detallada vive en `specs/analysis/current.md`. Este handoff registra el cierre del bloque, su evolución verificable y los límites que deben conservarse al comenzar documentación y preparación de la demo.
 
-## Estado alcanzado
+## Estado general
 
-El frontend ya implementa el flujo real basado en `ProcessingJob`:
-
-1. Contrato y types de `ProcessingJob` con estados `QUEUED`, `RUNNING`, `DONE` y `FAILED`.
-2. Lectura de jobs por video mediante `GET /videos/{video_id}/jobs?team_id=...`.
-3. Historial real dentro del contexto de cada video.
-4. Polling no superpuesto mientras existan jobs `QUEUED` o `RUNNING`.
-5. Creación real mediante `POST /videos/{video_id}/jobs` con `team_id` en el body.
-6. Detalle job-centric en `/analisis/jobs/:jobId?team_id=...`.
-7. Lectura y persistencia de `our_team_side`.
-8. Shooting Stats reales mediante `/jobs/{jobId}/stats`.
-9. Shot Chart real mediante `/jobs/{jobId}/shot-chart`, con filtro local por jugador.
-10. Court Positions reales mediante `/jobs/{jobId}/court-positions`, con trayectorias y filtros locales.
-
-Flujo validado hasta este punto:
+El flujo frontend real de Analysis se considera cerrado para el alcance actual del TPP:
 
 ```text
-Team → Video → iniciar análisis → QUEUED → RUNNING → DONE
-     → Ver análisis → court positions
-                    → confirmar team-side → shooting stats → shot chart
+Videos → Historial de análisis → ProcessingJob
+       → QUEUED / RUNNING / DONE / FAILED
+       → detalle por job
+       → Team Side y resultados reales
 ```
 
-La creación, el polling y la transición hasta `DONE` fueron validados manualmente contra el backend real con el job `f504888a-978a-4f43-a130-280e730c5a04`. La validación automatizada cubre team-side `0`, team-side `1`, cambio de lado, Shooting Stats, Shot Chart, Court Positions y recarga sin datos stale. El smoke de los bloques posteriores a `DONE` sigue pendiente únicamente hasta que el backend desplegado publique el contrato ya presente en `origin/main`; esto no bloquea continuar la implementación frontend.
+Un fallo aislado en Team Side, Court Positions o Análisis similares se representa dentro de su propio bloque y no inutiliza el resto del detalle. No hay un motivo técnico frontend para continuar agregando funcionalidad de Analysis antes de comenzar la documentación del TPP y la preparación de la defensa/demo.
+
+## Evolución UX/UI previa a ProcessingJob
+
+Estas fases fueron iteraciones de experiencia y presentación del frontend. No deben confundirse con la integración posterior de ProcessingJobs reales.
+
+### Phase 6C — Setup y base UX
+
+- Commit: `cf57982 feat(frontend): redesign core UX foundation and analysis setup`.
+- Reorganizó el inicio del análisis como preparación progresiva: selección de material, video existente o nuevo, validaciones, creación inline de equipo y upload antes del workspace.
+- Estableció la base visual, los componentes de estado y la separación entre preparación y edición.
+- El flujo de análisis subyacente seguía siendo manual/mock.
+
+### Phase 6D — Analysis Workspace
+
+- Commit: `b1417c0 feat(frontend): redesign analysis workspace experience`.
+- Merge: `d0b80ff`.
+- Reordenó el workspace alrededor del video y la timeline, con navegación compacta y panel secundario contextual.
+- Eliminó rangos iniciales fabricados e incorporó estados honestos para inicio sin fin, rango válido, edición de etiqueta y guardado.
+- Hizo explícito que los drafts eran locales; no introdujo ProcessingJobs reales.
+
+### Phase 6E — Analysis List and Review
+
+- Commit: `99d043d feat(frontend): redesign analysis list and review`.
+- Merge: `a0db442`.
+- Convirtió la lista en una superficie de trabajo escaneable y agregó estados loading, error, empty y populated.
+- Reorganizó el review con video o momentos como contenido principal, metadata secundaria y navegación basada sólo en IDs persistidos.
+- Evitó porcentajes y acciones no respaldadas por datos confiables.
+- La fuente seguía siendo `AnalysisSession` y los servicios legacy/manual/mock.
+
+### Phase 6F
+
+No existió una Phase 6F formal en el historial Git, las specs ni los handoffs versionados. Después de 6E comenzó la integración técnica de ProcessingJobs reales. No debe asignarse retrospectivamente el nombre 6F a ese trabajo.
+
+## Integración de ProcessingJob real
+
+La integración job-centric ocurrió después de las fases UX/UI anteriores:
+
+- `3820b36 feat: add analysis job history and polling`
+  - historial real por video;
+  - polling no superpuesto para jobs `QUEUED` y `RUNNING`;
+  - estados terminales `DONE` y `FAILED`.
+- `0128fe3 feat: create analysis jobs from videos`
+  - creación real desde Videos;
+  - preservación del historial y comienzo de polling después de crear un job.
+- `8e220c5 feat: add job-centric analysis detail and team side`
+  - detalle refresh-safe por `jobId + teamId`;
+  - lectura y persistencia de `our_team_side`.
+- `c72eff1 feat: add shooting stats and shot chart`
+  - estadísticas de tiro detectadas;
+  - mapa de tiros con posiciones y estados honestos de cobertura.
+- `62d2f81 feat: add court position trajectories`
+  - Court Positions reales;
+  - trayectorias, filtros locales, cobertura `truncated` y registros fuera de cancha.
+- `0431420 feat: add court position heatmap`
+  - Heatmap derivado localmente de las posiciones reales de Court Positions;
+  - concentración relativa de muestras, sin endpoint ni refetch adicional.
+- `420c38b feat: add similar analysis results`
+  - Análisis similares para jobs `DONE` del mismo Team;
+  - navegación al job relacionado conservando `team_id`.
+- `d452682 fix: polish analysis demo experience`
+  - terminología, jerarquía, errores locales, responsive y presentación para demo.
+- `acf061c fix: finalize videos analysis flow`
+  - carga principal Videos + Teams con loading, error, retry y empty explícitos;
+  - actividad reciente mock aislada del modo API real;
+  - cierre funcional del acceso Videos → Analysis.
+
+## Estado funcional actual
+
+Se considera terminado:
+
+- Videos responsive: cards en móvil y tabla en desktop.
+- Carga inicial de Videos + Teams con loading, error, retry, empty real y empty por filtros.
+- Actividad reciente sintética disponible sólo cuando `VITE_USE_MOCK_API=true`; en modo API real no se consulta ni se muestra.
+- Filtro por `team_id` preservado en Videos y en la navegación job-centric.
+- Historial real de análisis dentro de cada video.
+- Creación real de ProcessingJobs.
+- Polling de `QUEUED`/`RUNNING`, sin requests superpuestas, hasta un estado terminal.
+- Presentación honesta de `DONE` y `FAILED`.
+- Detalle real por job con recuperación de contexto de video y equipo.
+- Identificación y persistencia de Team Side.
+- Estadísticas de tiro detectadas, sin presentarlas como box score oficial.
+- Mapa de tiros con estados `made`, `missed` y `unknown` diferenciados.
+- Court Positions con posiciones, trayectorias, filtros locales y métricas de movimiento backend sin reinterpretación.
+- Heatmap como concentración relativa de muestras espaciales válidas del filtro activo.
+- Análisis similares con scores general, de tiros y de movimiento, sin convertirlos en precisión, confianza o recomendación.
+- Loading, error, retry y empty states locales en los bloques del detalle.
+- Fallos aislados que no derriban el resto de la página.
+- Responsive móvil/desktop para Videos y el detalle de Analysis.
+- Terminología y jerarquía visual ajustadas para demo.
+
+Validación del cierre:
+
+- 106/106 tests passing.
+- Build passing.
+- Lint con 0 errores y 2 warnings preexistentes.
+- Revisión visual razonable de los flujos responsive y del demo polish.
 
 ## Arquitectura que debe conservarse
 
-- `ProcessingJob` y `AnalysisSession` son modelos independientes.
-- El review mock de 6E en `/analisis/:id` permanece intacto.
-- No inventar `matchId` ni relaciones Job ↔ Match.
-- No convertir `ProcessingJob` a `AnalysisSession`.
-- Los contratos reales usan services/adapters específicos:
-  - `analysisJobService`;
-  - `analysisJobTeamSideService`;
-  - `analysisJobStatsService`;
-  - `analysisJobShotChartService`;
-  - `analysisJobCourtPositionsService`.
-- `AnalysisJobDetailPage` coordina los bloques mediante el `ProcessingJob`; TeamSide, Stats, ShotChart y Court Positions no deben depender internamente unos de otros.
-- Stats y ShotChart sólo consultan un job `DONE` con `ourTeamSide` confirmado.
-- Cambiar `ourTeamSide` invalida y remonta Stats y ShotChart para evitar identidades del mapping anterior.
-- Court Positions consulta cualquier job `DONE`, no depende de `ourTeamSide` y no refetch al cambiar el lado confirmado.
-- Stats y Shot Chart muestran identidades únicamente desde `roster_name` / `display_name` del backend. Court Positions usa sólo dorsal backend o el identificador técnico `Track {track_id}`. No fabricar jugadores.
+- `AnalysisSession` representa el flujo legacy/manual/mock.
+- `ProcessingJob` representa el flujo real actual de análisis automático.
+- No convertir `ProcessingJob` en `AnalysisSession` ni usar uno como adapter implícito del otro.
+- No eliminar todavía el flujo legacy: su migración o retiro requiere una decisión separada.
+- No usar mocks ni datos sintéticos como fallback del flujo real.
+- `ProcessingJob` y sus resultados usan services/adapters específicos y contratos backend reales.
+- Team Side, Shooting Stats, Shot Chart, Court Positions y Análisis similares mantienen loading/error/retry locales.
+- Shooting Stats y Shot Chart dependen de un Team Side confirmado.
+- Court Positions y Heatmap no dependen de `our_team_side` y reutilizan el mismo dataset cargado.
+- Análisis similares es un bloque independiente y no depende de Team Side, Stats, Shot Chart, Court Positions ni Heatmap.
+- No fabricar jugadores, nombres, rivales, fechas, thumbnails, métricas ni relaciones con partidos cuando el contrato no los entrega.
 
-## Backend y decisiones vigentes
+## Dependencias externas y limitaciones conocidas
 
-- Usar `origin/main` como fuente de verdad y volver a actualizar esa referencia antes de iniciar el próximo contrato.
-- La navegación esperada es `Equipo → Videos → análisis del video`.
-- El historial real necesario es por video; actualmente no se necesita un historial global de jobs.
-- Clip Collections es el contrato vigente para clips y no debe mezclarse con el flujo job-centric.
-- Shooting, zonas y Shot Chart son datos reales del backend.
-- Court Positions usa `sample_every=5` encapsulado en el adapter; las métricas de movimiento permanecen exactamente como las calcula el backend sobre la trayectoria completa.
-- `coverage.not_measured` debe seguir representándose honestamente.
-- Pases, pérdidas, asistencias, robos, rebotes y otras métricas no medidas no deben mostrarse con valores inventados.
-- No agregar fallbacks, mocks de producción ni datos sintéticos para ocultar el `404` del deploy atrasado.
+Estos puntos no son bugs frontend:
 
-## Archivos del bloque cerrado
+- El deploy backend puede estar desactualizado y responder `404` para `/jobs/{jobId}/team-sides` aunque el contrato exista en la rama backend de referencia.
+- `/jobs/{jobId}/similar` también depende de que el backend desplegado incluya ese endpoint.
+- El frontend maneja esos fallos como errores locales y recuperables; no modifica contratos ni usa mocks para ocultarlos.
+- La cantidad, calidad, identidad y cobertura de tiros, posiciones, trayectorias, scores similares y demás detecciones dependen del backend y del modelo de visión.
+- El muestreo y las métricas backend pueden limitar la precisión interpretativa; la UI mantiene semántica defensiva y no reconstruye tiempo, posesión o eventos no medidos.
 
-Archivos modificados incluidos en el cierre:
+## Fuera del alcance actual / futuro
 
-- `PROJECT_MAP.md`
-- `specs/analysis/current.md`
-- `src/pages/analysis/AnalysisJobDetailPage.tsx`
-- `src/services/registry.ts`
-- `src/types/index.ts`
+No son pendientes para cerrar Analysis en el alcance actual:
 
-Archivos nuevos de Shooting Stats:
+- comparación de jugadores;
+- comparación de equipos;
+- jugadores similares;
+- equipos similares;
+- scouting automático, recomendaciones o ranking de candidatos;
+- relación `ProcessingJob ↔ Match`;
+- historial global de ProcessingJobs fuera del contexto de cada video;
+- metadata avanzada para Análisis similares, como nombres, rivales, fechas o thumbnails;
+- posesión, segundos o porcentaje de tiempo en una zona;
+- métricas temporales reconstruidas desde las muestras espaciales;
+- migración o eliminación completa de `AnalysisSession` y del review legacy 6E.
 
-- `src/pages/analysis/AnalysisJobShootingStats.tsx`
-- `src/pages/analysis/analysis-job-stats.ts`
-- `src/services/contracts/analysis-job-stats.service.ts`
-- `src/services/api/analysis-job-stats.client.ts`
-- `src/services/api/analysis-job-stats.api.ts`
-- `tests/analysis-job-stats.test.ts`
+Estas ideas requieren definición de producto y, en varios casos, contratos o modelos backend nuevos. No deben inferirse a partir de mocks históricos ni presentarse como trabajo faltante del flujo actual.
 
-Archivos nuevos de Shot Chart:
+## Punto de continuación
 
-- `src/components/analysis/ShotChartCourt.tsx`
-- `src/components/analysis/shot-chart-court.ts`
-- `src/pages/analysis/AnalysisJobShotChart.tsx`
-- `src/pages/analysis/analysis-job-shot-chart.ts`
-- `src/services/contracts/analysis-job-shot-chart.service.ts`
-- `src/services/api/analysis-job-shot-chart.client.ts`
-- `src/services/api/analysis-job-shot-chart.api.ts`
-- `tests/analysis-job-shot-chart.test.ts`
+Analysis queda cerrado para desarrollo funcional dentro del alcance actual del TPP.
 
-Archivos nuevos de Court Positions:
+Próximo paso recomendado:
 
-- `src/components/analysis/CourtPositionsCourt.tsx`
-- `src/components/analysis/court-positions-court.ts`
-- `src/pages/analysis/AnalysisJobCourtPositions.tsx`
-- `src/pages/analysis/analysis-job-court-positions.ts`
-- `src/services/contracts/analysis-job-court-positions.service.ts`
-- `src/services/api/analysis-job-court-positions.client.ts`
-- `src/services/api/analysis-job-court-positions.api.ts`
-- `tests/analysis-job-court-positions.test.ts`
+1. Documentar la arquitectura, decisiones, contratos y evolución del TPP.
+2. Preparar el guion y recorrido de la defensa/demo.
+3. Tratar cualquier ampliación futura de Analysis como un bloque nuevo, con alcance explícito y sin reabrir decisiones ya cerradas salvo que aparezca una inconsistencia concreta.
 
-`specs/analysis/handoff.md` también forma parte del cierre documental. `artifacts/` permanece local, sin trackear y excluido del commit.
-
-## Estado específico del Shot Chart
-
-Contrato:
-
-```http
-GET /jobs/{jobId}/shot-chart?team_id={teamId}
-```
-
-El response real contiene:
-
-- `court`: `length_m`, `width_m`, `hoop_inset_m`, ambos `hoops`, `three_point_radius_m` y `corner_three_lateral_m`;
-- `shots`: identidad nullable, `x_m`, `y_m`, `made`, `result`, `points`, `zone`, `distance_m`, `shot_type`, timestamp y attribution;
-- `players`: `track_id`, lado, camiseta, `display_name` y sus tiros;
-- `coverage`: cobertura de shooting, `shots_charted` y `filtered_to_track_id`.
-
-Decisiones de UI:
-
-- La cancha usa `court.length_m × court.width_m` como sistema de coordenadas.
-- Cada marker se transforma con `left = x_m / length_m` y `top = y_m / width_m`.
-- Coordenadas no finitas o fuera de esas dimensiones no se dibujan.
-- `made`, `missed` y `unknown` tienen tratamientos separados; `unknown` nunca se muestra como fallo.
-- El valor 2P/3P se muestra dentro del marker.
-- El filtro por jugador es local; no se envía `track_id` ni se generan requests adicionales.
-- Tiros sin posición y sin shooter se reflejan mediante coverage.
-
-Verificación del bloque:
-
-- 12 tests específicos de Shot Chart agregados.
-- Suite relevante completa: 52/52 tests passing.
-- `npm run build`: passing.
-- `npm run lint`: 0 errores; permanecen 2 warnings preexistentes de Fast Refresh en `button.tsx` y `AuthContext.tsx`.
-- Vite mantiene el warning conocido por un chunk mayor a 500 kB.
-- Commit y push del bloque: completados en `dev`.
-- Smoke test manual desktop/mobile contra backend real: pendiente sólo por el deploy backend desactualizado que no registra todavía `/jobs/{job_id}/team-sides`.
-
-## No implementado
-
-- Heatmap.
-- Similares.
-- `/jobs/{id}/results`.
-- Comparaciones entre jugadores o equipos.
-- Integración Match ↔ Job.
-- Migración o eliminación del review mock 6E.
-
-## Próximo bloque recomendado
-
-Court Positions queda implementado. Antes de iniciar otro bloque:
-
-1. Mantener registrado el smoke pendiente como bloqueo de entorno; no reabrir los bloques cerrados ni inventar fallbacks frontend.
-2. Ejecutar smoke desktop/mobile cuando el deploy backend publique los endpoints presentes en `origin/main`.
-3. No iniciar Heatmap sin una instrucción separada y sin definir primero si será una derivación local de Court Positions o un contrato backend propio.
-
-Secuencia posterior recomendada:
-
-```text
-heatmap → similares/comparaciones → pulido UI
-```
-
-No iniciar esas implementaciones desde este handoff.
+Al commitear este handoff, incluir únicamente `specs/analysis/handoff.md`. Mantener `artifacts/` fuera del índice.

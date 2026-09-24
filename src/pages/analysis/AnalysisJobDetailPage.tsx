@@ -3,7 +3,6 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   CircleAlert,
-  CircleCheck,
   LoaderCircle,
   Video as VideoIcon,
 } from 'lucide-react'
@@ -106,7 +105,7 @@ export function AnalysisJobDetailPage() {
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground">No pudimos cargar este análisis</p>
             <p className="mt-1 text-muted-foreground">
-              Revisá la conexión y volvé a intentarlo sin salir de esta ejecución.
+              Revisá la conexión y volvé a intentarlo sin salir de esta página.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={() => void loadDetail()}>
@@ -126,7 +125,7 @@ export function AnalysisJobDetailPage() {
         <EmptyState
           icon={<CircleAlert className="h-5 w-5" aria-hidden="true" />}
           title="No encontramos este análisis"
-          description="El job no existe, no está disponible para este equipo o el enlace está incompleto."
+          description="El análisis no existe, no está disponible para este equipo o el enlace está incompleto."
           action={(
             <Button asChild variant="outline">
               <Link to="/videos">Volver a Videos</Link>
@@ -150,10 +149,10 @@ export function AnalysisJobDetailPage() {
 
       <header className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Analysis Job</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Análisis de video</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{contextLabel}</p>
-          <p className="mt-2 font-mono text-xs text-muted-foreground">Job {job.id}</p>
+          <p className="mt-2 font-mono text-xs text-muted-foreground">ID de análisis {job.id}</p>
         </div>
         <StatusIndicator state={presentation.indicatorState}>{presentation.label}</StatusIndicator>
       </header>
@@ -170,7 +169,7 @@ export function AnalysisJobDetailPage() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 id="job-progress-title" className="font-semibold text-foreground">Análisis en proceso</h2>
-              <p className="mt-1 text-sm text-muted-foreground">El backend continúa procesando este video.</p>
+              <p className="mt-1 text-sm text-muted-foreground">El sistema continúa procesando este video.</p>
             </div>
             {job.progressPercent != null && (
               <span className="text-sm font-semibold text-primary">{job.progressPercent}% procesado</span>
@@ -203,18 +202,6 @@ export function AnalysisJobDetailPage() {
 
       {job.status === 'DONE' && (
         <>
-          <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="job-completed-title">
-            <div className="flex items-start gap-3">
-              <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-              <div>
-                <h2 id="job-completed-title" className="font-semibold text-foreground">Análisis completado</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  El procesamiento terminó correctamente.
-                </p>
-              </div>
-            </div>
-          </section>
-
           <AnalysisJobTeamSideSelector job={job} onJobUpdated={handleJobUpdated} />
           <AnalysisJobShootingStatsView
             key={`stats-${job.ourTeamSide ?? 'unconfirmed'}`}
@@ -230,11 +217,11 @@ export function AnalysisJobDetailPage() {
       )}
 
       <section className="space-y-3" aria-label="Información secundaria del análisis">
-        <details className="group rounded-lg border bg-surface" open>
+        <details className="group rounded-lg border bg-surface">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30">
             <span className="flex items-center gap-2">
               <VideoIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              Información de la ejecución
+              Información del análisis
             </span>
           </summary>
           <dl className="grid gap-3 border-t px-5 py-5 text-sm sm:grid-cols-2">

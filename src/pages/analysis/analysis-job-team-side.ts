@@ -1,6 +1,10 @@
 import type { IAnalysisJobTeamSideService } from '../../services/contracts/analysis-job-team-sides.service.ts'
 import type { AnalysisJobTeamSide, AnalysisJobTeamSides, ProcessingJob } from '../../types/index.ts'
 
+export function analysisJobTeamGroupLabel(side: AnalysisJobTeamSide): string {
+  return `Grupo detectado ${side === 0 ? 'A' : 'B'}`
+}
+
 export function initialAnalysisJobTeamSide(
   teamSides: AnalysisJobTeamSides,
 ): AnalysisJobTeamSide | null {

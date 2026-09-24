@@ -17,6 +17,7 @@ import {
   loadAnalysisJobStats,
   type AnalysisJobStatsLoadContext,
 } from './analysis-job-stats'
+import { analysisJobTeamGroupLabel } from './analysis-job-team-side'
 
 interface AnalysisJobShootingStatsProps {
   job: ProcessingJob
@@ -54,7 +55,7 @@ function ShootingMetrics({ totals }: { totals: ShootingTotals }) {
   return (
     <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
       <div className="rounded-md bg-surface-subtle p-3">
-        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Puntos</dt>
+        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Puntos detectados</dt>
         <dd className="mt-1 text-2xl font-semibold text-foreground">{totals.points}</dd>
       </div>
       <div className="rounded-md bg-surface-subtle p-3">
@@ -110,8 +111,8 @@ function TeamStatsCard({
     <article className="rounded-lg border bg-surface p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-foreground">Lado {team.teamSide}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{team.playersTracked} jugadores trackeados</p>
+          <h3 className="font-semibold text-foreground">{analysisJobTeamGroupLabel(team.teamSide)}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{team.playersTracked} seguimientos de jugadores</p>
         </div>
         {isOurTeam && <Badge variant="analyzed">Tu equipo</Badge>}
       </div>
@@ -142,7 +143,7 @@ function CoverageSummary({ stats }: { stats: AnalysisJobShootingStats }) {
         <div><dt>Tiros detectados</dt><dd className="font-semibold text-foreground">{coverage.shotsDetected}</dd></div>
         <div><dt>Tiros contabilizados</dt><dd className="font-semibold text-foreground">{coverage.shotsScored}</dd></div>
         <div><dt>Camisetas identificadas</dt><dd className="font-semibold text-foreground">{coverage.playersWithJerseyNumber}/{coverage.playersTracked}</dd></div>
-        <div><dt>Jugadores vinculados al roster</dt><dd className="font-semibold text-foreground">{coverage.playersLinkedToRoster}/{coverage.playersTracked}</dd></div>
+        <div><dt>Jugadores vinculados al plantel</dt><dd className="font-semibold text-foreground">{coverage.playersLinkedToRoster}/{coverage.playersTracked}</dd></div>
       </dl>
       {(coverage.shotsWithoutCourtPosition > 0 || coverage.shotsWithoutShooter > 0) && (
         <p className="mt-3 text-muted-foreground">
@@ -152,7 +153,7 @@ function CoverageSummary({ stats }: { stats: AnalysisJobShootingStats }) {
       {notMeasured.length > 0 && (
         <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Este análisis mide shooting. No mide {notMeasured.join(', ')}.
+          Este análisis mide tiros detectados. No mide {notMeasured.join(', ')}.
         </p>
       )}
     </div>
@@ -193,9 +194,9 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
         setStats(loaded)
         setLoadState('success')
       },
-      (loadError: unknown) => {
+      () => {
         if (!active) return
-        setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las estadísticas.')
+        setError('No pudimos cargar esta información. Reintentá en unos segundos.')
         setLoadState('error')
       },
     )
@@ -213,9 +214,9 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
         <div className="flex items-start gap-3">
           <BarChart3 className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div>
-            <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de shooting</h2>
+            <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de tiro detectadas</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Confirmá primero cuál de los lados corresponde a tu equipo para resolver correctamente los jugadores del roster.
+              Confirmá primero qué grupo corresponde a tu equipo para asociar correctamente los jugadores con el plantel.
             </p>
           </div>
         </div>
@@ -228,7 +229,7 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-busy="true" aria-live="polite">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
-          Cargando estadísticas de shooting…
+          Cargando estadísticas de tiro…
         </div>
       </section>
     )
@@ -237,7 +238,7 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
   if (loadState === 'error' || !stats) {
     return (
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="shooting-stats-title">
-        <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de shooting</h2>
+        <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de tiro detectadas</h2>
         <Alert className="mt-4 flex flex-col gap-4 border-destructive/25 bg-destructive/5 sm:flex-row sm:items-center">
           <CircleAlert className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="min-w-0 flex-1">
@@ -257,9 +258,9 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
   return (
     <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="shooting-stats-title">
       <div>
-        <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de shooting</h2>
+        <h2 id="shooting-stats-title" className="font-semibold text-foreground">Estadísticas de tiro detectadas</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Totales calculados por el backend a partir de los tiros detectados.
+          Métricas estimadas por el sistema a partir de los tiros detectados; no reemplazan un box score oficial.
         </p>
       </div>
 
@@ -268,7 +269,7 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
           className="py-8"
           icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
           title="No se detectaron estadísticas"
-          description="El análisis terminó, pero no produjo equipos ni jugadores con métricas de shooting para mostrar."
+          description="El análisis terminó, pero no produjo equipos ni jugadores con métricas de tiro para mostrar."
         />
       ) : (
         <>
@@ -286,7 +287,7 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
                   <thead className="bg-surface-subtle text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">Jugador</th>
-                      <th className="px-4 py-3 font-medium">Lado</th>
+                      <th className="px-4 py-3 font-medium">Grupo</th>
                       <th className="px-4 py-3 text-right font-medium">PTS</th>
                       <th className="px-4 py-3 text-right font-medium">TC</th>
                       <th className="px-4 py-3 text-right font-medium">2P</th>
@@ -299,10 +300,10 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{player.rosterName ?? player.displayName}</span>
-                            {player.rosterName && <Badge variant="analyzed">Roster</Badge>}
+                            {player.rosterName && <Badge variant="analyzed">Plantel</Badge>}
                           </div>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            Track {player.trackId}{player.jerseyNumber ? ` · #${player.jerseyNumber}` : ''}
+                            Seguimiento {player.trackId}{player.jerseyNumber ? ` · #${player.jerseyNumber}` : ''}
                           </p>
                           {Object.keys(player.byZone).length > 0 && (
                             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
@@ -312,7 +313,9 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
                             </p>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{player.teamSide ?? '—'}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {player.teamSide == null ? '—' : analysisJobTeamGroupLabel(player.teamSide)}
+                        </td>
                         <td className="px-4 py-3 text-right font-semibold text-foreground">{player.points}</td>
                         <td className="px-4 py-3 text-right text-foreground">{metricLine(player.fieldGoalsMade, player.fieldGoalsAttempted, player.fieldGoalPercentage)}</td>
                         <td className="px-4 py-3 text-right text-foreground">{metricLine(player.twoPointMade, player.twoPointAttempted, player.twoPointPercentage)}</td>

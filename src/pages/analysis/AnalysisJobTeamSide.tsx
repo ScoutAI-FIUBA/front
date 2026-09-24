@@ -11,6 +11,7 @@ import type {
   ProcessingJob,
 } from '@/types'
 import {
+  analysisJobTeamGroupLabel,
   createAnalysisJobTeamSideConfirmation,
   initialAnalysisJobTeamSide,
 } from './analysis-job-team-side'
@@ -24,10 +25,6 @@ type LoadState = 'loading' | 'success' | 'error'
 
 const TEAM_SIDES: AnalysisJobTeamSide[] = [0, 1]
 
-function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback
-}
-
 export function AnalysisJobTeamSideSelector({
   job,
   onJobUpdated,
@@ -38,6 +35,7 @@ export function AnalysisJobTeamSideSelector({
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
@@ -50,11 +48,12 @@ export function AnalysisJobTeamSideSelector({
         if (!active) return
         setTeamSides(loaded)
         setSelectedSide(initialAnalysisJobTeamSide(loaded))
+        setIsExpanded(loaded.ourTeamSide == null)
         setLoadState('success')
       },
-      (error: unknown) => {
+      () => {
         if (!active) return
-        setLoadError(errorMessage(error, 'No se pudieron cargar los lados detectados.'))
+        setLoadError('No pudimos cargar esta información. Reintentá en unos segundos.')
         setLoadState('error')
       },
     )
@@ -70,11 +69,12 @@ export function AnalysisJobTeamSideSelector({
       ? { ...current, ourTeamSide: updatedJob.ourTeamSide }
       : current)
     if (updatedJob.ourTeamSide != null) setSelectedSide(updatedJob.ourTeamSide)
+    setIsExpanded(false)
     onJobUpdated(updatedJob)
   }, [onJobUpdated])
 
-  const handleSaveError = useCallback((error: unknown) => {
-    setSaveError(errorMessage(error, 'No se pudo confirmar el lado del equipo.'))
+  const handleSaveError = useCallback(() => {
+    setSaveError('No pudimos guardar la selección. Reintentá en unos segundos.')
   }, [])
 
   const confirmation = useMemo(() => createAnalysisJobTeamSideConfirmation({
@@ -91,7 +91,7 @@ export function AnalysisJobTeamSideSelector({
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-busy="true" aria-live="polite">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
-          Cargando lados detectados…
+          Cargando grupos detectados…
         </div>
       </section>
     )
@@ -104,7 +104,7 @@ export function AnalysisJobTeamSideSelector({
         <Alert className="mt-4 flex flex-col gap-4 border-destructive/25 bg-destructive/5 sm:flex-row sm:items-center">
           <CircleAlert className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">No pudimos cargar los lados detectados</p>
+            <p className="font-semibold text-foreground">No pudimos cargar los grupos detectados</p>
             <p className="mt-1 text-muted-foreground">{loadError}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => setReloadKey((key) => key + 1)}>
@@ -115,8 +115,32 @@ export function AnalysisJobTeamSideSelector({
     )
   }
 
-  const isConfirmed = teamSides.ourTeamSide != null
-  const selectedIsConfirmed = isConfirmed && selectedSide === teamSides.ourTeamSide
+  const confirmedSide = teamSides.ourTeamSide
+  const isConfirmed = confirmedSide != null
+  const selectedIsConfirmed = isConfirmed && selectedSide === confirmedSide
+
+  if (isConfirmed && !isExpanded) {
+    return (
+      <section className="rounded-lg border bg-surface p-4 sm:p-5" aria-labelledby="team-side-title">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+            <div>
+              <h2 id="team-side-title" className="font-semibold text-foreground">
+                Tu equipo: {analysisJobTeamGroupLabel(confirmedSide)}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Esta selección se usa para asociar las detecciones con tu plantel.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setIsExpanded(true)}>
+            Cambiar
+          </Button>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="team-side-title">
@@ -124,25 +148,25 @@ export function AnalysisJobTeamSideSelector({
         <div>
           <h2 id="team-side-title" className="font-semibold text-foreground">Identificá tu equipo</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            El pipeline separó a los jugadores en dos lados. Elegí cuál corresponde a tu equipo.
+            El sistema separó las detecciones en dos grupos. Elegí cuál corresponde a tu equipo.
           </p>
         </div>
         {isConfirmed && (
           <Badge variant="analyzed" className="w-fit gap-1">
             <CircleCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            Lado {teamSides.ourTeamSide} confirmado
+            {analysisJobTeamGroupLabel(confirmedSide)} confirmado
           </Badge>
         )}
       </div>
 
       {!isConfirmed && teamSides.suggestedTeamSide != null && (
         <p className="mt-4 text-sm text-muted-foreground">
-          Preseleccionamos el lado {teamSides.suggestedTeamSide} por sus coincidencias con el roster. Todavía no está guardado.
+          Preseleccionamos {analysisJobTeamGroupLabel(teamSides.suggestedTeamSide)} por sus coincidencias con el plantel. Todavía no está guardado.
         </p>
       )}
 
       <fieldset className="mt-5">
-        <legend className="sr-only">Seleccionar el lado correspondiente a tu equipo</legend>
+        <legend className="sr-only">Seleccionar el grupo detectado correspondiente a tu equipo</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           {TEAM_SIDES.map((sideValue) => {
             const side = teamSides.sides.find((item) => item.teamSide === sideValue)
@@ -182,7 +206,7 @@ export function AnalysisJobTeamSideSelector({
                     >
                       {selected && <span className="h-2 w-2 rounded-full bg-primary-foreground" />}
                     </span>
-                    <span className="font-semibold text-foreground">Lado {sideValue}</span>
+                    <span className="font-semibold text-foreground">{analysisJobTeamGroupLabel(sideValue)}</span>
                   </div>
                   <div className="flex flex-wrap justify-end gap-1.5">
                     {suggested && <Badge variant="position">Sugerido</Badge>}
@@ -194,7 +218,7 @@ export function AnalysisJobTeamSideSelector({
                   <div className="mt-4 space-y-3 text-sm">
                     <p className="flex items-center gap-2 text-foreground">
                       <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      {side.trackCount} tracks detectados
+                      {side.trackCount} seguimientos detectados
                     </p>
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Camisetas detectadas</p>
@@ -209,11 +233,11 @@ export function AnalysisJobTeamSideSelector({
                       )}
                     </div>
                     <p className="text-muted-foreground">
-                      Coincidencias con el roster: <span className="font-semibold text-foreground">{side.rosterMatches}</span>
+                      Coincidencias con el plantel: <span className="font-semibold text-foreground">{side.rosterMatches}</span>
                     </p>
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">El backend no informó detecciones para este lado.</p>
+                  <p className="mt-4 text-sm text-muted-foreground">El sistema no informó detecciones para este grupo.</p>
                 )}
               </label>
             )
@@ -222,7 +246,7 @@ export function AnalysisJobTeamSideSelector({
       </fieldset>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Números de camiseta conocidos en el roster: {teamSides.rosterNumbersKnown}.
+        Números de camiseta conocidos en el plantel: {teamSides.rosterNumbersKnown}.
       </p>
 
       {saveError && (
@@ -235,7 +259,21 @@ export function AnalysisJobTeamSideSelector({
         </Alert>
       )}
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        {isConfirmed && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isSaving}
+            onClick={() => {
+              setSelectedSide(confirmedSide)
+              setSaveError('')
+              setIsExpanded(false)
+            }}
+          >
+            Cancelar
+          </Button>
+        )}
         <Button
           type="button"
           disabled={selectedSide == null || isSaving || selectedIsConfirmed}

@@ -91,7 +91,7 @@ function CoverageNotices({ positions }: { positions: AnalysisJobCourtPositions }
           <div>
             <p className="font-medium text-foreground">Cobertura parcial de posiciones</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              El backend limitó la lectura de una trayectoria extensa. Las métricas de movimiento corresponden a los datos informados por el backend.
+              El sistema limitó la lectura de una trayectoria extensa. Las métricas de movimiento corresponden a los datos disponibles del análisis.
             </p>
           </div>
         </Alert>
@@ -144,9 +144,9 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
         setPositions(loaded)
         setLoadState('success')
       },
-      (loadError: unknown) => {
+      () => {
         if (!active) return
-        setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar las posiciones.')
+        setError('No pudimos cargar esta información. Reintentá en unos segundos.')
         setLoadState('error')
       },
     )
@@ -220,8 +220,8 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
           <h2 id="court-positions-title" className="font-semibold text-foreground">Posiciones en cancha</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {view === 'trajectories'
-              ? 'Trayectorias proyectadas por el backend. La distancia y la posición promedio usan la trayectoria completa analizada.'
-              : 'Concentración relativa de las muestras espaciales recibidas desde Court Positions.'}
+              ? 'Trayectorias proyectadas por el sistema. La distancia y la posición promedio usan la trayectoria completa analizada.'
+              : 'Concentración relativa de las muestras espaciales disponibles en el análisis de posiciones.'}
           </p>
         </div>
         <div className="grid w-full gap-3 sm:w-72">
@@ -261,10 +261,10 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tracks</SelectItem>
-                <SelectItem value="side-0">Lado 0</SelectItem>
-                <SelectItem value="side-1">Lado 1</SelectItem>
-                <SelectItem value="unassigned">Sin lado</SelectItem>
+                <SelectItem value="all">Todos los seguimientos</SelectItem>
+                <SelectItem value="side-0">Grupo detectado A</SelectItem>
+                <SelectItem value="side-1">Grupo detectado B</SelectItem>
+                <SelectItem value="unassigned">Sin grupo</SelectItem>
                 {positions.players.map((player) => (
                   <SelectItem key={player.trackId} value={`track:${player.trackId}`}>
                     {courtPositionPlayerLabel(player)}
@@ -293,7 +293,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
           )
         ) : (
           <div className="rounded-lg border border-dashed bg-surface-subtle px-4 py-8 text-center text-sm text-muted-foreground">
-            No hay tracks que coincidan con este filtro.
+            No hay seguimientos que coincidan con este filtro.
           </div>
         )}
       </div>

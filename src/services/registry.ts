@@ -31,16 +31,16 @@ import { mockAnalysisService } from './mock/analysis.mock'
 import { mockClipCollectionService } from './mock/clip-collections.mock'
 
 /** Set VITE_USE_MOCK_API=true to use sessionStorage mocks instead of the backend */
-const useMockApi = import.meta.env.VITE_USE_MOCK_API === 'true'
+export const isMockApiEnabled = import.meta.env.VITE_USE_MOCK_API === 'true'
 
-export const authService: IAuthService = useMockApi ? mockAuthService : apiAuthService
-export const teamService: ITeamService = useMockApi ? mockTeamService : apiTeamService
-export const playerService: IPlayerService = useMockApi ? mockPlayerService : apiPlayerService
+export const authService: IAuthService = isMockApiEnabled ? mockAuthService : apiAuthService
+export const teamService: ITeamService = isMockApiEnabled ? mockTeamService : apiTeamService
+export const playerService: IPlayerService = isMockApiEnabled ? mockPlayerService : apiPlayerService
 
 /** Partidos y análisis siguen en mock hasta que existan en el backend */
 export const matchService: IMatchService = mockMatchService
-export const videoService: IVideoService = useMockApi ? mockVideoService : apiVideoService
-export const clipCollectionService: IClipCollectionService = useMockApi
+export const videoService: IVideoService = isMockApiEnabled ? mockVideoService : apiVideoService
+export const clipCollectionService: IClipCollectionService = isMockApiEnabled
   ? mockClipCollectionService
   : apiClipCollectionService
 export const analysisService: IAnalysisService = mockAnalysisService
