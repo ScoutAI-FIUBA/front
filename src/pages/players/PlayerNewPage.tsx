@@ -17,6 +17,7 @@ import type { PositionCode, Team } from '@/types'
 import { calcAge, toJerseyNumber } from '@/lib/utils'
 import { POSITIONS } from '@/lib/positions'
 import { toast } from 'sonner'
+import { isFutureBirthDate, localDateInputValue } from './player-birth-date'
 
 export function PlayerNewPage() {
   const navigate = useNavigate()
@@ -29,6 +30,7 @@ export function PlayerNewPage() {
   const [heightCm, setHeightCm] = useState('180')
   const [weightKg, setWeightKg] = useState('75')
   const [teamId, setTeamId] = useState('')
+  const maximumBirthDate = localDateInputValue()
 
   useEffect(() => {
     void teamService.list().then(setTeams)
@@ -37,6 +39,10 @@ export function PlayerNewPage() {
   const handleSave = async () => {
     if (!firstName || !lastName || !position || !birthDate) {
       toast.error('Completá los campos obligatorios')
+      return
+    }
+    if (isFutureBirthDate(birthDate, maximumBirthDate)) {
+      toast.error('La fecha de nacimiento no puede ser futura')
       return
     }
     const height = Number(heightCm)
@@ -122,7 +128,7 @@ export function PlayerNewPage() {
             </div>
             <div>
               <Label>Fecha de nacimiento</Label>
-              <Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1" />
+              <Input type="date" max={maximumBirthDate} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1" />
               {age !== null && (
                 <p className="mt-1 text-xs text-muted-foreground">{age} años</p>
               )}

@@ -8,6 +8,7 @@ import {
   FolderOpen,
   LoaderCircle,
   Lock,
+  Play,
   Plus,
   Video as VideoIcon,
 } from 'lucide-react'
@@ -45,6 +46,8 @@ import {
   type VideosLayout,
 } from './video-responsive'
 import { loadVideosPageData, loadVideosRecentActivity } from './videos-page-data'
+import { VideoPlaybackDialog } from './VideoPlaybackDialog'
+import { canOpenVideoPlayback } from './video-playback'
 
 type LoadState = 'loading' | 'success' | 'error'
 
@@ -58,6 +61,7 @@ interface VideoActionsProps {
   video: Video
   historyOpen: boolean
   onToggleHistory: () => void
+  onPlayVideo: (video: Video) => void
   onRequestAnalysis: (videoId: string) => void
 }
 
@@ -65,10 +69,16 @@ function VideoActions({
   video,
   historyOpen,
   onToggleHistory,
+  onPlayVideo,
   onRequestAnalysis,
 }: VideoActionsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-start">
+      {canOpenVideoPlayback(video) && (
+        <Button variant="outline" size="sm" onClick={() => onPlayVideo(video)}>
+          <Play className="h-4 w-4" aria-hidden="true" /> Ver video
+        </Button>
+      )}
       <Button asChild variant="outline" size="sm">
         <Link to={`/videos/${video.id}/colecciones`}>
           <FolderOpen className="h-4 w-4" /> Colecciones
@@ -129,6 +139,7 @@ export function VideosPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
+  const [playbackVideo, setPlaybackVideo] = useState<Video | null>(null)
   const videosLayout = useVideosLayout()
 
   const load = useCallback(async () => {
@@ -282,7 +293,7 @@ export function VideosPage() {
                     <tr>
                       <th className="p-4 text-left">Partido / Video</th>
                       <th className="p-4 text-left">Equipo</th>
-                      <th className="p-4 text-left">Rival</th>
+                      <th className="p-4 text-left">Descripción</th>
                       <th className="p-4 text-left">Fecha</th>
                       <th className="p-4 text-left">Estado</th>
                       <th className="p-4 text-left">Acciones</th>
@@ -300,7 +311,7 @@ export function VideosPage() {
                               <p className="text-xs text-muted-foreground">{v.resolution}</p>
                             </td>
                             <td className="p-4">{teamName(v.teamId)}</td>
-                            <td className="p-4">{v.rivalName ?? '—'}</td>
+                            <td className="p-4">{v.description ?? '—'}</td>
                             <td className="p-4">{formatDate(v.uploadedAt)}</td>
                             <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
                             <td className="p-4">
@@ -308,6 +319,7 @@ export function VideosPage() {
                                 video={v}
                                 historyOpen={historyOpen}
                                 onToggleHistory={() => setExpandedVideoId(historyOpen ? null : v.id)}
+                                onPlayVideo={setPlaybackVideo}
                                 onRequestAnalysis={(videoId) => void requestAnalysis(videoId)}
                               />
                             </td>
@@ -355,8 +367,8 @@ export function VideosPage() {
                             <dd className="mt-0.5 text-foreground">{teamName(video.teamId)}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Rival</dt>
-                            <dd className="mt-0.5 text-foreground">{video.rivalName ?? '—'}</dd>
+                            <dt className="text-xs text-muted-foreground">Descripción</dt>
+                            <dd className="mt-0.5 text-foreground">{video.description ?? '—'}</dd>
                           </div>
                           <div className="col-span-2">
                             <dt className="text-xs text-muted-foreground">Fecha</dt>
@@ -369,6 +381,7 @@ export function VideosPage() {
                             video={video}
                             historyOpen={historyOpen}
                             onToggleHistory={() => setExpandedVideoId(historyOpen ? null : video.id)}
+                            onPlayVideo={setPlaybackVideo}
                             onRequestAnalysis={(videoId) => void requestAnalysis(videoId)}
                           />
                         </div>
@@ -409,6 +422,13 @@ export function VideosPage() {
             )}
           </div>
         </>
+      )}
+
+      {playbackVideo && (
+        <VideoPlaybackDialog
+          video={playbackVideo}
+          onClose={() => setPlaybackVideo(null)}
+        />
       )}
     </div>
   )

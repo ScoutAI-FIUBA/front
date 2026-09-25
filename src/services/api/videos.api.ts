@@ -77,7 +77,7 @@ function mapApiVideo(video: ApiVideo, playbackUrl = ''): Video {
     title: video.title,
     storageUrl: playbackUrl,
     durationMs: video.duration_ms ?? undefined,
-    rivalName: video.description ?? undefined,
+    description: video.description ?? undefined,
     uploadedAt: video.created_at,
     status: mapVideoStatus(video.status),
     resolution: video.mime_type ?? undefined,

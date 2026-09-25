@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,7 @@ export function LoginPage() {
   const { login, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -46,16 +47,16 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl md:grid-cols-2">
-        <div className="relative flex flex-col justify-between overflow-hidden bg-[#7a4a58] p-10 text-white">
+        <div className="relative flex flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground">
           <LoginCourtBackdrop />
           <p className="relative text-lg font-bold">ScoutAI</p>
           <div className="relative">
             <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
-            <p className="mt-4 text-white/80">
+            <p className="mt-4 text-primary-foreground/80">
               Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
             </p>
           </div>
-          <p className="relative text-xs text-white/50">ScoutAI MVP</p>
+          <p className="relative text-xs text-primary-foreground/50">ScoutAI MVP</p>
         </div>
 
         <div className="p-10">
@@ -79,7 +80,28 @@ export function LoginPage() {
                 <Label htmlFor="password">Contraseña</Label>
                 <button type="button" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</button>
               </div>
-              <Input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword
+                    ? <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    : <Eye className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Ingresando...' : 'Iniciar sesión'}

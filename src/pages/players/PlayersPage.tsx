@@ -29,8 +29,10 @@ interface PlayerRow extends Player {
 }
 
 import { POSITIONS, positionLabel } from '@/lib/positions'
+import { isFutureBirthDate, localDateInputValue } from './player-birth-date'
 
 export function PlayersPage() {
+  const maximumBirthDate = localDateInputValue()
   const [rows, setRows] = useState<PlayerRow[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [search, setSearch] = useState('')
@@ -76,6 +78,10 @@ export function PlayersPage() {
   const handleUpdate = async () => {
     if (!editPlayerId || !editFirstName.trim() || !editLastName.trim() || !editPosition || !editBirthDate) {
       toast.error('Completá los campos obligatorios')
+      return
+    }
+    if (isFutureBirthDate(editBirthDate, maximumBirthDate)) {
+      toast.error('La fecha de nacimiento no puede ser futura')
       return
     }
     const height = Number(editHeightCm)
@@ -226,7 +232,7 @@ export function PlayersPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Fecha de nacimiento</label>
-                <Input type="date" value={editBirthDate} onChange={(e) => setEditBirthDate(e.target.value)} className="mt-1" />
+                <Input type="date" max={maximumBirthDate} value={editBirthDate} onChange={(e) => setEditBirthDate(e.target.value)} className="mt-1" />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

@@ -35,7 +35,7 @@ export const mockVideoService: IVideoService = {
       title: dto.title,
       storageUrl: `/mock/videos/${dto.file.name}`,
       durationMs: dto.durationMs,
-      rivalName: dto.description,
+      description: dto.description,
         uploadedAt: new Date().toISOString(),
         status: 'uploaded' as const,
       resolution: '1080p',
