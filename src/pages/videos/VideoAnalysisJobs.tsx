@@ -12,7 +12,10 @@ import {
   addCreatedAnalysisJob,
   createAnalysisJobSubmission,
 } from './analysis-job-creation'
-import { analysisJobDetailPath, canOpenAnalysisJob } from '@/pages/analysis/analysis-job-detail'
+import {
+  analysisJobDetailActionLabel,
+  analysisJobDetailPath,
+} from '@/pages/analysis/analysis-job-detail'
 import { getAnalysisJobPresentation } from './analysis-job-presentation'
 import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs-polling'
 
@@ -211,6 +214,7 @@ export function VideoAnalysisJobs({
           {jobs.map((job) => {
             const presentation = getAnalysisJobPresentation(job)
             const hasProgress = job.status === 'RUNNING' && job.progressPercent != null
+            const detailActionLabel = analysisJobDetailActionLabel(job)
 
             return (
               <article key={job.id} className="px-1 py-5 sm:px-3">
@@ -251,10 +255,10 @@ export function VideoAnalysisJobs({
                   </p>
                 )}
 
-                {canOpenAnalysisJob(job) && (
+                {detailActionLabel && (
                   <Button asChild variant="outline" size="sm" className="mt-4">
                     <Link to={analysisJobDetailPath(job)}>
-                      Ver análisis
+                      {detailActionLabel}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
                   </Button>
