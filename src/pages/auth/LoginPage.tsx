@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert } from '@/components/ui/alert'
+import { LoginCourtBackdrop } from '@/components/auth/LoginCourtBackdrop'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function LoginPage() {
@@ -45,15 +46,16 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl md:grid-cols-2">
-        <div className="relative flex flex-col justify-between bg-[#7a4a58] p-10 text-white">
-          <p className="text-lg font-bold">ScoutAI</p>
-          <div>
+        <div className="relative flex flex-col justify-between overflow-hidden bg-[#7a4a58] p-10 text-white">
+          <LoginCourtBackdrop />
+          <p className="relative text-lg font-bold">ScoutAI</p>
+          <div className="relative">
             <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
             <p className="mt-4 text-white/80">
               Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
             </p>
           </div>
-          <p className="text-xs text-white/50">ScoutAI MVP</p>
+          <p className="relative text-xs text-white/50">ScoutAI MVP</p>
         </div>
 
         <div className="p-10">
