@@ -16,6 +16,7 @@ Current behavior documentation.
 - `src/App.tsx`
 - `src/contexts/AuthContext.tsx`
 - `src/components/layout/ProtectedRoute.tsx`
+- `src/components/auth/LoginCourtBackdrop.tsx`
 - `src/pages/auth/LoginPage.tsx`
 - `src/pages/auth/RegisterPage.tsx`
 - `src/services/registry.ts`
@@ -34,6 +35,7 @@ Current behavior documentation.
 - Login timeout errors tell the user that the server is taking longer than
   usual and that the attempt can be retried; they do not expose backend URLs.
 - Login calls `authService.login`, then stores user and token in context state.
+- Login keeps its existing form and promotional panel hierarchy while a local, decorative court SVG adds low-contrast basketball identity behind only the promotional content. The SVG is hidden from assistive technology and uses a simpler crop on narrow viewports.
 - Login keeps React hooks in a stable order while auth state restores, and submits the browser form values so password-manager autofill is honored even when React state has not received change events yet.
 - Register calls `authService.register`, then stores user and token in context state.
 - Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.

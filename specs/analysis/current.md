@@ -39,6 +39,8 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/components/analysis/court-positions-court.ts`
 - `src/components/analysis/CourtPositionsHeatmap.tsx`
 - `src/components/analysis/court-positions-heatmap.ts`
+- `src/components/analysis/ProcessingShotArc.tsx`
+- `src/components/analysis/processing-shot-arc.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/analysis-job-team-sides.service.ts`
 - `src/services/api/analysis-job-team-sides.client.ts`
@@ -65,6 +67,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Analysis list is a single scannable work list rather than a grid of equally weighted cards.
 - Each row uses only reliable `AnalysisSession` fields: session code, pending/processing/completed status, and state-relevant progress metadata.
 - Completed rows omit the redundant 100% progress bar and lead to review; processing rows expose progress and remaining time; pending rows do not fabricate progress detail.
+- A real `RUNNING` processing-job detail with a numeric `progressPercent` supplements the existing accessible percentage and progress bar with a decorative shot arc. Ball position and visible trajectory are derived only from that real percentage, never from synthetic phases or autonomous looping; reduced-motion users receive the corresponding static frame.
 - Analysis list distinguishes loading, retryable error, successful empty, and successful populated states.
 - New analysis uses progressive disclosure inside the existing `/analisis/nuevo` route.
 - Setup first asks which material the user wants to analyze and offers an existing video or a new local file.

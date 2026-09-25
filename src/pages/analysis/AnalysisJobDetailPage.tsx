@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { StatusIndicator } from '@/components/ui/status-indicator'
+import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import { analysisJobService, teamService, videoService } from '@/services/registry'
 import {
   classifyAnalysisJobDetailError,
@@ -176,11 +177,14 @@ export function AnalysisJobDetailPage() {
             )}
           </div>
           {job.progressPercent != null ? (
-            <Progress
-              value={job.progressPercent}
-              className="mt-4"
-              aria-label={`Progreso del análisis: ${job.progressPercent}%`}
-            />
+            <>
+              <ProcessingShotArc progressPercent={job.progressPercent} />
+              <Progress
+                value={job.progressPercent}
+                className="mt-4"
+                aria-label={`Progreso del análisis: ${job.progressPercent}%`}
+              />
+            </>
           ) : (
             <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground" role="status">
               <LoaderCircle className="h-4 w-4 animate-spin text-information" aria-hidden="true" />
