@@ -141,7 +141,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - Collection navigation remains a secondary action and appears only when a saved manual analysis has a `clipCollectionId`.
 - Review does not expose `Editar análisis`: the current route and persistence state cannot safely restore a saved analysis into the local Workspace.
 - Review remains in the normal light application shell; only the active analysis Workspace uses the dark focus theme.
-- A completed processing job in a video's real history exposes `Ver análisis` and links to the job-specific detail route. Other job statuses do not expose this navigation.
+- A running processing job in a video's real history exposes `Ver progreso`, while a completed job exposes `Ver análisis`; both link to the same team-scoped job detail route. Queued and failed jobs do not expose this navigation.
 - User-facing processing-job detail copy uses product language: `Análisis de video`, `Estadísticas de tiro detectadas`, `Mapa de tiros`, `plantel`, `sistema`, `seguimientos`, and `Grupo detectado A/B`. Internal endpoint, type, and side `0 | 1` contracts remain unchanged.
 - Job detail loads `analysisJobService.get(jobId, teamId)` directly from route/query parameters and never creates an `AnalysisSession` or requires a match.
 - After loading the job, video and team services resolve optional display context from the job's own `videoId` and `teamId`. Context lookup failures fall back to identifiers without hiding the job.

@@ -17,7 +17,13 @@ interface AnalysisJobDetailDependencies {
 }
 
 export function canOpenAnalysisJob(job: ProcessingJob): boolean {
-  return job.status === 'DONE'
+  return analysisJobDetailActionLabel(job) != null
+}
+
+export function analysisJobDetailActionLabel(job: ProcessingJob): string | null {
+  if (job.status === 'RUNNING') return 'Ver progreso'
+  if (job.status === 'DONE') return 'Ver análisis'
+  return null
 }
 
 export function analysisJobDetailPath(job: ProcessingJob): string {

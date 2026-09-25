@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { ApiResponseError } from '../src/services/api/errors.ts'
 import {
+  analysisJobDetailActionLabel,
   analysisJobDetailPath,
   canOpenAnalysisJob,
   classifyAnalysisJobDetailError,
@@ -28,14 +29,28 @@ function job(status: ProcessingJobStatus = 'DONE'): ProcessingJob {
   }
 }
 
-test('builds a refresh-safe job detail URL and only DONE jobs can open it', () => {
+test('RUNNING and DONE jobs expose the correct action and refresh-safe detail URL', () => {
+  const runningJob = job('RUNNING')
+  const doneJob = job('DONE')
+
+  assert.equal(analysisJobDetailActionLabel(runningJob), 'Ver progreso')
+  assert.equal(analysisJobDetailActionLabel(doneJob), 'Ver análisis')
   assert.equal(
-    analysisJobDetailPath(job()),
+    analysisJobDetailPath(runningJob),
     '/analisis/jobs/job%2Fid?team_id=team%20id',
   )
-  assert.equal(canOpenAnalysisJob(job('DONE')), true)
+  assert.equal(
+    analysisJobDetailPath(doneJob),
+    '/analisis/jobs/job%2Fid?team_id=team%20id',
+  )
+  assert.equal(canOpenAnalysisJob(runningJob), true)
+  assert.equal(canOpenAnalysisJob(doneJob), true)
+})
+
+test('QUEUED and FAILED jobs keep no visible detail action', () => {
+  assert.equal(analysisJobDetailActionLabel(job('QUEUED')), null)
+  assert.equal(analysisJobDetailActionLabel(job('FAILED')), null)
   assert.equal(canOpenAnalysisJob(job('QUEUED')), false)
-  assert.equal(canOpenAnalysisJob(job('RUNNING')), false)
   assert.equal(canOpenAnalysisJob(job('FAILED')), false)
 })
 
