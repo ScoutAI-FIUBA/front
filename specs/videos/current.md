@@ -40,7 +40,7 @@ Current behavior documentation.
 - Changing the team selector updates `team_id` in the URL, and selecting
   `Todos los equipos` removes it. This does not add backend requests.
 - Each video row can disclose its own backend processing-job history without navigating to the global analysis list.
-- Desktop keeps the scannable video table, while narrow viewports render each video as a responsive card with its title, team, rival, date, status, collections, and processing-job history action available without horizontal clipping.
+- Desktop keeps the scannable video table, while narrow viewports render each video as a responsive card with its title, team, optional description, date, status, collections, and processing-job history action available without horizontal clipping.
 - The processing-job history is the single visible entry point from Videos into completed analysis results. The legacy `/analisis/:id` route remains available internally but its ambiguous icon-only link is not rendered in the primary Videos experience.
 - Ready videos expose an `Iniciar análisis` action inside that history disclosure. It submits `POST /videos/{video_id}/jobs` with `{ team_id }`; the optional pipeline is omitted so the backend selects its default.
 - A successful submission inserts the returned `QUEUED` job into the existing history immediately. The active-job polling lifecycle then starts without converting the job to an `AnalysisSession`.
@@ -77,6 +77,8 @@ Current behavior documentation.
 - Backend statuses are mapped to frontend statuses: `READY -> uploaded`, `PENDING_UPLOAD -> processing`, `FAILED -> failed`.
 - Only frontend videos mapped to `uploaded` expose real job creation, matching the backend requirement that the video be `READY`.
 - Backend `duration_ms` is mapped to `Video.durationMs` for clip-range validation.
+- Backend `description` is mapped to `Video.description` and displayed as
+  description; the frontend does not reinterpret it as a rival name.
 - The legacy `videoService.requestAnalysis(videoId)` remains mock-only and separate from real `analysisJobService.create`.
 
 ## Non-Scope

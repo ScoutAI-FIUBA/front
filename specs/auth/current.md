@@ -35,7 +35,11 @@ Current behavior documentation.
 - Login timeout errors tell the user that the server is taking longer than
   usual and that the attempt can be retried; they do not expose backend URLs.
 - Login calls `authService.login`, then stores user and token in context state.
+- Login and Register allow each password field to toggle between masked and
+  visible text locally without changing the submitted password value.
 - Login keeps its existing form and promotional panel hierarchy while a local, decorative court SVG adds low-contrast basketball identity behind only the promotional content. The SVG is hidden from assistive technology and uses a simpler crop on narrow viewports.
+- Login's promotional panel uses the existing blue `primary` identity tokens;
+  it does not retain the previous hard-coded pink/burgundy background.
 - Login keeps React hooks in a stable order while auth state restores, and submits the browser form values so password-manager autofill is honored even when React state has not received change events yet.
 - Register calls `authService.register`, then stores user and token in context state.
 - Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.

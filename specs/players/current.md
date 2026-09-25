@@ -34,6 +34,8 @@ Current behavior documentation.
 - Create player page loads teams for optional association.
 - Create player page calculates age from birth date for display.
 - Create player requires first name, last name, position, birth date, valid height, and valid weight.
+- Create and edit forms set today's local date as the maximum birth date and
+  reject a future value before calling the player service.
 - Create player navigates back to `/jugadores` after successful save.
 - Toasts provide success and error feedback.
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { BarChart3, Lock, Mail, ShieldCheck, User, Users } from 'lucide-react'
+import { BarChart3, Eye, EyeOff, Mail, User, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,8 @@ export function RegisterPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -49,6 +51,42 @@ export function RegisterPage() {
     </div>
   )
 
+  const passwordField = (
+    id: string,
+    label: string,
+    value: string,
+    onChange: (value: string) => void,
+    visible: boolean,
+    onToggle: () => void,
+    autoComplete: string,
+  ) => (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <div className="relative mt-1">
+        <Input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="••••••••"
+          autoComplete={autoComplete}
+          className="pr-10"
+        />
+        <button
+          type="button"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          aria-label={visible ? `Ocultar ${label.toLowerCase()}` : `Mostrar ${label.toLowerCase()}`}
+          aria-pressed={visible}
+          onClick={onToggle}
+        >
+          {visible
+            ? <EyeOff className="h-4 w-4" aria-hidden="true" />
+            : <Eye className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f3f4]">
       <div className="flex flex-1 items-center justify-center p-4">
@@ -74,8 +112,24 @@ export function RegisterPage() {
             <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
               {field('name', 'Nombre completo', 'text', fullName, setFullName, 'Ej. Juan Pérez', User)}
               {field('email', 'Correo electrónico', 'email', email, setEmail, 'usuario@dominio.com', Mail)}
-              {field('password', 'Contraseña', 'password', password, setPassword, '••••••••', Lock)}
-              {field('confirm', 'Confirmar contraseña', 'password', confirm, setConfirm, '••••••••', ShieldCheck)}
+              {passwordField(
+                'password',
+                'Contraseña',
+                password,
+                setPassword,
+                showPassword,
+                () => setShowPassword((visible) => !visible),
+                'new-password',
+              )}
+              {passwordField(
+                'confirm',
+                'Confirmar contraseña',
+                confirm,
+                setConfirm,
+                showConfirm,
+                () => setShowConfirm((visible) => !visible),
+                'new-password',
+              )}
               <Button type="submit" className="w-full uppercase tracking-wide" disabled={loading}>
                 {loading ? 'Creando...' : 'Crear cuenta'}
               </Button>

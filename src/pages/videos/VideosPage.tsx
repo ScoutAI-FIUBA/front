@@ -282,7 +282,7 @@ export function VideosPage() {
                     <tr>
                       <th className="p-4 text-left">Partido / Video</th>
                       <th className="p-4 text-left">Equipo</th>
-                      <th className="p-4 text-left">Rival</th>
+                      <th className="p-4 text-left">Descripción</th>
                       <th className="p-4 text-left">Fecha</th>
                       <th className="p-4 text-left">Estado</th>
                       <th className="p-4 text-left">Acciones</th>
@@ -300,7 +300,7 @@ export function VideosPage() {
                               <p className="text-xs text-muted-foreground">{v.resolution}</p>
                             </td>
                             <td className="p-4">{teamName(v.teamId)}</td>
-                            <td className="p-4">{v.rivalName ?? '—'}</td>
+                            <td className="p-4">{v.description ?? '—'}</td>
                             <td className="p-4">{formatDate(v.uploadedAt)}</td>
                             <td className="p-4"><Badge variant={statusVariant(v.status)}>{statusLabel(v.status)}</Badge></td>
                             <td className="p-4">
@@ -355,8 +355,8 @@ export function VideosPage() {
                             <dd className="mt-0.5 text-foreground">{teamName(video.teamId)}</dd>
                           </div>
                           <div>
-                            <dt className="text-xs text-muted-foreground">Rival</dt>
-                            <dd className="mt-0.5 text-foreground">{video.rivalName ?? '—'}</dd>
+                            <dt className="text-xs text-muted-foreground">Descripción</dt>
+                            <dd className="mt-0.5 text-foreground">{video.description ?? '—'}</dd>
                           </div>
                           <div className="col-span-2">
                             <dt className="text-xs text-muted-foreground">Fecha</dt>

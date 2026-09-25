@@ -90,7 +90,7 @@ export interface Video {
   durationMs?: number
   thumbnailUrl?: string
   resolution?: string
-  rivalName?: string
+  description?: string
   uploadedAt: string
   status: VideoStatus
 }
