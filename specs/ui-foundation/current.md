@@ -33,6 +33,7 @@ Provide a neutral, task-oriented visual foundation with a scoped dark analysis w
 - Task-oriented navigation groups and labels without changing routes.
 - Global `Empezar análisis` action and removal of the nonfunctional global search.
 - A single CSS-variable token source for neutral surfaces, brand actions, and semantic states.
+- The global light identity uses a basketball-inspired burnt-orange primary (`#C96A2B`), darker hover (`#A95520`), and soft terracotta surface (`#F7E8DD`) while preserving blue for semantic information and independent chart categories.
 - Existing/system typography using `Segoe UI Variable`, `system-ui`, and `sans-serif`.
 - Shared visual treatments for buttons, cards, inputs, selects, dialogs, and badges.
 - Shared `PageHeader`, `EmptyState`, and `StatusIndicator` components.
@@ -83,6 +84,7 @@ Provide a neutral, task-oriented visual foundation with a scoped dark analysis w
 - The shell has no nonfunctional search control.
 - The global creation action reads `Empezar análisis` and routes to `/analisis/nuevo`.
 - Tailwind color utilities use CSS-variable tokens rather than independent hardcoded brand values.
+- Primary actions keep accessible foreground contrast in both their default and darker hover states through tokenized foreground colors.
 - Compatibility aliases keep untouched pages functional and visually coherent during the phased migration.
 - Dark workspace variables are scoped under `.analysis-workspace-theme` and never mutate global light tokens.
 - Workspace rail labels remain accessible while visually collapsed, and users can expand the rail at desktop widths.

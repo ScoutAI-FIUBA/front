@@ -18,6 +18,7 @@ import {
   loadAnalysisJobDetail,
   type AnalysisJobDetailModel,
 } from './analysis-job-detail'
+import { createAnalysisJobDetailPoller } from './analysis-job-detail-polling'
 import { getAnalysisJobPresentation } from '@/pages/videos/analysis-job-presentation'
 import { AnalysisJobTeamSideSelector } from './AnalysisJobTeamSide'
 import { AnalysisJobShootingStatsView } from './AnalysisJobShootingStats'
@@ -70,6 +71,23 @@ export function AnalysisJobDetailPage() {
   useEffect(() => {
     void loadDetail()
   }, [loadDetail])
+
+  const jobStatus = detail?.job.status
+
+  useEffect(() => {
+    if (loadState !== 'success' || jobStatus !== 'RUNNING' || !jobId || !teamId) return
+
+    const poller = createAnalysisJobDetailPoller({
+      load: () => analysisJobService.get(jobId, teamId),
+      onJob: (updatedJob) => {
+        setDetail((current) => current && current.job.id === updatedJob.id
+          ? { ...current, job: updatedJob }
+          : current)
+      },
+    })
+    poller.start(jobStatus)
+    return () => poller.stop()
+  }, [jobId, jobStatus, loadState, teamId])
 
   const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
     setDetail((current) => current && current.job.id === updatedJob.id

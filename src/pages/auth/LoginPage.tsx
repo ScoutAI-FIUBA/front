@@ -52,11 +52,11 @@ export function LoginPage() {
           <p className="relative text-lg font-bold">ScoutAI</p>
           <div className="relative">
             <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
-            <p className="mt-4 text-primary-foreground/80">
+            <p className="mt-4 text-primary-foreground">
               Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
             </p>
           </div>
-          <p className="relative text-xs text-primary-foreground/50">ScoutAI MVP</p>
+          <p className="relative text-xs text-primary-foreground">ScoutAI MVP</p>
         </div>
 
         <div className="p-10">

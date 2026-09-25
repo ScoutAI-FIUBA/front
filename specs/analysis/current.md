@@ -144,6 +144,7 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - A running processing job in a video's real history exposes `Ver progreso`, while a completed job exposes `Ver análisis`; both link to the same team-scoped job detail route. Queued and failed jobs do not expose this navigation.
 - User-facing processing-job detail copy uses product language: `Análisis de video`, `Estadísticas de tiro detectadas`, `Mapa de tiros`, `plantel`, `sistema`, `seguimientos`, and `Grupo detectado A/B`. Internal endpoint, type, and side `0 | 1` contracts remain unchanged.
 - Job detail loads `analysisJobService.get(jobId, teamId)` directly from route/query parameters and never creates an `AnalysisSession` or requires a match.
+- While the loaded job remains `RUNNING`, its detail polls that same team-scoped endpoint every 10 seconds without overlapping requests. Each response replaces the job snapshot so real progress and terminal `DONE` or `FAILED` transitions render immediately; polling stops on a terminal response or when the route unmounts or changes.
 - After loading the job, video and team services resolve optional display context from the job's own `videoId` and `teamId`. Context lookup failures fall back to identifiers without hiding the job.
 - Job detail reuses the Phase 6E review hierarchy and UI primitives for loading, retryable error, not-found, status, progress, completion, and secondary metadata.
 - A direct refresh works when `jobId` and `team_id` remain in the URL. Missing parameters or a backend 404 render the not-found state.

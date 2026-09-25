@@ -20,6 +20,7 @@ export default {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
           hover: 'hsl(var(--primary-hover))',
+          'hover-foreground': 'hsl(var(--primary-hover-foreground))',
           subtle: 'hsl(var(--primary-subtle))',
         },
         secondary: {
