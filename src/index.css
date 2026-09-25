@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 220 18% 97%;
-    --foreground: 217 25% 11%;
+    --background: 220 20% 97.06%;
+    --foreground: 220.91 39.29% 10.98%;
     --surface: 0 0% 100%;
     --surface-elevated: 0 0% 100%;
     --surface-subtle: 216 26% 95%;
@@ -13,15 +13,16 @@
     --card-foreground: var(--foreground);
     --popover: var(--surface-elevated);
     --popover-foreground: var(--foreground);
-    --border: 216 26% 88%;
+    --border: 220 13.04% 90.98%;
     --border-strong: 215 16% 75%;
     --input: var(--border);
-    --primary: 221 83% 48%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 224 76% 40%;
-    --primary-subtle: 219 100% 96%;
+    --primary: 23.92 64.75% 47.84%;
+    --primary-foreground: 220.91 39.29% 10.98%;
+    --primary-hover: 23.21 68.16% 39.41%;
+    --primary-hover-foreground: 0 0% 100%;
+    --primary-subtle: 25.38 61.9% 91.76%;
     --muted: var(--surface-subtle);
-    --muted-foreground: 216 11% 47%;
+    --muted-foreground: 220 8.94% 46.08%;
     --success: 142 72% 29%;
     --success-foreground: 0 0% 100%;
     --warning: 32 95% 35%;
@@ -57,9 +58,11 @@
     --surface-subtle: var(--workspace-surface-subtle);
     --border: var(--workspace-border);
     --border-strong: var(--workspace-border-strong);
-    --primary: 217 91% 60%;
-    --primary-hover: 217 91% 67%;
-    --primary-subtle: 218 42% 18%;
+    --primary: 23.92 64.75% 47.84%;
+    --primary-foreground: 220.91 39.29% 10.98%;
+    --primary-hover: 23.21 68.16% 39.41%;
+    --primary-hover-foreground: 0 0% 100%;
+    --primary-subtle: 24 38% 18%;
     --muted-foreground: var(--workspace-muted-foreground);
     --success: 142 70% 45%;
     --warning: 38 92% 52%;
