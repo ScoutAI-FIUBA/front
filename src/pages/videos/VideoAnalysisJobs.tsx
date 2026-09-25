@@ -121,6 +121,7 @@ export function VideoAnalysisJobs({
   }, [isCreating, jobs, loadState, requestJobs])
 
   const activeJobExists = hasActiveAnalysisJobs(jobs)
+  const runningJob = jobs.find((job) => job.status === 'RUNNING')
 
   return (
     <section className="bg-surface-subtle px-4 py-5 sm:px-6" aria-label={`Historial de análisis de ${videoTitle}`}>
@@ -133,22 +134,31 @@ export function VideoAnalysisJobs({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {videoReady && loadState === 'success' && (
-            <Button
-              size="sm"
-              disabled={isCreating || isRefreshing || activeJobExists}
-              onClick={() => void creationSubmission.submit()}
-            >
-              {isCreating ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Play className="h-4 w-4" aria-hidden="true" />
-              )}
-              {isCreating
-                ? 'Iniciando…'
-                : activeJobExists
-                  ? 'Análisis en curso'
-                  : 'Iniciar análisis'}
-            </Button>
+            runningJob ? (
+              <Button asChild size="sm">
+                <Link to={analysisJobDetailPath(runningJob)}>
+                  Ver progreso
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                disabled={isCreating || isRefreshing || activeJobExists}
+                onClick={() => void creationSubmission.submit()}
+              >
+                {isCreating ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Play className="h-4 w-4" aria-hidden="true" />
+                )}
+                {isCreating
+                  ? 'Iniciando…'
+                  : activeJobExists
+                    ? 'Análisis en curso'
+                    : 'Iniciar análisis'}
+              </Button>
+            )
           )}
           {loadState === 'success' && (
             <Button

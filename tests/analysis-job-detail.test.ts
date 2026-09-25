@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { ApiResponseError } from '../src/services/api/errors.ts'
 import {
@@ -52,6 +53,19 @@ test('QUEUED and FAILED jobs keep no visible detail action', () => {
   assert.equal(analysisJobDetailActionLabel(job('FAILED')), null)
   assert.equal(canOpenAnalysisJob(job('QUEUED')), false)
   assert.equal(canOpenAnalysisJob(job('FAILED')), false)
+})
+
+test('the top action opens RUNNING progress while QUEUED stays non-navigable', () => {
+  const source = readFileSync(
+    new URL('../src/pages/videos/VideoAnalysisJobs.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /const runningJob = jobs\.find\(\(job\) => job\.status === 'RUNNING'\)/)
+  assert.match(source, /<Link to=\{analysisJobDetailPath\(runningJob\)\}>/)
+  assert.match(source, /runningJob \? \(/)
+  assert.match(source, /activeJobExists\s*\? 'Análisis en curso'/)
+  assert.equal(analysisJobDetailActionLabel(job('DONE')), 'Ver análisis')
 })
 
 test('loads the job first and resolves video and team context from its ids', async () => {

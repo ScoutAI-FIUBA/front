@@ -51,6 +51,9 @@ Current behavior documentation.
 - Ready videos expose an `Iniciar análisis` action inside that history disclosure. It submits `POST /videos/{video_id}/jobs` with `{ team_id }`; the optional pipeline is omitted so the backend selects its default.
 - A successful submission inserts the returned `QUEUED` job into the existing history immediately. The active-job polling lifecycle then starts without converting the job to an `AnalysisSession`.
 - Analysis submission is single-flight: the action is disabled while its request is pending, and an existing `QUEUED` or `RUNNING` job also disables another submission in line with the backend's one-active-job constraint.
+- When that active job is `RUNNING`, the top action becomes `Ver progreso`
+  and reuses the same team-scoped detail path as the job row. A `QUEUED` job
+  keeps the non-navigable `Análisis en curso` state.
 - Submission errors are shown inside the history disclosure without clearing the last successfully loaded jobs.
 - Opening a video's analysis history loads `analysisJobService.listForVideo(videoId, teamId)` once; users can retry failures or refresh the history manually.
 - While an open history contains at least one `QUEUED` or `RUNNING` job, it refreshes the complete per-video snapshot every 10 seconds through `listForVideo`. The next timer is scheduled only after the current request settles, so polling requests never overlap.
