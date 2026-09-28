@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { CircleAlert, Info, LoaderCircle, MapPinned } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CircleAlert, LoaderCircle, MapPinned, Users } from 'lucide-react'
 import { CourtPositionsCourt } from '@/components/analysis/CourtPositionsCourt'
 import { CourtPositionsHeatmap } from '@/components/analysis/CourtPositionsHeatmap'
+import { CourtPositionsPlayback } from '@/components/analysis/CourtPositionsPlayback'
 import { buildCourtPositionsHeatmap } from '@/components/analysis/court-positions-heatmap'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +26,7 @@ import {
   analysisJobCourtPositionsLoadKey,
   courtPositionPlayerLabel,
   courtPositionSideLabel,
+  defaultCourtPositionFilter,
   filterCourtPositionPlayers,
   loadAnalysisJobCourtPositions,
   type CourtPositionsFilter,
@@ -32,6 +34,12 @@ import {
 
 interface AnalysisJobCourtPositionsProps {
   job: ProcessingJob
+  onTechnicalSummaryChange?: (summary: AnalysisMovementTechnicalSummary | null) => void
+}
+
+export interface AnalysisMovementTechnicalSummary {
+  coverage: AnalysisJobCourtPositions['coverage']
+  playerCount: number
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
@@ -41,71 +49,7 @@ function formatMetres(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 2 })} m`
 }
 
-function PlayerMovementCard({
-  player,
-  job,
-}: {
-  player: AnalysisJobCourtPositionsPlayer
-  job: ProcessingJob
-}) {
-  const isOurTeam = job.ourTeamSide != null && player.teamSide === job.ourTeamSide
-
-  return (
-    <article className="rounded-lg border bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h3 className="font-semibold text-foreground">{courtPositionPlayerLabel(player)}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{courtPositionSideLabel(player.teamSide)}</p>
-        </div>
-        {isOurTeam && <Badge variant="analyzed">Tu equipo</Badge>}
-      </div>
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <dt className="text-xs text-muted-foreground">Distancia</dt>
-          <dd className="mt-1 font-semibold text-foreground">{formatMetres(player.movement.distanceM)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Muestras</dt>
-          <dd className="mt-1 font-semibold text-foreground">{player.movement.samples}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="text-xs text-muted-foreground">Posición promedio</dt>
-          <dd className="mt-1 font-medium text-foreground">
-            x {formatMetres(player.movement.averagePosition.xM)} · y {formatMetres(player.movement.averagePosition.yM)}
-          </dd>
-        </div>
-      </dl>
-    </article>
-  )
-}
-
-function CoverageNotices({ positions }: { positions: AnalysisJobCourtPositions }) {
-  const { coverage } = positions
-  if (!coverage.truncated && coverage.recordsOffCourt === 0) return null
-
-  return (
-    <div className="mt-5 space-y-3">
-      {coverage.truncated && (
-        <Alert className="flex items-start gap-3 border-information/25 bg-information/5">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-information" aria-hidden="true" />
-          <div>
-            <p className="font-medium text-foreground">Cobertura parcial de posiciones</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              El sistema limitó la lectura de una trayectoria extensa. Las métricas de movimiento corresponden a los datos disponibles del análisis.
-            </p>
-          </div>
-        </Alert>
-      )}
-      {coverage.recordsOffCourt > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Se descartaron {coverage.recordsOffCourt} registros con proyecciones fuera de la cancha.
-        </p>
-      )}
-    </div>
-  )
-}
-
-export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositionsProps) {
+export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }: AnalysisJobCourtPositionsProps) {
   const { id: jobId, status: jobStatus, teamId } = job
   const context = useMemo(
     () => analysisJobCourtPositionsContextForJob({ id: jobId, status: jobStatus, teamId }),
@@ -118,6 +62,11 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
   const [view, setView] = useState<CourtPositionsView>('trajectories')
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const ourTeamSideRef = useRef(job.ourTeamSide)
+
+  useEffect(() => {
+    ourTeamSideRef.current = job.ourTeamSide
+  }, [job.ourTeamSide])
 
   useEffect(() => {
     let active = true
@@ -128,6 +77,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
       setView('trajectories')
       setError('')
       setLoadState('idle')
+      onTechnicalSummaryChange?.(null)
       return () => {
         active = false
       }
@@ -142,7 +92,12 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
       (loaded) => {
         if (!active || !loaded) return
         setPositions(loaded)
+        setFilter(defaultCourtPositionFilter(loaded.players, ourTeamSideRef.current))
         setLoadState('success')
+        onTechnicalSummaryChange?.({
+          coverage: loaded.coverage,
+          playerCount: loaded.players.length,
+        })
       },
       () => {
         if (!active) return
@@ -154,7 +109,7 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
     return () => {
       active = false
     }
-  }, [context, loadKey, reloadKey])
+  }, [context, loadKey, onTechnicalSummaryChange, reloadKey])
 
   const visiblePlayers = useMemo(
     () => filterCourtPositionPlayers(positions?.players ?? [], filter),
@@ -166,6 +121,9 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
       : { cells: [], totalSamples: 0, maxSamplesPerCell: 0 },
     [positions, visiblePlayers],
   )
+  const selectedPlayer = filter.startsWith('track:') && visiblePlayers.length === 1
+    ? visiblePlayers[0]
+    : null
 
   if (jobStatus !== 'DONE') return null
 
@@ -208,105 +166,99 @@ export function AnalysisJobCourtPositionsView({ job }: AnalysisJobCourtPositions
           title="No se produjeron posiciones utilizables"
           description="El procesamiento terminó, pero no generó posiciones proyectadas que puedan mostrarse en la cancha."
         />
-        <CoverageNotices positions={positions} />
       </section>
     )
   }
 
   return (
-    <section className="min-w-0 rounded-lg border bg-surface p-4 sm:p-6" aria-labelledby="court-positions-title">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="min-w-0 space-y-5" aria-labelledby="court-positions-title">
+      <div className="flex flex-col gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 id="court-positions-title" className="font-semibold text-foreground">Posiciones en cancha</h2>
+          <h2 id="court-positions-title" className="text-xl font-semibold text-foreground">Movimiento en cancha</h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {view === 'trajectories'
-              ? 'Trayectorias proyectadas por el sistema. La distancia y la posición promedio usan la trayectoria completa analizada.'
-              : 'Concentración relativa de las muestras espaciales disponibles en el análisis de posiciones.'}
+              ? 'Seguí el recorrido espacial de un jugador o abrí una comparación secundaria.'
+              : 'Observá dónde se concentran las muestras del jugador o grupo seleccionado.'}
           </p>
         </div>
-        <div className="grid w-full gap-3 sm:w-72">
-          <div>
-            <p id="court-positions-view-label" className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Vista
-            </p>
-            <div className="flex gap-2" role="group" aria-labelledby="court-positions-view-label">
-              <Button
-                type="button"
-                size="sm"
-                variant={view === 'trajectories' ? 'default' : 'outline'}
-                className="flex-1"
-                aria-pressed={view === 'trajectories'}
-                onClick={() => setView('trajectories')}
-              >
-                Trayectorias
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={view === 'heatmap' ? 'default' : 'outline'}
-                className="flex-1"
-                aria-pressed={view === 'heatmap'}
-                onClick={() => setView('heatmap')}
-              >
-                Mapa de calor
-              </Button>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground" htmlFor="court-positions-filter">
-              Mostrar
-            </label>
-            <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
-              <SelectTrigger id="court-positions-filter" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los seguimientos</SelectItem>
-                <SelectItem value="side-0">Grupo detectado A</SelectItem>
-                <SelectItem value="side-1">Grupo detectado B</SelectItem>
-                <SelectItem value="unassigned">Sin grupo</SelectItem>
-                {positions.players.map((player) => (
-                  <SelectItem key={player.trackId} value={`track:${player.trackId}`}>
-                    {courtPositionPlayerLabel(player)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="flex shrink-0 gap-2" role="group" aria-label="Vista de movimiento">
+          <Button type="button" size="sm" variant={view === 'trajectories' ? 'default' : 'ghost'} aria-pressed={view === 'trajectories'} onClick={() => setView('trajectories')}>
+            Recorrido
+          </Button>
+          <Button type="button" size="sm" variant={view === 'heatmap' ? 'default' : 'ghost'} aria-pressed={view === 'heatmap'} onClick={() => setView('heatmap')}>
+            Mapa de calor
+          </Button>
         </div>
       </div>
 
-      <div className="mt-5 min-w-0">
-        {visiblePlayers.length > 0 ? (
-          view === 'trajectories' ? (
-            <CourtPositionsCourt
-              court={positions.court}
-              players={visiblePlayers}
-              ourTeamSide={job.ourTeamSide}
-            />
-          ) : heatmap.totalSamples > 0 ? (
-            <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} />
-          ) : (
-            <div className="rounded-lg border border-dashed bg-surface-subtle px-4 py-8 text-center text-sm text-muted-foreground">
-              No hay posiciones válidas para construir el mapa de calor.
-            </div>
-          )
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(240px,0.55fr)] sm:items-end">
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground" htmlFor="court-positions-filter">Jugador o comparación</label>
+          <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
+            <SelectTrigger id="court-positions-filter" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {positions.players.map((player) => (
+                <SelectItem key={player.trackId} value={`track:${player.trackId}`}>{courtPositionPlayerLabel(player)}</SelectItem>
+              ))}
+              <SelectItem value="all">Comparar todos los seguimientos</SelectItem>
+              <SelectItem value="side-0">Comparar grupo A</SelectItem>
+              <SelectItem value="side-1">Comparar grupo B</SelectItem>
+              <SelectItem value="unassigned">Comparar sin grupo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selectedPlayer ? (
+          <dl className="grid grid-cols-2 gap-x-6 border-l border-white/10 pl-4 text-sm">
+            <div><dt className="text-xs text-muted-foreground">Distancia detectada</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{formatMetres(selectedPlayer.movement.distanceM)}</dd></div>
+            <div><dt className="text-xs text-muted-foreground">Muestras</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{selectedPlayer.movement.samples}</dd></div>
+          </dl>
         ) : (
-          <div className="rounded-lg border border-dashed bg-surface-subtle px-4 py-8 text-center text-sm text-muted-foreground">
-            No hay seguimientos que coincidan con este filtro.
+          <p className="flex items-center gap-2 text-sm text-muted-foreground"><Users className="h-4 w-4" aria-hidden="true" /> Vista comparativa secundaria</p>
+        )}
+      </div>
+
+      {selectedPlayer && (
+        <div className="flex flex-wrap items-center gap-3 border-y border-white/10 py-3">
+          <span className="flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-primary bg-[#111827] px-2 font-bold text-white">
+            {selectedPlayer.jerseyNumber ? `#${selectedPlayer.jerseyNumber}` : selectedPlayer.trackId}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground">{courtPositionPlayerLabel(selectedPlayer)}</p>
+            <p className="text-xs text-muted-foreground">{courtPositionSideLabel(selectedPlayer.teamSide)}</p>
+          </div>
+          {job.ourTeamSide != null && selectedPlayer.teamSide === job.ourTeamSide && <Badge variant="analyzed">Tu equipo</Badge>}
+        </div>
+      )}
+
+      <div className="min-w-0">
+        {visiblePlayers.length === 0 ? (
+          <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay seguimientos que coincidan con esta selección.</div>
+        ) : view === 'heatmap' ? (
+          heatmap.totalSamples > 0
+            ? <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} />
+            : <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay posiciones válidas para construir el mapa de calor.</div>
+        ) : selectedPlayer ? (
+          <CourtPositionsPlayback key={selectedPlayer.trackId} court={positions.court} player={selectedPlayer} />
+        ) : (
+          <div className="space-y-3">
+            <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} />
+            <p className="text-xs text-muted-foreground">La comparación superpone recorridos completos. Elegí un jugador para reproducir una secuencia individual.</p>
           </div>
         )}
       </div>
 
-      {visiblePlayers.length > 0 && (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {visiblePlayers.map((player) => (
-            <PlayerMovementCard key={player.trackId} player={player} job={job} />
+      {!selectedPlayer && visiblePlayers.length > 0 && (
+        <div className="divide-y divide-white/10 border-y border-white/10">
+          {visiblePlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
+            <div key={player.trackId} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-3 text-sm">
+              <span className="font-medium text-foreground">{courtPositionPlayerLabel(player)}</span>
+              <span className="tabular-nums text-muted-foreground">{formatMetres(player.movement.distanceM)}</span>
+              <span className="tabular-nums text-muted-foreground">{player.movement.samples} muestras</span>
+            </div>
           ))}
         </div>
       )}
-
-      <CoverageNotices positions={positions} />
     </section>
   )
 }

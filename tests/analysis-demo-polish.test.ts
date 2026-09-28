@@ -52,17 +52,19 @@ test('videos expose ProcessingJob history as the only visible analysis entry', (
   assert.match(source, /Historial de análisis/)
 })
 
-test('DONE detail keeps the confirmed team group compact and technical details closed', () => {
+test('DONE workspace keeps team confirmation and technical identity secondary', () => {
   const teamSideSource = readSource('../src/pages/analysis/AnalysisJobTeamSide.tsx')
   const detailSource = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
+  const technicalSource = readSource('../src/pages/analysis/AnalysisJobDetails.tsx')
 
   assert.match(teamSideSource, /Tu equipo:/)
   assert.match(teamSideSource, />\s*Cambiar\s*</)
   assert.match(teamSideSource, />\s*Cancelar\s*</)
   assert.match(teamSideSource, /setIsExpanded\(loaded\.ourTeamSide == null\)/)
   assert.doesNotMatch(detailSource, /job-completed-title/)
-  assert.doesNotMatch(detailSource, /<details[^>]*\bopen\b/)
-  assert.match(detailSource, /Información del análisis/)
+  assert.match(detailSource, /id: 'details', label: 'Detalles'/)
+  assert.doesNotMatch(detailSource, /ID de análisis \{job\.id\}/)
+  assert.match(technicalSource, /ID técnico del análisis/)
 })
 
 test('analysis copy explains detected shooting metrics without claiming an official box score', () => {

@@ -83,6 +83,24 @@ test('RUNNING starts detail polling every 10 seconds and publishes real progress
   assert.equal(scheduler.timers.size, 1)
 })
 
+test('QUEUED starts detail polling and continues when the job becomes RUNNING', async () => {
+  const scheduler = new ManualScheduler()
+  const received: ProcessingJob[] = []
+  const poller = createAnalysisJobDetailPoller({
+    scheduler,
+    load: async () => job('RUNNING', 12),
+    onJob: (updatedJob) => received.push(updatedJob),
+  })
+
+  poller.start('QUEUED')
+  assert.equal(scheduler.timers.size, 1)
+  scheduler.runNext()
+  await flushPromises()
+
+  assert.equal(received[0]?.status, 'RUNNING')
+  assert.equal(scheduler.timers.size, 1)
+})
+
 for (const terminalStatus of ['DONE', 'FAILED'] as const) {
   test(`RUNNING to ${terminalStatus} publishes the terminal job and stops polling`, async () => {
     const scheduler = new ManualScheduler()
@@ -157,8 +175,8 @@ test('never overlaps detail requests', async () => {
   assert.equal(scheduler.timers.size, 1)
 })
 
-test('non-RUNNING jobs do not leave detail polling active', () => {
-  for (const status of ['QUEUED', 'DONE', 'FAILED'] as const) {
+test('terminal jobs do not leave detail polling active', () => {
+  for (const status of ['DONE', 'FAILED'] as const) {
     const scheduler = new ManualScheduler()
     const poller = createAnalysisJobDetailPoller({
       scheduler,
@@ -177,7 +195,7 @@ test('the detail wires polling to the existing team-scoped job endpoint', () => 
     'utf8',
   )
 
-  assert.match(source, /jobStatus !== 'RUNNING'/)
+  assert.match(source, /jobStatus !== 'QUEUED' && jobStatus !== 'RUNNING'/)
   assert.match(source, /load: \(\) => analysisJobService\.get\(jobId, teamId\)/)
   assert.match(source, /setDetail\(\(current\) => current && current\.job\.id === updatedJob\.id/)
   assert.match(source, /return \(\) => poller\.stop\(\)/)

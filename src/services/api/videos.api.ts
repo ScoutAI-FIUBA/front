@@ -84,6 +84,14 @@ function mapApiVideo(video: ApiVideo, playbackUrl = ''): Video {
   }
 }
 
+export async function getApiVideoByIdForTeam(id: string, teamId: string): Promise<Video> {
+  const data = await apiJson<GetVideoResponse>(
+    `/videos/${encodeURIComponent(id)}?team_id=${encodeURIComponent(teamId)}`,
+  )
+
+  return mapApiVideo(data.video, data.presigned_playback_url)
+}
+
 async function listTeamVideos(teamId: string, status?: string | null): Promise<Video[]> {
   const query = status
     ? `?team_id=${encodeURIComponent(teamId)}&status=${encodeURIComponent(status)}`
@@ -106,11 +114,7 @@ export const apiVideoService: IVideoService = {
     const video = videos.find((item) => item.id === id)
     if (!video || video.status !== 'uploaded') return video ?? null
 
-    const data = await apiJson<GetVideoResponse>(
-      `/videos/${encodeURIComponent(id)}?team_id=${encodeURIComponent(video.teamId)}`,
-    )
-
-    return mapApiVideo(data.video, data.presigned_playback_url)
+    return getApiVideoByIdForTeam(id, video.teamId)
   },
 
   async filterByTeam(teamId: string): Promise<Video[]> {

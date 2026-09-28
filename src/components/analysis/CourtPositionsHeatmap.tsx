@@ -1,5 +1,6 @@
 import type { AnalysisJobCourtPositions } from '@/types'
 import type { CourtPositionsHeatmapData } from './court-positions-heatmap'
+import { BasketballCourtLines } from './BasketballCourtLines'
 
 interface CourtPositionsHeatmapProps {
   court: AnalysisJobCourtPositions['court']
@@ -39,25 +40,7 @@ export function CourtPositionsHeatmap({
             </rect>
           ))}
 
-          <rect
-            x="0.08"
-            y="0.08"
-            width={Math.max(0, court.lengthM - 0.16)}
-            height={Math.max(0, court.widthM - 0.16)}
-            fill="none"
-            stroke="white"
-            strokeOpacity="0.9"
-            strokeWidth="0.12"
-          />
-          <line
-            x1={court.lengthM / 2}
-            y1="0"
-            x2={court.lengthM / 2}
-            y2={court.widthM}
-            stroke="white"
-            strokeOpacity="0.85"
-            strokeWidth="0.1"
-          />
+          <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />
         </svg>
       </div>
 

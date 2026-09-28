@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { BasketballCourtLines } from './BasketballCourtLines'
 import type {
   AnalysisJobShotChartCourt,
   AnalysisJobShotChartPlayer,
@@ -11,6 +12,9 @@ interface ShotChartCourtProps {
   court: AnalysisJobShotChartCourt
   shots: AnalysisJobShotChartShot[]
   players: AnalysisJobShotChartPlayer[]
+  selectedShotKey?: string | null
+  shotKey?: (shot: AnalysisJobShotChartShot, index: number) => string
+  onSelectShot?: (shot: AnalysisJobShotChartShot, index: number) => void
 }
 
 const RESULT_STYLES: Record<ShotChartResult, string> = {
@@ -29,13 +33,15 @@ function shotPlayerLabel(
   return 'Tirador no identificado'
 }
 
-export function ShotChartCourt({ court, shots, players }: ShotChartCourtProps) {
+export function ShotChartCourt({
+  court,
+  shots,
+  players,
+  selectedShotKey = null,
+  shotKey,
+  onSelectShot,
+}: ShotChartCourtProps) {
   const playersByTrack = new Map(players.map((player) => [player.trackId, player.displayName]))
-  const cornerLineOffset = court.widthM / 2 - court.cornerThreeLateralM
-  const cornerArcDelta = Math.sqrt(Math.max(
-    0,
-    court.threePointRadiusM ** 2 - court.cornerThreeLateralM ** 2,
-  ))
 
   return (
     <div>
@@ -50,77 +56,13 @@ export function ShotChartCourt({ court, shots, players }: ShotChartCourtProps) {
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          <rect
-            x="0.08"
-            y="0.08"
-            width={Math.max(0, court.lengthM - 0.16)}
-            height={Math.max(0, court.widthM - 0.16)}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.12"
-            className="text-white/80"
+          <BasketballCourtLines
+            lengthM={court.lengthM}
+            widthM={court.widthM}
+            hoopInsetM={court.hoopInsetM}
+            threePointRadiusM={court.threePointRadiusM}
+            cornerThreeLateralM={court.cornerThreeLateralM}
           />
-          <line
-            x1={court.lengthM / 2}
-            y1="0"
-            x2={court.lengthM / 2}
-            y2={court.widthM}
-            stroke="currentColor"
-            strokeWidth="0.1"
-            className="text-white/75"
-          />
-          <circle
-            cx={court.hoops.home.xM}
-            cy={court.hoops.home.yM}
-            r={court.threePointRadiusM}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.1"
-            className="text-white/70"
-          />
-          <circle
-            cx={court.hoops.away.xM}
-            cy={court.hoops.away.yM}
-            r={court.threePointRadiusM}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.1"
-            className="text-white/70"
-          />
-          {[cornerLineOffset, court.widthM - cornerLineOffset].map((y) => (
-            <g key={y}>
-              <line
-                x1="0"
-                y1={y}
-                x2={court.hoops.home.xM + cornerArcDelta}
-                y2={y}
-                stroke="currentColor"
-                strokeWidth="0.1"
-                className="text-white/70"
-              />
-              <line
-                x1={court.hoops.away.xM - cornerArcDelta}
-                y1={y}
-                x2={court.lengthM}
-                y2={y}
-                stroke="currentColor"
-                strokeWidth="0.1"
-                className="text-white/70"
-              />
-            </g>
-          ))}
-          {[court.hoops.home, court.hoops.away].map((hoop, index) => (
-            <circle
-              key={index}
-              cx={hoop.xM}
-              cy={hoop.yM}
-              r={Math.min(court.lengthM, court.widthM) * 0.012}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.12"
-              className="text-white"
-            />
-          ))}
         </svg>
 
         {shots.map((shot, index) => {
@@ -129,10 +71,33 @@ export function ShotChartCourt({ court, shots, players }: ShotChartCourtProps) {
           const player = shotPlayerLabel(shot, playersByTrack)
           const result = shotChartResultLabel(shot.result)
           const description = `${player} · ${shot.points}P · ${result} · ${shot.zone}`
+          const markerKey = shotKey?.(shot, index) ?? `${shot.shotId ?? 'shot'}-${index}`
+          const selected = markerKey === selectedShotKey
+
+          if (onSelectShot) {
+            return (
+              <button
+                type="button"
+                key={markerKey}
+                className={cn(
+                  'absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow-sm transition-[transform,box-shadow] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 motion-reduce:transition-none',
+                  RESULT_STYLES[shot.result],
+                  selected && 'z-10 scale-125 ring-2 ring-white ring-offset-2 ring-offset-black/40',
+                )}
+                style={{ left: `${point.leftPercent}%`, top: `${point.topPercent}%` }}
+                title={description}
+                aria-label={`${description}. Seleccionar tiro`}
+                aria-pressed={selected}
+                onClick={() => onSelectShot(shot, index)}
+              >
+                {shot.points}
+              </button>
+            )
+          }
 
           return (
             <span
-              key={`${shot.shotId ?? 'shot'}-${index}`}
+              key={markerKey}
               className={cn(
                 'absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
                 RESULT_STYLES[shot.result],

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CircleAlert, GitCompareArrows, LoaderCircle } from 'lucide-react'
+import { ArrowRight, CalendarDays, CircleAlert, GitCompareArrows, LoaderCircle, Video as VideoIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { analysisJobSimilarService } from '@/services/registry'
-import type { AnalysisJobSimilarAnalyses, AnalysisJobSimilarResult, ProcessingJob } from '@/types'
+import { analysisJobSimilarService, videoService } from '@/services/registry'
+import type { AnalysisJobSimilarAnalyses, AnalysisJobSimilarResult, ProcessingJob, Video } from '@/types'
 import {
   analysisJobSimilarContextForJob,
   analysisJobSimilarLoadKey,
@@ -17,19 +17,19 @@ import {
 
 interface AnalysisJobSimilarAnalysesProps {
   job: ProcessingJob
+  teamName?: string
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 
 function SimilarityScore({ label, value }: { label: string; value: number }) {
+  const percentage = Math.min(100, Math.max(0, value * 100))
   return (
-    <div className="min-w-0 rounded-md bg-muted/50 p-3">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5">
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-        <span className="text-lg font-semibold tabular-nums text-foreground">
-          {formatSimilarityScore(value)}
-        </span>
-        <span className="text-xs text-muted-foreground">score de similitud</span>
+      <dd className="text-sm font-semibold tabular-nums text-foreground">{formatSimilarityScore(value)}</dd>
+      <dd className="col-span-2 h-1.5 overflow-hidden rounded-full bg-surface-subtle" aria-hidden="true">
+        <span className="block h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} />
       </dd>
     </div>
   )
@@ -38,37 +38,56 @@ function SimilarityScore({ label, value }: { label: string; value: number }) {
 function SimilarAnalysisCard({
   result,
   teamId,
+  video,
+  teamName,
 }: {
   result: AnalysisJobSimilarResult
   teamId: string
+  video: Video | null
+  teamName?: string
 }) {
   return (
-    <article className="flex min-w-0 flex-col gap-4 rounded-lg border bg-surface p-4 sm:p-5">
-      <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Análisis de video</p>
-        <h3 className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
-          {result.jobId}
-        </h3>
+    <article className="grid min-w-0 gap-5 py-5 lg:grid-cols-[minmax(0,0.85fr)_minmax(260px,1.15fr)_auto] lg:items-center">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/35 text-primary">
+          <VideoIcon className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Partido comparable</p>
+          <h3 className="mt-0.5 truncate font-semibold text-foreground">
+            {video?.title ?? 'Video sin contexto disponible'}
+          </h3>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+            {teamName && <span>{teamName}</span>}
+            {video?.uploadedAt && (
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" aria-hidden="true" />
+                {new Date(video.uploadedAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            )}
+          </p>
+        </div>
       </div>
 
-      <dl className="grid gap-2 sm:grid-cols-3">
+      <dl className="grid gap-3">
         <SimilarityScore label="Similitud general" value={result.score} />
         <SimilarityScore label="Similitud de tiros" value={result.shotScore} />
         <SimilarityScore label="Similitud de movimiento" value={result.movementScore} />
       </dl>
 
-      <div className="mt-auto">
+      <div className="flex items-center gap-3 lg:flex-col lg:items-end">
         <Button asChild variant="outline" size="sm">
           <Link to={analysisJobSimilarPath(result.jobId, teamId)}>
             Ver análisis <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </Button>
+        <p className="break-all font-mono text-[10px] text-muted-foreground">ID {result.jobId}</p>
       </div>
     </article>
   )
 }
 
-export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalysesProps) {
+export function AnalysisJobSimilarAnalysesView({ job, teamName }: AnalysisJobSimilarAnalysesProps) {
   const { id: jobId, status: jobStatus, teamId } = job
   const context = useMemo(
     () => analysisJobSimilarContextForJob({ id: jobId, status: jobStatus, teamId }),
@@ -79,6 +98,7 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
   const [similar, setSimilar] = useState<AnalysisJobSimilarAnalyses | null>(null)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [videosById, setVideosById] = useState<Map<string, Video>>(new Map())
 
   useEffect(() => {
     let active = true
@@ -112,6 +132,24 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
       active = false
     }
   }, [context, loadKey, reloadKey])
+
+  useEffect(() => {
+    let active = true
+    if (!similar || similar.results.length === 0) {
+      setVideosById(new Map())
+      return () => { active = false }
+    }
+
+    void videoService.filterByTeam(teamId).then(
+      (videos) => {
+        if (active) setVideosById(new Map(videos.map((video) => [video.id, video])))
+      },
+      () => {
+        if (active) setVideosById(new Map())
+      },
+    )
+    return () => { active = false }
+  }, [similar, teamId])
 
   if (job.status !== 'DONE') return null
 
@@ -147,15 +185,10 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
   const results = similarResultsForDisplay(similar.results)
 
   return (
-    <section className="min-w-0 rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="similar-analyses-title">
-      <div className="flex items-start gap-3">
-        <GitCompareArrows className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-        <div className="min-w-0">
-          <h2 id="similar-analyses-title" className="font-semibold text-foreground">Análisis similares</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Otros análisis completados del mismo equipo, en el orden informado por el sistema.
-          </p>
-        </div>
+    <section className="min-w-0 space-y-5" aria-labelledby="similar-analyses-title">
+      <div className="min-w-0">
+        <h2 id="similar-analyses-title" className="text-xl font-semibold text-foreground">Partidos similares</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Compará patrones de tiro y movimiento con otros análisis del equipo.</p>
       </div>
 
       {results.length === 0 ? (
@@ -166,9 +199,15 @@ export function AnalysisJobSimilarAnalysesView({ job }: AnalysisJobSimilarAnalys
           description="El sistema no encontró resultados similares para este análisis."
         />
       ) : (
-        <div className="mt-5 space-y-3">
+        <div className="divide-y divide-white/10 border-y border-white/10">
           {results.map((result) => (
-            <SimilarAnalysisCard key={result.jobId} result={result} teamId={teamId} />
+            <SimilarAnalysisCard
+              key={result.jobId}
+              result={result}
+              teamId={teamId}
+              video={videosById.get(result.videoId) ?? null}
+              teamName={teamName}
+            />
           ))}
         </div>
       )}

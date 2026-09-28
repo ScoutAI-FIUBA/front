@@ -148,7 +148,10 @@ test('formats all three values as explicitly labelled similarity scores', () => 
   assert.match(source, /Similitud general/)
   assert.match(source, /Similitud de tiros/)
   assert.match(source, /Similitud de movimiento/)
-  assert.match(source, /score de similitud/)
+  assert.match(source, /Partidos similares/)
+  assert.match(source, /style=\{\{ width: `\$\{percentage\}%` \}\}/)
+  assert.match(source, /divide-y divide-white\/10 border-y/)
+  assert.doesNotMatch(source, /xl:grid-cols-2/)
   assert.doesNotMatch(source, /precisión|probabilidad|confianza|muy similar/i)
 })
 
@@ -210,13 +213,13 @@ test('load identity is independent from our_team_side', () => {
   assert.equal(analysisJobSimilarLoadKey(sideZero), 'job-1:team-1')
 })
 
-test('the independent block is placed after Court Positions in DONE job detail', () => {
+test('the independent Similar module remains separate from Movement in job detail', () => {
   const source = readFileSync(
     new URL('../src/pages/analysis/AnalysisJobDetailPage.tsx', import.meta.url),
     'utf8',
   )
-  const courtPositionsIndex = source.indexOf('<AnalysisJobCourtPositionsView job={job} />')
-  const similarIndex = source.indexOf('<AnalysisJobSimilarAnalysesView job={job} />')
+  const courtPositionsIndex = source.indexOf('<AnalysisJobCourtPositionsView')
+  const similarIndex = source.indexOf('<AnalysisJobSimilarAnalysesView')
 
   assert.ok(courtPositionsIndex >= 0)
   assert.ok(similarIndex > courtPositionsIndex)

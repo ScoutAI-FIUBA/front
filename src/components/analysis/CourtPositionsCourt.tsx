@@ -5,6 +5,7 @@ import type {
 } from '@/types'
 import { courtPositionPlayerLabel } from '@/pages/analysis/analysis-job-court-positions'
 import { validCourtPositions } from './court-positions-court'
+import { BasketballCourtLines } from './BasketballCourtLines'
 
 interface CourtPositionsCourtProps {
   court: AnalysisJobCourtPositions['court']
@@ -35,25 +36,7 @@ export function CourtPositionsCourt({
           role="img"
           aria-label="Cancha con trayectorias detectadas de jugadores"
         >
-          <rect
-            x="0.08"
-            y="0.08"
-            width={Math.max(0, court.lengthM - 0.16)}
-            height={Math.max(0, court.widthM - 0.16)}
-            fill="none"
-            stroke="white"
-            strokeOpacity="0.8"
-            strokeWidth="0.12"
-          />
-          <line
-            x1={court.lengthM / 2}
-            y1="0"
-            x2={court.lengthM / 2}
-            y2={court.widthM}
-            stroke="white"
-            strokeOpacity="0.7"
-            strokeWidth="0.1"
-          />
+          <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />
 
           {players.map((player) => {
             const positions = validCourtPositions(court, player.positions)

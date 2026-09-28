@@ -11,8 +11,10 @@ import {
   analysisJobCourtPositionsContextForJob,
   analysisJobCourtPositionsLoadKey,
   courtPositionPlayerLabel,
+  defaultCourtPositionFilter,
   filterCourtPositionPlayers,
   loadAnalysisJobCourtPositions,
+  movementSequenceIndex,
 } from '../src/pages/analysis/analysis-job-court-positions.ts'
 import { courtPositionPointToPercent } from '../src/components/analysis/court-positions-court.ts'
 import type { ProcessingJob } from '../src/types/index.ts'
@@ -200,6 +202,39 @@ test('filters locally by side, unassigned tracks, and individual track', async (
   assert.deepEqual(filterCourtPositionPlayers(players, 'track:9').map((player) => player.trackId), [9])
 })
 
+test('defaults Movement to one player, preferring the confirmed team side', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.equal(defaultCourtPositionFilter(players, 0), 'track:7')
+  assert.equal(defaultCourtPositionFilter(players, 1), 'track:9')
+  assert.equal(defaultCourtPositionFilter(players, null), 'track:7')
+  assert.equal(defaultCourtPositionFilter([], 0), 'all')
+})
+
+test('maps playback progress to sample order without inventing time', () => {
+  assert.equal(movementSequenceIndex(-1, 6), 0)
+  assert.equal(movementSequenceIndex(0, 6), 0)
+  assert.equal(movementSequenceIndex(0.5, 6), 3)
+  assert.equal(movementSequenceIndex(1, 6), 5)
+  assert.equal(movementSequenceIndex(2, 6), 5)
+  assert.equal(movementSequenceIndex(0.5, 0), 0)
+
+  const playbackSource = readFileSync(
+    new URL('../src/components/analysis/CourtPositionsPlayback.tsx', import.meta.url),
+    'utf8',
+  )
+  assert.match(playbackSource, /from 'motion\/react'/)
+  assert.match(playbackSource, /useReducedMotion\(\)/)
+  assert.match(playbackSource, /Reproducir recorrido/)
+  assert.match(playbackSource, /Pausar/)
+  assert.match(playbackSource, /Reiniciar/)
+  assert.match(playbackSource, /type="range"/)
+  assert.match(playbackSource, /secuencia de muestras/)
+  assert.match(playbackSource, /No representa tiempo de partido ni está sincronizado con el video/)
+  assert.doesNotMatch(playbackSource, /timestampSeconds|onSeekToVideo|frameIndex/)
+})
+
 test('changing our_team_side keeps the same load identity and does not require refetch', async () => {
   const sideZeroContext = analysisJobCourtPositionsContextForJob(doneJob(0))
   const sideOneContext = analysisJobCourtPositionsContextForJob(doneJob(1))
@@ -236,7 +271,34 @@ test('court and detail containers use responsive width guards without a mobile m
   )
 
   assert.match(courtSource, /w-full max-w-full overflow-hidden/)
-  assert.match(detailSource, /min-w-0 rounded-lg/)
+  assert.match(detailSource, /className="min-w-0 space-y-5"/)
   assert.doesNotMatch(courtSource, /min-w-\[/)
   assert.doesNotMatch(detailSource, /min-w-\[/)
+})
+
+test('all analysis courts share recognisable basketball geometry', () => {
+  const linesSource = readFileSync(
+    new URL('../src/components/analysis/BasketballCourtLines.tsx', import.meta.url),
+    'utf8',
+  )
+  const shotCourtSource = readFileSync(
+    new URL('../src/components/analysis/ShotChartCourt.tsx', import.meta.url),
+    'utf8',
+  )
+  const movementCourtSource = readFileSync(
+    new URL('../src/components/analysis/CourtPositionsCourt.tsx', import.meta.url),
+    'utf8',
+  )
+  const heatmapSource = readFileSync(
+    new URL('../src/components/analysis/CourtPositionsHeatmap.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(linesSource, /threePointRadiusM/)
+  assert.match(linesSource, /freeThrowRadius/)
+  assert.match(linesSource, /<circle/)
+  assert.match(linesSource, /<path/)
+  assert.match(shotCourtSource, /<BasketballCourtLines/)
+  assert.match(movementCourtSource, /<BasketballCourtLines/)
+  assert.match(heatmapSource, /<BasketballCourtLines/)
 })

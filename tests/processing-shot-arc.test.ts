@@ -39,14 +39,14 @@ test('clamps only the decorative position to the visible trajectory', () => {
 
 test('keeps the visual decorative, reduced-motion safe, and scoped to RUNNING jobs', () => {
   const componentSource = readSource('../src/components/analysis/ProcessingShotArc.tsx')
-  const detailSource = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
-  const runningStart = detailSource.indexOf("job.status === 'RUNNING'")
-  const failedStart = detailSource.indexOf("job.status === 'FAILED'")
-  const doneStart = detailSource.indexOf("job.status === 'DONE'")
+  const overviewSource = readSource('../src/pages/analysis/AnalysisJobOverview.tsx')
+  const runningStart = overviewSource.indexOf("job.status === 'RUNNING'")
+  const failedStart = overviewSource.indexOf("job.status === 'FAILED'")
+  const doneStart = overviewSource.indexOf('const teamStats')
 
   assert.match(componentSource, /aria-hidden="true"/)
   assert.match(componentSource, /motion-reduce:transition-none/)
   assert.ok(runningStart >= 0 && failedStart > runningStart && doneStart > failedStart)
-  assert.match(detailSource.slice(runningStart, failedStart), /<ProcessingShotArc/)
-  assert.doesNotMatch(detailSource.slice(doneStart), /<ProcessingShotArc/)
+  assert.match(overviewSource.slice(runningStart, failedStart), /<ProcessingShotArc/)
+  assert.doesNotMatch(overviewSource.slice(doneStart), /<ProcessingShotArc/)
 })
