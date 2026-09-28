@@ -4,7 +4,7 @@ El estado operativo del working tree y el próximo punto de continuación están
 
 ## Status
 
-Implemented behavior through Phase 6E Analysis list and Review redesign.
+Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1.1 polish.
 
 ## Routes
 
@@ -61,6 +61,31 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 - `src/types/index.ts`
 
 ## Current Behavior
+
+- `/analisis/jobs/:jobId?team_id=...` is a dedicated dark analysis workspace organized around persistent source video, one active result surface, and evidence-oriented navigation.
+- The workspace header uses video title, team, status, analysis date, and optional duration as its primary identity. The job UUID is confined to Details.
+- The embedded source player resolves a fresh team-scoped playback URL, keeps loading/error/retry states local, exposes a stable seek capability, and preserves playback time when refreshing an expired or failed signed URL where the browser permits it.
+- The source player remains mounted while switching Overview, Shots, Movement, Similar, and Details. Result panels remain mounted but only the active panel is visible, preserving local filters and selections.
+- QUEUED and RUNNING render inside the same workspace and both remain live through the existing team-scoped polling endpoint. Polling stops only at DONE or FAILED, and a transition to DONE exposes results without a page reload.
+- Overview contains only server-backed status, timestamps, detected shooting totals/coverage, and navigation actions. It does not generate qualitative or AI-authored conclusions.
+- Shots combines headline shooting metrics, local result/points/player/zone filters, the existing court visualization, and an individual-moment list from the returned shot payloads.
+- Selecting a shot marker or moment preserves that shot as selected. A shot with `timestampSeconds` seeks the persistent source player; a shot without it remains inspectable but never exposes a fake video action.
+- Shot evidence copy explicitly treats linked timestamps as detected moments and does not claim contractual synchronization with the original video timeline.
+- Movement remains spatial analysis only. It reuses trajectories and heatmap views, supports existing side/track filters, and never converts `frameIndex` to time or seeks video.
+- Similar analyses hydrate recognizable video titles through one team-scoped video-list request and gracefully fall back to a secondary job identifier when metadata is unavailable.
+- Team-side confirmation remains persisted before Stats or Shot Chart can load. The existing jersey, track-count, roster-match, and suggestion data remain the only evidence claimed by the selector.
+- Details contains execution identifiers, timestamps, coverage/invalid-sample diagnostics made available by loaded modules, and explicit methodology limitations.
+- FAILED remains a safe product state with source context and recovery navigation. Raw backend failure strings are not promoted as primary copy and no unsupported same-job retry is offered.
+- Phase 1.1 keeps the persistent source video and result-module architecture while flattening non-essential cards, using Spanish module labels, and treating court geometry, jersey identity, shot location, and spatial sequence as the workspace's visual language.
+- A playable source video retains the full primary player surface. A failed source video collapses to a compact degraded state with video identity, retry, and an explicit evidence limitation instead of reserving an empty aspect-ratio rectangle.
+- Completed workspace navigation uses `Resumen`, `Tiros`, `Movimiento`, `Similares`, and `Detalles`. Its mobile presentation is a keyboard-accessible horizontal module rail with hidden native scrollbar, snap targets, and edge cues rather than visible accidental overflow.
+- Shots presents its compact metrics and filters before a desktop master-detail composition where the shot court and selected-shot evidence are visible together. Marker and evidence selection remain one shared state.
+- Mobile Shots exposes one focused selected-shot detail below the court and never introduces a nested vertical evidence scroller. Unselected moments remain available through a flat, page-scrolling list only when the user asks to browse them.
+- Movement defaults to one concrete player/track, preferring a track on the persisted team side when one exists. `Comparar todos` and detected-side groupings remain secondary spatial comparison modes.
+- The selected Movement player exposes `Reproducir recorrido`, pause, restart, and a sequence scrubber powered by Motion for React. Progress represents ordered sample sequence only: it never derives seconds from `frameIndex`, seeks the source video, or claims synchronized replay.
+- Reduced-motion users receive the complete static selected-player trajectory and retain the player/view controls without automatic or spatial playback motion.
+- Movement trajectory and heatmap surfaces share a richer full basketball-court geometry with baselines, half court, centre circle, painted areas, backboards, hoops, and three-point geometry.
+- Similar analyses present unchanged backend scores as high-contrast comparison rows/bars, not nested score cards. Technical identifiers remain tertiary.
 
 - Analysis list loads sessions through a single `analysisService.listSessions()` request and does not hydrate every row with detail requests.
 - Analysis list exposes an `Empezar análisis` action that keeps the global creation language consistent.
@@ -221,12 +246,15 @@ Implemented behavior through Phase 6E Analysis list and Review redesign.
 
 ## Verification
 
-- Automated frontend suite: 94/94 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, gating and request keys that prevent stale data or unnecessary refetches.
+- Automated frontend suite: 138/138 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, workspace lifecycle states, timestamp eligibility, stable shot selection, embedded-player recovery, Movement sequence semantics, responsive navigation, gating, and request keys that prevent stale data or unnecessary refetches.
+- The v2 processing-job workspace has focused coverage for `QUEUED -> RUNNING -> DONE` polling, persistent video placement across result tabs, made/missed/unknown local filters, nullable timestamps, imperative seeking, source URL refresh, and direct known-team video lookup without an all-team fan-out.
 - Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
 - Heatmap adds 10 focused tests for one-metre binning, boundary and invalid coordinates, out-of-court samples, dynamic court dimensions, relative intensity, filter-scoped normalization, empty valid samples, and request reuse across view and filter changes.
 - Similar analyses adds 9 focused tests for the fixed request contract, `DONE` gating, mapping, backend order, five-result display limit, score labels, empty state, retry, team-scoped navigation, side independence, and placement after Court Positions.
 - `npm run build`: passing; Vite keeps the known chunk-size warning.
 - `npm run lint`: 0 errors and the 2 preexisting Fast Refresh warnings in `button.tsx` and `AuthContext.tsx`.
+- A controlled mobile smoke test verified the completed workspace at `/analisis/jobs/job-qa?team_id=team-3`, including the compact identity header, persistent video recovery state, Overview metrics, shot filters and evidence actions, movement presentation, similar-analysis empty state, and technical Details.
+- Phase 1.1 visual QA covered the completed workspace at 1440 × 900 and 390 × 844, including Overview, Shots master-detail and selection, Movement before/during sequence playback, heatmap, Similar, compact source-video failure, and mobile module discovery. The dedicated local fixture copy uses basketball-oriented team, venue, and match labels; no backend data was changed.
 - Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.
 - The remaining real smoke test for team-side, Stats and Shot Chart is blocked only by the deployed backend being behind `origin/main`: the deployed API returns `404 {"detail":"Not Found"}` for `GET /jobs/{job_id}/team-sides`, while the route exists in the current backend contract and the frontend request matches it.
 - Production behavior must not add fallback mocks or synthetic results to hide that deployment mismatch.

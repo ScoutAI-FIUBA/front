@@ -95,6 +95,31 @@ test('loads the job first and resolves video and team context from its ids', asy
   assert.deepEqual(calls, ['job:job-1:team-1', 'video:video-1', 'team:team-1'])
 })
 
+test('uses the known team id for video context when a scoped loader is available', async () => {
+  const calls: string[] = []
+  const loaded = await loadAnalysisJobDetail('job-1', 'route-team', {
+    analysisJobs: {
+      async get() {
+        return { ...job(), videoId: 'video-1', teamId: 'job-team' }
+      },
+    },
+    videos: {
+      async getById() {
+        calls.push('unscoped-video-loader')
+        return null
+      },
+    },
+    getVideoByIdForTeam: async (videoId, teamId) => {
+      calls.push(`scoped-video:${videoId}:${teamId}`)
+      return null
+    },
+    teams: { getById: async () => null },
+  })
+
+  assert.equal(loaded.job.teamId, 'job-team')
+  assert.deepEqual(calls, ['scoped-video:video-1:job-team'])
+})
+
 test('keeps the real job available when optional context lookups fail', async () => {
   const loaded = await loadAnalysisJobDetail('job-1', 'team-1', {
     analysisJobs: { get: async () => job() },

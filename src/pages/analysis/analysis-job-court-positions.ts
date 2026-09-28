@@ -59,6 +59,22 @@ export function filterCourtPositionPlayers(
   return players.filter((player) => player.trackId === trackId)
 }
 
+export function defaultCourtPositionFilter(
+  players: AnalysisJobCourtPositionsPlayer[],
+  ourTeamSide: AnalysisJobTeamSide | null,
+): CourtPositionsFilter {
+  const preferred = ourTeamSide == null
+    ? players[0]
+    : players.find((player) => player.teamSide === ourTeamSide) ?? players[0]
+  return preferred ? `track:${preferred.trackId}` : 'all'
+}
+
+export function movementSequenceIndex(progress: number, sampleCount: number): number {
+  if (sampleCount <= 1) return 0
+  const safeProgress = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0))
+  return Math.min(sampleCount - 1, Math.round(safeProgress * (sampleCount - 1)))
+}
+
 export function courtPositionPlayerLabel(
   player: Pick<AnalysisJobCourtPositionsPlayer, 'jerseyNumber' | 'trackId'>,
 ): string {

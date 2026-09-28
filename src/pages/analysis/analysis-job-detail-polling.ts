@@ -19,6 +19,10 @@ export interface AnalysisJobDetailPoller {
   stop(): void
 }
 
+function isActiveStatus(status: ProcessingJobStatus): boolean {
+  return status === 'QUEUED' || status === 'RUNNING'
+}
+
 const browserScheduler: AnalysisJobDetailPollingScheduler = {
   setTimeout(callback, delayMs) {
     return globalThis.setTimeout(callback, delayMs)
@@ -61,7 +65,7 @@ export function createAnalysisJobDetailPoller({
       if (!running) return
 
       onJob(job)
-      if (job.status !== 'RUNNING') {
+      if (!isActiveStatus(job.status)) {
         running = false
       }
     } catch {
@@ -75,7 +79,7 @@ export function createAnalysisJobDetailPoller({
   return {
     start(status) {
       clearTimer()
-      running = status === 'RUNNING'
+      running = isActiveStatus(status)
       schedule()
     },
     stop() {

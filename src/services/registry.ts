@@ -14,7 +14,7 @@ import type { IClipCollectionService } from './contracts/clip-collections.servic
 import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
 import { apiTeamService } from './api/teams.api'
-import { apiVideoService } from './api/videos.api'
+import { apiVideoService, getApiVideoByIdForTeam } from './api/videos.api'
 import { apiClipCollectionService } from './api/clip-collections.api'
 import { apiAnalysisJobService } from './api/analysis-jobs.api'
 import { apiAnalysisJobTeamSideService } from './api/analysis-job-team-sides.api'
@@ -40,6 +40,11 @@ export const playerService: IPlayerService = isMockApiEnabled ? mockPlayerServic
 /** Partidos y análisis siguen en mock hasta que existan en el backend */
 export const matchService: IMatchService = mockMatchService
 export const videoService: IVideoService = isMockApiEnabled ? mockVideoService : apiVideoService
+export const getVideoByIdForTeam = (videoId: string, teamId: string) => (
+  isMockApiEnabled
+    ? mockVideoService.getById(videoId)
+    : getApiVideoByIdForTeam(videoId, teamId)
+)
 export const clipCollectionService: IClipCollectionService = isMockApiEnabled
   ? mockClipCollectionService
   : apiClipCollectionService

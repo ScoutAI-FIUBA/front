@@ -14,6 +14,7 @@ interface AnalysisJobDetailDependencies {
   analysisJobs: Pick<IAnalysisJobService, 'get'>
   videos: Pick<IVideoService, 'getById'>
   teams: Pick<ITeamService, 'getById'>
+  getVideoByIdForTeam?: (videoId: string, teamId: string) => Promise<Video | null>
 }
 
 export function canOpenAnalysisJob(job: ProcessingJob): boolean {
@@ -41,7 +42,9 @@ export async function loadAnalysisJobDetail(
 ): Promise<AnalysisJobDetailModel> {
   const job = await dependencies.analysisJobs.get(jobId, teamId)
   const [videoResult, teamResult] = await Promise.allSettled([
-    dependencies.videos.getById(job.videoId),
+    dependencies.getVideoByIdForTeam
+      ? dependencies.getVideoByIdForTeam(job.videoId, job.teamId)
+      : dependencies.videos.getById(job.videoId),
     dependencies.teams.getById(job.teamId),
   ])
 
