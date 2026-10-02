@@ -140,7 +140,12 @@ export async function apiJson<T>(
   options?: ApiFetchOptions,
 ): Promise<T> {
   const res = await apiFetch(path, init, options)
-  if (res.status === 204) return undefined as T
   if (!res.ok) throw new ApiResponseError(await parseApiError(res), res.status)
-  return res.json() as Promise<T>
+  // 202/204 and other empty success bodies must not call res.json().
+  if (res.status === 204 || res.status === 205 || res.status === 202) {
+    return undefined as T
+  }
+  const text = await res.text()
+  if (!text) return undefined as T
+  return JSON.parse(text) as T
 }
