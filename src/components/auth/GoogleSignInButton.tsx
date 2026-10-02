@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
@@ -10,8 +10,12 @@ interface GoogleSignInButtonProps {
 }
 
 export function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButtonProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const onCredentialRef = useRef(onCredential)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
+
+  onCredentialRef.current = onCredential
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return
@@ -24,32 +28,52 @@ export function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButto
     script.src = GIS_SRC
     script.async = true
     script.onload = () => setReady(true)
+    script.onerror = () => setError('No se pudo cargar Google Sign-In')
     if (!existing) document.head.appendChild(script)
   }, [])
 
-  const handleClick = async () => {
-    if (!GOOGLE_CLIENT_ID || !window.google?.accounts?.id) {
-      setError('Google no está configurado')
-      return
-    }
-    setError('')
-    window.google.accounts.id.initialize({
+  useEffect(() => {
+    if (!ready || disabled || !GOOGLE_CLIENT_ID || !containerRef.current) return
+    const googleId = window.google?.accounts?.id
+    if (!googleId?.initialize || !googleId.renderButton) return
+
+    googleId.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: (response) => {
-        if (!response.credential) return
-        void onCredential(response.credential)
+        if (!response.credential) {
+          setError('No se recibió el token de Google')
+          return
+        }
+        setError('')
+        void onCredentialRef.current(response.credential)
       },
     })
-    window.google.accounts.id.prompt()
-  }
 
-  const unavailable = !GOOGLE_CLIENT_ID || disabled || !ready
+    containerRef.current.innerHTML = ''
+    googleId.renderButton(containerRef.current, {
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      width: Math.max(containerRef.current.offsetWidth, 280),
+    })
+  }, [ready, disabled])
+
+  if (!GOOGLE_CLIENT_ID) {
+    return (
+      <Button type="button" variant="outline" className="w-full" disabled>
+        Google
+      </Button>
+    )
+  }
 
   return (
     <div className="space-y-2">
-      <Button type="button" variant="outline" className="w-full" disabled={unavailable} onClick={() => void handleClick()}>
-        Google
-      </Button>
+      <div ref={containerRef} className="flex min-h-10 w-full justify-center" />
+      {!ready && !error && (
+        <Button type="button" variant="outline" className="w-full" disabled>
+          Google
+        </Button>
+      )}
       {error && <p className="text-center text-xs text-red-600">{error}</p>}
     </div>
   )
@@ -60,7 +84,19 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize: (config: { client_id: string; callback: (response: { credential?: string }) => void }) => void
+          initialize: (config: {
+            client_id: string
+            callback: (response: { credential?: string }) => void
+          }) => void
+          renderButton: (
+            parent: HTMLElement,
+            options: {
+              theme?: string
+              size?: string
+              text?: string
+              width?: number
+            },
+          ) => void
           prompt: () => void
         }
       }

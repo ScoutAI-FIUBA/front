@@ -113,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const confirmEmailVerification = useCallback(async (verifyToken: string) => {
     const next = await authService.confirmEmailVerification(verifyToken)
-    setUser(next)
+    setUser((current) => (current ? { ...next, createdAt: current.createdAt } : current))
   }, [])
 
   const value = useMemo(

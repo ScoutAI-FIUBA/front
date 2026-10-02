@@ -159,6 +159,22 @@ test('invalid login credentials preserve the backend 401 without attempting refr
   assert.equal(getStoredToken(), null)
 })
 
+test('password forgot accepts empty 202 bodies without parsing JSON', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  globalThis.fetch = (async () => new Response(null, { status: 202 })) as typeof fetch
+
+  await assert.doesNotReject(apiAuthService.requestPasswordReset('analyst@example.com'))
+})
+
+test('password reset accepts empty 204 bodies without parsing JSON', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch
+
+  await assert.doesNotReject(apiAuthService.resetPassword('token', 'newsecret1'))
+})
+
 test('protected 401 refreshes once and retries with the new access token', async (t) => {
   installBrowserStorage()
   t.after(restoreBrowserGlobals)
