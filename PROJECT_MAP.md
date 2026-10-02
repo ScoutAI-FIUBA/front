@@ -49,6 +49,10 @@ src/
 
 - `/login`: login page.
 - `/register`: registration page.
+- `/recuperar-password`: request password reset.
+- `/restablecer-password`: set a new password from email token.
+- `/verificar-email`: confirm email verification token.
+- `/cuenta`: account profile and password.
 - `/dashboard`: protected dashboard.
 - `/equipos`: teams page.
 - `/jugadores`: players list page.

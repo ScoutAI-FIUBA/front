@@ -5,6 +5,7 @@ export interface ApiUser {
   email: string
   role: string
   email_verified?: boolean
+  full_name?: string | null
 }
 
 export interface ApiTeam {
@@ -53,14 +54,20 @@ export function setProfileFullName(userId: string, fullName: string): void {
 export function mapApiUser(apiUser: ApiUser, fullNameOverride?: string): User {
   const fullName =
     fullNameOverride?.trim() ||
+    apiUser.full_name?.trim() ||
     getProfileFullName(apiUser.id) ||
     apiUser.email.split('@')[0]
+
+  if (apiUser.full_name?.trim()) {
+    setProfileFullName(apiUser.id, apiUser.full_name.trim())
+  }
 
   return {
     id: apiUser.id,
     email: apiUser.email,
     fullName,
     role: mapRole(apiUser.role),
+    emailVerified: Boolean(apiUser.email_verified),
     createdAt: new Date().toISOString(),
   }
 }

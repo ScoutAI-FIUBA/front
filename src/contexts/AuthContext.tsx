@@ -18,7 +18,14 @@ interface AuthContextValue {
   isAuthenticated: boolean
   login: (credentials: UserCredentials) => Promise<void>
   register: (dto: RegisterDto) => Promise<void>
+  loginWithGoogle: (idToken: string) => Promise<void>
   logout: () => Promise<void>
+  requestPasswordReset: (email: string) => Promise<void>
+  resetPassword: (token: string, password: string) => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
+  updateProfile: (fullName: string) => Promise<void>
+  sendEmailVerification: () => Promise<void>
+  confirmEmailVerification: (token: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -71,10 +78,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(result.token)
   }, [])
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const result = await authService.loginWithGoogle(idToken)
+    setUser(result.user)
+    setToken(result.token)
+  }, [])
+
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
     setToken(null)
+  }, [])
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    await authService.requestPasswordReset(email)
+  }, [])
+
+  const resetPassword = useCallback(async (resetToken: string, password: string) => {
+    await authService.resetPassword(resetToken, password)
+  }, [])
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await authService.changePassword(currentPassword, newPassword)
+  }, [])
+
+  const updateProfile = useCallback(async (fullName: string) => {
+    const next = await authService.updateProfile(fullName)
+    setUser(next)
+  }, [])
+
+  const sendEmailVerification = useCallback(async () => {
+    await authService.sendEmailVerification()
+  }, [])
+
+  const confirmEmailVerification = useCallback(async (verifyToken: string) => {
+    const next = await authService.confirmEmailVerification(verifyToken)
+    setUser(next)
   }, [])
 
   const value = useMemo(
@@ -85,9 +124,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user && !!token,
       login,
       register,
+      loginWithGoogle,
       logout,
+      requestPasswordReset,
+      resetPassword,
+      changePassword,
+      updateProfile,
+      sendEmailVerification,
+      confirmEmailVerification,
     }),
-    [user, token, isLoading, login, register, logout],
+    [
+      user,
+      token,
+      isLoading,
+      login,
+      register,
+      loginWithGoogle,
+      logout,
+      requestPasswordReset,
+      resetPassword,
+      changePassword,
+      updateProfile,
+      sendEmailVerification,
+      confirmEmailVerification,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -98,6 +158,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }
-
-
-

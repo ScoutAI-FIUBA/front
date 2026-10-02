@@ -10,4 +10,11 @@ export interface IAuthService {
   register(dto: RegisterDto): Promise<AuthResult>
   logout(): Promise<void>
   getCurrentUser(token: string): Promise<User | null>
+  requestPasswordReset(email: string): Promise<void>
+  resetPassword(token: string, password: string): Promise<void>
+  changePassword(currentPassword: string, newPassword: string): Promise<void>
+  updateProfile(fullName: string): Promise<User>
+  sendEmailVerification(): Promise<void>
+  confirmEmailVerification(token: string): Promise<User>
+  loginWithGoogle(idToken: string): Promise<AuthResult>
 }

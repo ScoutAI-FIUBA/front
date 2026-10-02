@@ -5,6 +5,10 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
 import { AppShell } from '@/components/layout/AppShell'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
+import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
+import { AccountPage } from '@/pages/auth/AccountPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { TeamsPage } from '@/pages/teams/TeamsPage'
 import { PlayersPage } from '@/pages/players/PlayersPage'
@@ -25,9 +29,13 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/recuperar-password" element={<ForgotPasswordPage />} />
+        <Route path="/restablecer-password" element={<ResetPasswordPage />} />
+        <Route path="/verificar-email" element={<VerifyEmailPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/cuenta" element={<AccountPage />} />
             <Route path="/equipos" element={<TeamsPage />} />
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />

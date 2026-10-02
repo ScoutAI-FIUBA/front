@@ -48,7 +48,11 @@ export const apiAuthService: IAuthService = {
       '/auth/register',
       {
         method: 'POST',
-        body: JSON.stringify({ email: dto.email, password: dto.password }),
+        body: JSON.stringify({
+          email: dto.email,
+          password: dto.password,
+          full_name: dto.fullName,
+        }),
       },
       { auth: false },
     )
@@ -58,7 +62,13 @@ export const apiAuthService: IAuthService = {
     return {
       ...result,
       user: mapApiUser(
-        { id: result.user.id, email: result.user.email, role: result.user.role },
+        {
+          id: result.user.id,
+          email: result.user.email,
+          role: result.user.role,
+          email_verified: result.user.emailVerified,
+          full_name: dto.fullName,
+        },
         dto.fullName,
       ),
     }
@@ -82,6 +92,63 @@ export const apiAuthService: IAuthService = {
       clearStoredToken()
       return null
     }
+  },
+
+  async requestPasswordReset(email: string): Promise<void> {
+    await apiJson<void>(
+      '/auth/password/forgot',
+      { method: 'POST', body: JSON.stringify({ email }) },
+      { auth: false },
+    )
+  },
+
+  async resetPassword(token: string, password: string): Promise<void> {
+    await apiJson<void>(
+      '/auth/password/reset',
+      { method: 'POST', body: JSON.stringify({ token, password }) },
+      { auth: false },
+    )
+  },
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await apiJson<void>('/auth/me/password', {
+      method: 'PUT',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    })
+  },
+
+  async updateProfile(fullName: string): Promise<User> {
+    const data = await apiJson<AuthUserResponse>('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ full_name: fullName }),
+    })
+    return mapApiUser(data.user, fullName)
+  },
+
+  async sendEmailVerification(): Promise<void> {
+    await apiJson<void>('/auth/email/verify/send', { method: 'POST' })
+  },
+
+  async confirmEmailVerification(token: string): Promise<User> {
+    const data = await apiJson<AuthUserResponse>(
+      '/auth/email/verify/confirm',
+      { method: 'POST', body: JSON.stringify({ token }) },
+      { auth: false },
+    )
+    return mapApiUser(data.user)
+  },
+
+  async loginWithGoogle(idToken: string): Promise<AuthResult> {
+    const data = await apiJson<LoginResponse>(
+      '/auth/oauth/google',
+      { method: 'POST', body: JSON.stringify({ id_token: idToken }) },
+      {
+        auth: false,
+        timeoutMs: LOGIN_REQUEST_TIMEOUT_MS,
+        timeoutMessage: LOGIN_TIMEOUT_MESSAGE,
+      },
+    )
+    return toAuthResult(data)
   },
 }
 
