@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert } from '@/components/ui/alert'
 import { LoginCourtBackdrop } from '@/components/auth/LoginCourtBackdrop'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const { login, isAuthenticated, isLoading } = useAuth()
+  const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -78,7 +79,7 @@ export function LoginPage() {
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Contraseña</Label>
-                <button type="button" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</button>
+                <Link to="/recuperar-password" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</Link>
               </div>
               <div className="relative mt-1">
                 <Input
@@ -114,9 +115,21 @@ export function LoginPage() {
             <Separator className="flex-1" />
           </div>
 
-          <Button variant="outline" className="w-full" disabled>
-            Google
-          </Button>
+          <GoogleSignInButton
+            onCredential={async (idToken) => {
+              setError('')
+              setLoading(true)
+              try {
+                await loginWithGoogle(idToken)
+                navigate('/dashboard')
+              } catch (err) {
+                setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google')
+              } finally {
+                setLoading(false)
+              }
+            }}
+            disabled={loading}
+          />
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             ¿No tiene una cuenta?{' '}

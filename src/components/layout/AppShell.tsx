@@ -64,7 +64,10 @@ export function AppShell() {
 
   const compactWorkspaceRail = workspaceMode && !workspaceRailExpanded
 
-  const currentSection = navItems.find((item) => pathname.startsWith(item.to))?.label ?? 'ScoutAI'
+  const currentSection =
+    pathname.startsWith('/cuenta')
+      ? 'Cuenta'
+      : navItems.find((item) => pathname.startsWith(item.to))?.label ?? 'ScoutAI'
   const userInitials = (user?.fullName ?? 'Analista')
     .split(/\s+/)
     .slice(0, 2)
@@ -193,6 +196,10 @@ export function AppShell() {
 
         <div className="border-t p-3">
           <div className={cn('flex items-center gap-3 rounded-xl border bg-background/70 p-2.5', compactWorkspaceRail && 'lg:flex-col lg:gap-1.5 lg:px-1')}>
+            <Link
+              to="/cuenta"
+              className={cn('flex min-w-0 flex-1 items-center gap-3 rounded-lg', compactWorkspaceRail && 'lg:flex-col lg:gap-1.5')}
+            >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-primary">
               {userInitials}
             </span>
@@ -203,6 +210,7 @@ export function AppShell() {
                 {user?.role === 'analyst' ? 'Scout' : user?.role}
               </span>
             </span>
+            </Link>
             <button
               type="button"
               onClick={() => void handleLogout()}

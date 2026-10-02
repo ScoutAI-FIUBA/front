@@ -8,6 +8,10 @@ Current behavior documentation.
 
 - `/login`: login form.
 - `/register`: registration form.
+- `/recuperar-password`: request a password-reset email.
+- `/restablecer-password`: set a new password from the emailed token.
+- `/verificar-email`: confirm an emailed verification token.
+- `/cuenta`: authenticated profile, password change, and verification.
 - Protected routes redirect unauthenticated users to `/login`.
 - Authenticated users visiting `/login` are redirected to `/dashboard`.
 
@@ -19,6 +23,11 @@ Current behavior documentation.
 - `src/components/auth/LoginCourtBackdrop.tsx`
 - `src/pages/auth/LoginPage.tsx`
 - `src/pages/auth/RegisterPage.tsx`
+- `src/pages/auth/ForgotPasswordPage.tsx`
+- `src/pages/auth/ResetPasswordPage.tsx`
+- `src/pages/auth/VerifyEmailPage.tsx`
+- `src/pages/auth/AccountPage.tsx`
+- `src/components/auth/GoogleSignInButton.tsx`
 - `src/services/registry.ts`
 - `src/services/contracts/auth.service.ts`
 - `src/services/api/auth.api.ts`
@@ -74,11 +83,19 @@ Current behavior documentation.
 - Login displays service errors as alert text.
 - Register displays service errors as alert text.
 
+- Register sends `full_name` to the backend; `/auth/me` and login return it.
+- Password recovery is implemented: login links to `/recuperar-password`, which
+  always reports success, and `/restablecer-password` redeems the emailed token.
+- `/cuenta` edits the display name, changes the password, and can resend the
+  verification email. Login is still allowed when the email is unverified.
+- Google login uses Google Identity Services when `VITE_GOOGLE_CLIENT_ID` is set
+  and posts the ID token to `/auth/oauth/google`. Without the client id the
+  button stays disabled.
+
 ## Non-Scope
 
-- Password recovery is displayed but not implemented.
-- Google login button is displayed disabled.
-- No new auth features are requested by this spec.
+- Forced email verification before login.
+- Account deletion UI (backend `DELETE /auth/me` already exists).
 
 ## Verification
 

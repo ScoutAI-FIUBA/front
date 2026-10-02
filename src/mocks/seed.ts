@@ -8,6 +8,7 @@ export const SEED_DATA: MockStore = {
       password: 'demo123',
       fullName: 'Analista',
       role: 'analyst',
+      emailVerified: true,
       createdAt: '2024-01-15T10:00:00Z',
     },
   ],
