@@ -48,6 +48,12 @@ import {
   shotHasVideoEvidence,
   type ShotEvidenceFilters,
 } from './analysis-job-shot-evidence'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+  type AnalysisJobPlayerKey,
+} from './analysis-job-player-identity'
 
 type LoadState = 'blocked' | 'loading' | 'success' | 'error'
 
@@ -76,11 +82,11 @@ function formatPercentage(value: number | null): string {
   return `${(value * 100).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`
 }
 
-function shotPlayerLabel(shot: AnalysisJobShotChartShot): string {
-  if (shot.rosterName) return shot.rosterName
-  if (shot.jerseyNumber) return `#${shot.jerseyNumber}`
-  if (shot.trackId != null) return `Seguimiento ${shot.trackId}`
-  return 'Tirador no identificado'
+function shotPlayerLabel(
+  shot: AnalysisJobShotChartShot,
+  playerLabels: Map<AnalysisJobPlayerKey, string>,
+): string {
+  return analysisJobPlayerLabelFromMap(shot, playerLabels)
 }
 
 function ModuleError({ title, retry }: { title: string; retry: () => void }) {
@@ -99,9 +105,11 @@ function ModuleError({ title, retry }: { title: string; retry: () => void }) {
 function SelectedShotDetail({
   shot,
   onViewPlay,
+  playerLabels,
 }: {
   shot: AnalysisJobShotChartShot | null
   onViewPlay: (shot: AnalysisJobShotChartShot) => void
+  playerLabels: Map<AnalysisJobPlayerKey, string>
 }) {
   if (!shot) {
     return <p className="py-8 text-sm text-muted-foreground">No hay tiros que coincidan con los filtros actuales.</p>
@@ -113,7 +121,7 @@ function SelectedShotDetail({
       <p className="text-xs font-medium text-muted-foreground">Tiro seleccionado</p>
       <div className="mt-2 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-lg font-semibold text-foreground">{shotPlayerLabel(shot)}</h3>
+          <h3 className="truncate text-lg font-semibold text-foreground">{shotPlayerLabel(shot, playerLabels)}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{ZONE_LABELS[shot.zone] ?? shot.zone}</p>
         </div>
         <Badge variant={shot.result === 'made' ? 'analyzed' : shot.result === 'missed' ? 'failed' : 'outline'}>
@@ -238,7 +246,25 @@ export function AnalysisJobShotsWorkspace({
   }
 
   const ourTeam = stats?.teams.find((team) => team.teamSide === stats.ourTeamSide) ?? null
+  const ourTeamHighPresence = stats?.players.filter((player) => (
+    player.teamSide === stats.ourTeamSide && player.onCourt
+  )).length ?? 0
   const zones = [...new Set(chart?.shots.map((shot) => shot.zone) ?? [])].sort()
+  const statsPlayersByKey = new Map(
+    (stats?.players ?? []).flatMap((player) => {
+      const key = analysisJobPlayerKey(player)
+      return key ? [[key, player] as const] : []
+    }),
+  )
+  const chartPlayers = [...(chart?.players ?? [])].sort((left, right) => {
+    const leftOnCourt = statsPlayersByKey.get(analysisJobPlayerKey(left) as AnalysisJobPlayerKey)?.onCourt ?? false
+    const rightOnCourt = statsPlayersByKey.get(analysisJobPlayerKey(right) as AnalysisJobPlayerKey)?.onCourt ?? false
+    return Number(rightOnCourt) - Number(leftOnCourt)
+  })
+  const playerLabels = buildAnalysisJobPlayerLabels(chartPlayers.map((player) => ({
+    ...player,
+    rosterName: statsPlayersByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterName ?? null,
+  })))
   const filteredShots = chart ? filterAnalysisJobShots(chart.shots, filters) : []
   const validShots = chart
     ? filteredShots.filter((shot) => shotChartPointToPercent(chart.court, shot) != null)
@@ -278,7 +304,7 @@ export function AnalysisJobShotsWorkspace({
             ['Puntos detectados', String(ourTeam.points)],
             ['Tiros de campo', `${ourTeam.fieldGoalsMade}/${ourTeam.fieldGoalsAttempted}`],
             ['Efectividad TC', formatPercentage(ourTeam.fieldGoalPercentage)],
-            ['Jugadores seguidos', String(ourTeam.playersTracked)],
+            [ourTeamHighPresence > 0 ? 'Mayor presencia observada' : 'Jugadores seguidos', String(ourTeamHighPresence || ourTeam.playersTracked)],
           ].map(([label, value]) => (
             <div key={label} className="px-3 py-3 sm:px-4">
               <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
@@ -318,12 +344,14 @@ export function AnalysisJobShotsWorkspace({
                 <SelectItem value="3">Sólo 3P</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={String(filters.trackId)} onValueChange={(value) => setFilters((current) => ({ ...current, trackId: value === 'all' ? 'all' : Number(value) }))}>
+            <Select value={filters.player} onValueChange={(value) => setFilters((current) => ({ ...current, player: value as ShotEvidenceFilters['player'] }))}>
               <SelectTrigger aria-label="Filtrar por jugador"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los jugadores</SelectItem>
-                {chart.players.map((player) => (
-                  <SelectItem key={player.trackId} value={String(player.trackId)}>{player.displayName}</SelectItem>
+                {chartPlayers.map((player) => (
+                  <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
+                    {analysisJobPlayerLabelFromMap(player, playerLabels)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -349,7 +377,7 @@ export function AnalysisJobShotsWorkspace({
                 <ShotChartCourt
                   court={chart.court}
                   shots={validShots}
-                  players={chart.players}
+                  players={chartPlayers}
                   selectedShotKey={activeShotKey}
                   shotKey={analysisShotKey}
                   onSelectShot={selectShot}
@@ -367,7 +395,7 @@ export function AnalysisJobShotsWorkspace({
               )}
             </div>
 
-            <SelectedShotDetail shot={selectedShot} onViewPlay={(shot) => selectShot(shot, filteredShots.indexOf(shot))} />
+            <SelectedShotDetail shot={selectedShot} playerLabels={playerLabels} onViewPlay={(shot) => selectShot(shot, filteredShots.indexOf(shot))} />
           </div>
 
           <div className="border-t border-white/10 pt-3">
@@ -383,7 +411,7 @@ export function AnalysisJobShotsWorkspace({
                   const hasEvidence = shotHasVideoEvidence(shot)
                   return (
                     <button key={key} type="button" className={cn('grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left transition-colors motion-reduce:transition-none', selected ? 'text-primary' : 'text-foreground hover:text-primary')} aria-pressed={selected} onClick={() => selectShot(shot, index)}>
-                      <span className="min-w-0"><span className="block truncate font-medium">{shotPlayerLabel(shot)}</span><span className="mt-0.5 block text-xs text-muted-foreground">{shot.points}P · {ZONE_LABELS[shot.zone] ?? shot.zone} · {shotChartResultLabel(shot.result)}</span></span>
+                      <span className="min-w-0"><span className="block truncate font-medium">{shotPlayerLabel(shot, playerLabels)}</span><span className="mt-0.5 block text-xs text-muted-foreground">{shot.points}P · {ZONE_LABELS[shot.zone] ?? shot.zone} · {shotChartResultLabel(shot.result)}</span></span>
                       <span className="inline-flex items-center gap-1 text-xs tabular-nums text-muted-foreground">{hasEvidence && <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />}{hasEvidence ? formatShotTimestamp(shot.timestampSeconds as number) : 'Sin video'}</span>
                     </button>
                   )

@@ -7,6 +7,11 @@ import type {
   ShotChartResult,
 } from '@/types'
 import { shotChartPointToPercent, shotChartResultLabel } from './shot-chart-court'
+import {
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+  type AnalysisJobPlayerKey,
+} from '@/pages/analysis/analysis-job-player-identity'
 
 interface ShotChartCourtProps {
   court: AnalysisJobShotChartCourt
@@ -25,12 +30,9 @@ const RESULT_STYLES: Record<ShotChartResult, string> = {
 
 function shotPlayerLabel(
   shot: AnalysisJobShotChartShot,
-  playersByTrack: Map<number, string>,
+  playerLabels: Map<AnalysisJobPlayerKey, string>,
 ): string {
-  if (shot.rosterName) return shot.rosterName
-  if (shot.trackId != null) return playersByTrack.get(shot.trackId) ?? `Seguimiento ${shot.trackId}`
-  if (shot.jerseyNumber) return `#${shot.jerseyNumber}`
-  return 'Tirador no identificado'
+  return analysisJobPlayerLabelFromMap(shot, playerLabels)
 }
 
 export function ShotChartCourt({
@@ -41,7 +43,7 @@ export function ShotChartCourt({
   shotKey,
   onSelectShot,
 }: ShotChartCourtProps) {
-  const playersByTrack = new Map(players.map((player) => [player.trackId, player.displayName]))
+  const playerLabels = buildAnalysisJobPlayerLabels(players)
 
   return (
     <div>
@@ -68,7 +70,7 @@ export function ShotChartCourt({
         {shots.map((shot, index) => {
           const point = shotChartPointToPercent(court, shot)
           if (!point) return null
-          const player = shotPlayerLabel(shot, playersByTrack)
+          const player = shotPlayerLabel(shot, playerLabels)
           const result = shotChartResultLabel(shot.result)
           const description = `${player} · ${shot.points}P · ${result} · ${shot.zone}`
           const markerKey = shotKey?.(shot, index) ?? `${shot.shotId ?? 'shot'}-${index}`

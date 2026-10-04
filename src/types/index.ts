@@ -191,8 +191,11 @@ export interface AnalysisJobTeamShootingStats extends ShootingTotals {
 
 export interface AnalysisJobPlayerShootingStats extends ShootingTotals {
   trackId: number
+  stablePlayerId: string | null
   teamSide: AnalysisJobTeamSide | null
   jerseyNumber: string | null
+  observations: number
+  onCourt: boolean
   rosterPlayerId: string | null
   rosterName: string | null
   displayName: string
@@ -201,6 +204,7 @@ export interface AnalysisJobPlayerShootingStats extends ShootingTotals {
 export interface AnalysisJobShotStat {
   shotId: string | number | null
   trackId: number | null
+  stablePlayerId: string | null
   teamSide: AnalysisJobTeamSide | null
   jerseyNumber: string | null
   rosterPlayerId: string | null
@@ -223,6 +227,7 @@ export interface AnalysisJobStatsCoverage {
   shotsWithoutCourtPosition: number
   shotsWithoutShooter: number
   playersTracked: number
+  playersOnCourt: number
   playersWithJerseyNumber: number
   playersLinkedToRoster: number
   measures: string[]
@@ -261,6 +266,7 @@ export interface AnalysisJobShotChartCourt {
 export interface AnalysisJobShotChartShot {
   shotId: string | number | null
   trackId: number | null
+  stablePlayerId: string | null
   teamSide: AnalysisJobTeamSide | null
   jerseyNumber: string | null
   rosterPlayerId: string | null
@@ -279,6 +285,7 @@ export interface AnalysisJobShotChartShot {
 
 export interface AnalysisJobShotChartPlayer {
   trackId: number
+  stablePlayerId: string | null
   teamSide: AnalysisJobTeamSide | null
   jerseyNumber: string | null
   displayName: string
@@ -291,12 +298,14 @@ export interface AnalysisJobShotChartCoverage {
   shotsWithoutCourtPosition: number
   shotsWithoutShooter: number
   playersTracked: number
+  playersOnCourt: number
   playersWithJerseyNumber: number
   playersLinkedToRoster: number
   measures: string[]
   notMeasured: string[]
   shotsCharted: number
   filteredToTrackId: number | null
+  filteredToStablePlayerId: string | null
 }
 
 export interface AnalysisJobShotChart {
@@ -323,6 +332,7 @@ export interface AnalysisJobCourtMovement {
 
 export interface AnalysisJobCourtPositionsPlayer {
   trackId: number
+  stablePlayerId: string | null
   teamSide: AnalysisJobTeamSide | null
   jerseyNumber: string | null
   positions: AnalysisJobCourtPosition[]

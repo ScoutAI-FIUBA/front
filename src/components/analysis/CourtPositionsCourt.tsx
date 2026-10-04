@@ -3,7 +3,11 @@ import type {
   AnalysisJobCourtPositionsPlayer,
   AnalysisJobTeamSide,
 } from '@/types'
-import { courtPositionPlayerLabel } from '@/pages/analysis/analysis-job-court-positions'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+} from '@/pages/analysis/analysis-job-player-identity'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
 
@@ -13,8 +17,16 @@ interface CourtPositionsCourtProps {
   ourTeamSide: AnalysisJobTeamSide | null
 }
 
-function trackColor(trackId: number): string {
-  const hue = ((trackId * 137.508) % 360 + 360) % 360
+function playerColor(player: AnalysisJobCourtPositionsPlayer): string {
+  if (!player.stablePlayerId) {
+    const hue = ((player.trackId * 137.508) % 360 + 360) % 360
+    return `hsl(${hue.toFixed(1)} 72% 38%)`
+  }
+  const hash = [...player.stablePlayerId].reduce(
+    (value, character) => ((value * 31) + character.charCodeAt(0)) | 0,
+    0,
+  )
+  const hue = ((hash * 137.508) % 360 + 360) % 360
   return `hsl(${hue.toFixed(1)} 72% 38%)`
 }
 
@@ -23,6 +35,8 @@ export function CourtPositionsCourt({
   players,
   ourTeamSide,
 }: CourtPositionsCourtProps) {
+  const playerLabels = buildAnalysisJobPlayerLabels(players)
+
   return (
     <div className="w-full max-w-full">
       <div
@@ -42,15 +56,15 @@ export function CourtPositionsCourt({
             const positions = validCourtPositions(court, player.positions)
             if (positions.length === 0) return null
 
-            const color = trackColor(player.trackId)
+            const color = playerColor(player)
             const isOurTeam = ourTeamSide != null && player.teamSide === ourTeamSide
             const points = positions.map((position) => `${position.xM},${position.yM}`).join(' ')
             const first = positions[0]
             const last = positions[positions.length - 1]
 
             return (
-              <g key={player.trackId}>
-                <title>{courtPositionPlayerLabel(player)}</title>
+              <g key={analysisJobPlayerKey(player)}>
+                <title>{analysisJobPlayerLabelFromMap(player, playerLabels)}</title>
                 {positions.length > 1 && (
                   <polyline
                     points={points}
@@ -86,13 +100,13 @@ export function CourtPositionsCourt({
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Seguimientos visibles">
         {players.map((player) => (
-          <span key={player.trackId} className="inline-flex items-center gap-1.5">
+          <span key={analysisJobPlayerKey(player)} className="inline-flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: trackColor(player.trackId) }}
+              style={{ backgroundColor: playerColor(player) }}
               aria-hidden="true"
             />
-            {courtPositionPlayerLabel(player)}
+            {analysisJobPlayerLabelFromMap(player, playerLabels)}
           </span>
         ))}
       </div>

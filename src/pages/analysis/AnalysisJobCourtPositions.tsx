@@ -24,13 +24,18 @@ import type {
 import {
   analysisJobCourtPositionsContextForJob,
   analysisJobCourtPositionsLoadKey,
-  courtPositionPlayerLabel,
   courtPositionSideLabel,
   defaultCourtPositionFilter,
   filterCourtPositionPlayers,
+  isCourtPositionPlayerFilter,
   loadAnalysisJobCourtPositions,
   type CourtPositionsFilter,
 } from './analysis-job-court-positions'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+} from './analysis-job-player-identity'
 
 interface AnalysisJobCourtPositionsProps {
   job: ProcessingJob
@@ -121,9 +126,10 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
       : { cells: [], totalSamples: 0, maxSamplesPerCell: 0 },
     [positions, visiblePlayers],
   )
-  const selectedPlayer = filter.startsWith('track:') && visiblePlayers.length === 1
+  const selectedPlayer = isCourtPositionPlayerFilter(filter) && visiblePlayers.length === 1
     ? visiblePlayers[0]
     : null
+  const playerLabels = buildAnalysisJobPlayerLabels(positions?.players ?? [])
 
   if (jobStatus !== 'DONE') return null
 
@@ -198,7 +204,9 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
             <SelectTrigger id="court-positions-filter" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               {positions.players.map((player) => (
-                <SelectItem key={player.trackId} value={`track:${player.trackId}`}>{courtPositionPlayerLabel(player)}</SelectItem>
+                <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
+                  {analysisJobPlayerLabelFromMap(player, playerLabels)}
+                </SelectItem>
               ))}
               <SelectItem value="all">Comparar todos los seguimientos</SelectItem>
               <SelectItem value="side-0">Comparar grupo A</SelectItem>
@@ -221,10 +229,10 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
       {selectedPlayer && (
         <div className="flex flex-wrap items-center gap-3 border-y border-white/10 py-3">
           <span className="flex h-10 min-w-10 items-center justify-center rounded-full border-2 border-primary bg-[#111827] px-2 font-bold text-white">
-            {selectedPlayer.jerseyNumber ? `#${selectedPlayer.jerseyNumber}` : selectedPlayer.trackId}
+            {selectedPlayer.jerseyNumber ? `#${selectedPlayer.jerseyNumber}` : selectedPlayer.stablePlayerId ? 'J' : selectedPlayer.trackId}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">{courtPositionPlayerLabel(selectedPlayer)}</p>
+            <p className="font-semibold text-foreground">{analysisJobPlayerLabelFromMap(selectedPlayer, playerLabels)}</p>
             <p className="text-xs text-muted-foreground">{courtPositionSideLabel(selectedPlayer.teamSide)}</p>
           </div>
           {job.ourTeamSide != null && selectedPlayer.teamSide === job.ourTeamSide && <Badge variant="analyzed">Tu equipo</Badge>}
@@ -239,7 +247,7 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
             ? <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} />
             : <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay posiciones válidas para construir el mapa de calor.</div>
         ) : selectedPlayer ? (
-          <CourtPositionsPlayback key={selectedPlayer.trackId} court={positions.court} player={selectedPlayer} />
+          <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} />
         ) : (
           <div className="space-y-3">
             <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} />
@@ -251,8 +259,8 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
       {!selectedPlayer && visiblePlayers.length > 0 && (
         <div className="divide-y divide-white/10 border-y border-white/10">
           {visiblePlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
-            <div key={player.trackId} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-3 text-sm">
-              <span className="font-medium text-foreground">{courtPositionPlayerLabel(player)}</span>
+            <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-3 text-sm">
+              <span className="font-medium text-foreground">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
               <span className="tabular-nums text-muted-foreground">{formatMetres(player.movement.distanceM)}</span>
               <span className="tabular-nums text-muted-foreground">{player.movement.samples} muestras</span>
             </div>

@@ -30,6 +30,7 @@ export interface ApiAnalysisJobShotChartCourt {
 export interface ApiAnalysisJobShotChartShot {
   shot_id: string | number | null
   track_id: number | null
+  stable_player_id?: string | null
   team_id: AnalysisJobTeamSide | null
   jersey_number: string | null
   roster_player_id: string | null
@@ -48,6 +49,7 @@ export interface ApiAnalysisJobShotChartShot {
 
 export interface ApiAnalysisJobShotChartPlayer {
   track_id: number
+  stable_player_id?: string | null
   team_id: AnalysisJobTeamSide | null
   jersey_number: string | null
   display_name: string
@@ -60,12 +62,14 @@ export interface ApiAnalysisJobShotChartCoverage {
   shots_without_court_position: number
   shots_without_shooter: number
   players_tracked: number
+  players_on_court?: number
   players_with_jersey_number: number
   players_linked_to_roster: number
   measures: string[]
   not_measured: string[]
   shots_charted: number
   filtered_to_track_id: number | null
+  filtered_to_stable_player_id?: string | null
 }
 
 export interface ApiAnalysisJobShotChart {
@@ -93,6 +97,7 @@ function mapShot(shot: ApiAnalysisJobShotChartShot): AnalysisJobShotChartShot {
   return {
     shotId: shot.shot_id,
     trackId: shot.track_id,
+    stablePlayerId: shot.stable_player_id ?? null,
     teamSide: shot.team_id,
     jerseyNumber: shot.jersey_number,
     rosterPlayerId: shot.roster_player_id,
@@ -113,6 +118,7 @@ function mapShot(shot: ApiAnalysisJobShotChartShot): AnalysisJobShotChartShot {
 function mapPlayer(player: ApiAnalysisJobShotChartPlayer): AnalysisJobShotChartPlayer {
   return {
     trackId: player.track_id,
+    stablePlayerId: player.stable_player_id ?? null,
     teamSide: player.team_id,
     jerseyNumber: player.jersey_number,
     displayName: player.display_name,
@@ -129,12 +135,14 @@ function mapCoverage(
     shotsWithoutCourtPosition: coverage.shots_without_court_position,
     shotsWithoutShooter: coverage.shots_without_shooter,
     playersTracked: coverage.players_tracked,
+    playersOnCourt: coverage.players_on_court ?? 0,
     playersWithJerseyNumber: coverage.players_with_jersey_number,
     playersLinkedToRoster: coverage.players_linked_to_roster,
     measures: coverage.measures,
     notMeasured: coverage.not_measured,
     shotsCharted: coverage.shots_charted,
     filteredToTrackId: coverage.filtered_to_track_id,
+    filteredToStablePlayerId: coverage.filtered_to_stable_player_id ?? null,
   }
 }
 

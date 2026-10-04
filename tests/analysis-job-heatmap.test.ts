@@ -24,6 +24,7 @@ function player(
 ): AnalysisJobCourtPositionsPlayer {
   return {
     trackId,
+    stablePlayerId: null,
     teamSide,
     jerseyNumber: null,
     positions,

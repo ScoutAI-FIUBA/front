@@ -1,4 +1,8 @@
 import type { AnalysisJobShotChartShot, ShotChartResult } from '../../types/index.ts'
+import {
+  analysisJobPlayerKey,
+  type AnalysisJobPlayerKey,
+} from './analysis-job-player-identity.ts'
 
 export type ShotEvidenceResultFilter = 'all' | ShotChartResult
 export type ShotEvidencePointsFilter = 'all' | '2' | '3'
@@ -6,14 +10,14 @@ export type ShotEvidencePointsFilter = 'all' | '2' | '3'
 export interface ShotEvidenceFilters {
   result: ShotEvidenceResultFilter
   points: ShotEvidencePointsFilter
-  trackId: 'all' | number
+  player: 'all' | AnalysisJobPlayerKey
   zone: 'all' | string
 }
 
 export const DEFAULT_SHOT_EVIDENCE_FILTERS: ShotEvidenceFilters = {
   result: 'all',
   points: 'all',
-  trackId: 'all',
+  player: 'all',
   zone: 'all',
 }
 
@@ -22,7 +26,7 @@ export function analysisShotKey(shot: AnalysisJobShotChartShot, index: number): 
   if (shot.shotId != null) return `shot:${shot.shotId}`
   return [
     'detected',
-    shot.trackId ?? 'unknown-track',
+    analysisJobPlayerKey(shot) ?? 'unknown-player',
     shot.timestampSeconds ?? 'no-time',
     shot.points,
     shot.zone,
@@ -38,7 +42,7 @@ export function filterAnalysisJobShots(
   return shots.filter((shot) => (
     (filters.result === 'all' || shot.result === filters.result)
     && (filters.points === 'all' || shot.points === Number(filters.points))
-    && (filters.trackId === 'all' || shot.trackId === filters.trackId)
+    && (filters.player === 'all' || analysisJobPlayerKey(shot) === filters.player)
     && (filters.zone === 'all' || shot.zone === filters.zone)
   ))
 }
