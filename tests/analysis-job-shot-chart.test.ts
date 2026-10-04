@@ -177,6 +177,29 @@ test('preserves linked and unlinked player identity exactly as returned', async 
   assert.equal(chart.shots[2]?.rosterPlayerId, null)
   assert.equal(chart.shots[2]?.rosterName, null)
   assert.equal(chart.players[1]?.displayName, 'Player 3')
+  assert.equal(chart.players[1]?.stablePlayerId, null)
+})
+
+test('maps model v2 stable identity and stable-player filter coverage', async () => {
+  const response = apiChart()
+  response.players[0] = {
+    ...response.players[0]!,
+    stable_player_id: 'player-stable-22',
+  }
+  response.shots[0] = {
+    ...response.shots[0]!,
+    stable_player_id: 'player-stable-22',
+  }
+  response.coverage.players_on_court = 10
+  response.coverage.filtered_to_stable_player_id = 'player-stable-22'
+  const service = createAnalysisJobShotChartService(async <T>() => response as T)
+
+  const chart = await service.get('job-1', 'team-1')
+
+  assert.equal(chart.players[0]?.stablePlayerId, 'player-stable-22')
+  assert.equal(chart.shots[0]?.stablePlayerId, 'player-stable-22')
+  assert.equal(chart.coverage.playersOnCourt, 10)
+  assert.equal(chart.coverage.filteredToStablePlayerId, 'player-stable-22')
 })
 
 test('does not place invalid coordinates on the court and preserves missing-position coverage', async () => {

@@ -119,12 +119,30 @@ test('maps side 0, side 1, and null without treating them as team UUIDs', async 
   assert.deepEqual(result.players.map((player) => player.teamSide), [0, 1, null])
 })
 
-test('preserves jersey numbers and uses a product-facing tracking label when absent', async () => {
+test('prefers jersey numbers and uses a product-facing tracking label for legacy players', async () => {
   const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
   const result = await service.get('job-1', 'team-1')
 
-  assert.equal(courtPositionPlayerLabel(result.players[0]!), '#23 · Seguimiento 7')
+  assert.equal(courtPositionPlayerLabel(result.players[0]!), '#23')
   assert.equal(courtPositionPlayerLabel(result.players[1]!), 'Seguimiento 9')
+})
+
+test('maps and filters model v2 players by stable identity without exposing it as a label', async () => {
+  const response = apiPositions()
+  response.players[1] = {
+    ...response.players[1]!,
+    stable_player_id: 'player-stable-9',
+  }
+  const service = createAnalysisJobCourtPositionsService(async <T>() => response as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.equal(players[1]?.stablePlayerId, 'player-stable-9')
+  assert.equal(courtPositionPlayerLabel(players[1]!), 'Jugador detectado')
+  assert.deepEqual(
+    filterCourtPositionPlayers(players, 'stable:player-stable-9').map((player) => player.trackId),
+    [9],
+  )
+  assert.equal(defaultCourtPositionFilter(players, 1), 'stable:player-stable-9')
 })
 
 test('maps an empty response and a null source file without fabricating players', async () => {

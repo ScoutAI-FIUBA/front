@@ -13,6 +13,10 @@ import type { AnalysisJobCourtPositions, AnalysisJobCourtPositionsPlayer } from 
 import { movementSequenceIndex } from '@/pages/analysis/analysis-job-court-positions'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabel,
+} from '@/pages/analysis/analysis-job-player-identity'
 
 interface CourtPositionsPlaybackProps {
   court: AnalysisJobCourtPositions['court']
@@ -44,7 +48,9 @@ export function CourtPositionsPlayback({ court, player }: CourtPositionsPlayback
   const markerY = useTransform(progress, inputRange, yRange)
   const points = positions.map((position) => `${position.xM},${position.yM}`).join(' ')
   const sampleIndex = movementSequenceIndex(displayProgress, positions.length)
-  const markerLabel = player.jerseyNumber ?? String(player.trackId)
+  const markerLabel = player.jerseyNumber ?? (player.stablePlayerId ? 'J' : String(player.trackId))
+  const playerKey = analysisJobPlayerKey(player)
+  const playerLabel = analysisJobPlayerLabel(player)
 
   useMotionValueEvent(progress, 'change', (latest) => {
     setDisplayProgress(latest)
@@ -58,7 +64,7 @@ export function CourtPositionsPlayback({ court, player }: CourtPositionsPlayback
     setDisplayProgress(initialProgress)
     setIsPlaying(false)
     setIsPaused(false)
-  }, [player.trackId, progress, reduceMotion])
+  }, [playerKey, progress, reduceMotion])
 
   useEffect(() => () => controlsRef.current?.stop(), [])
 
@@ -119,7 +125,7 @@ export function CourtPositionsPlayback({ court, player }: CourtPositionsPlayback
   return (
     <div className="space-y-4">
       <div className="relative overflow-hidden rounded-xl border border-border-strong bg-[#d7b985]" style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}>
-        <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${court.lengthM} ${court.widthM}`} preserveAspectRatio="none" role="img" aria-label={`Recorrido espacial del seguimiento ${player.trackId}`}>
+        <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${court.lengthM} ${court.widthM}`} preserveAspectRatio="none" role="img" aria-label={`Recorrido espacial de ${playerLabel}`}>
           <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />
           {positions.length > 1 && (
             <>

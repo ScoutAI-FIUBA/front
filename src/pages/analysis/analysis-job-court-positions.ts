@@ -7,6 +7,11 @@ import type {
   ProcessingJobStatus,
 } from '../../types/index.ts'
 import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabel,
+  type AnalysisJobPlayerKey,
+} from './analysis-job-player-identity.ts'
 
 export interface AnalysisJobCourtPositionsLoadContext {
   jobId: string
@@ -19,7 +24,7 @@ export type CourtPositionsFilter =
   | 'side-0'
   | 'side-1'
   | 'unassigned'
-  | `track:${number}`
+  | AnalysisJobPlayerKey
 
 export function analysisJobCourtPositionsContextForJob(
   job: Pick<ProcessingJob, 'id' | 'teamId' | 'status'>,
@@ -55,8 +60,7 @@ export function filterCourtPositionPlayers(
   if (filter === 'side-1') return players.filter((player) => player.teamSide === 1)
   if (filter === 'unassigned') return players.filter((player) => player.teamSide == null)
 
-  const trackId = Number(filter.slice('track:'.length))
-  return players.filter((player) => player.trackId === trackId)
+  return players.filter((player) => analysisJobPlayerKey(player) === filter)
 }
 
 export function defaultCourtPositionFilter(
@@ -66,7 +70,13 @@ export function defaultCourtPositionFilter(
   const preferred = ourTeamSide == null
     ? players[0]
     : players.find((player) => player.teamSide === ourTeamSide) ?? players[0]
-  return preferred ? `track:${preferred.trackId}` : 'all'
+  return preferred ? analysisJobPlayerKey(preferred) ?? 'all' : 'all'
+}
+
+export function isCourtPositionPlayerFilter(
+  filter: CourtPositionsFilter,
+): filter is AnalysisJobPlayerKey {
+  return filter.startsWith('stable:') || filter.startsWith('track:')
 }
 
 export function movementSequenceIndex(progress: number, sampleCount: number): number {
@@ -76,11 +86,9 @@ export function movementSequenceIndex(progress: number, sampleCount: number): nu
 }
 
 export function courtPositionPlayerLabel(
-  player: Pick<AnalysisJobCourtPositionsPlayer, 'jerseyNumber' | 'trackId'>,
+  player: Pick<AnalysisJobCourtPositionsPlayer, 'stablePlayerId' | 'jerseyNumber' | 'trackId'>,
 ): string {
-  return player.jerseyNumber
-    ? `#${player.jerseyNumber} · Seguimiento ${player.trackId}`
-    : `Seguimiento ${player.trackId}`
+  return analysisJobPlayerLabel(player)
 }
 
 export function courtPositionSideLabel(side: AnalysisJobTeamSide | null): string {

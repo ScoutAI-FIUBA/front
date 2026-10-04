@@ -163,6 +163,33 @@ test('keeps the backend fallback for a player without complete identity', async 
   assert.equal(anonymous?.rosterPlayerId, null)
   assert.equal(anonymous?.rosterName, null)
   assert.equal(anonymous?.displayName, 'Player 3')
+  assert.equal(anonymous?.stablePlayerId, null)
+  assert.equal(anonymous?.observations, 0)
+  assert.equal(anonymous?.onCourt, false)
+})
+
+test('maps model v2 stable identity, observations, and on-court coverage', async () => {
+  const response = apiStats()
+  response.players[0] = {
+    ...response.players[0]!,
+    stable_player_id: 'player-stable-22',
+    observations: 842,
+    on_court: true,
+  }
+  response.shots[0] = {
+    ...response.shots[0]!,
+    stable_player_id: 'player-stable-22',
+  }
+  response.coverage.players_on_court = 10
+  const service = createAnalysisJobStatsService(async <T>() => response as T)
+
+  const stats = await service.get('job-1', 'team-1')
+
+  assert.equal(stats.players[0]?.stablePlayerId, 'player-stable-22')
+  assert.equal(stats.players[0]?.observations, 842)
+  assert.equal(stats.players[0]?.onCourt, true)
+  assert.equal(stats.shots[0]?.stablePlayerId, 'player-stable-22')
+  assert.equal(stats.coverage.playersOnCourt, 10)
 })
 
 test('maps partial coverage and explicitly unmeasured metrics', async () => {

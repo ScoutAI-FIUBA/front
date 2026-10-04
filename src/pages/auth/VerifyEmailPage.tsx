@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
@@ -8,6 +8,7 @@ export function VerifyEmailPage() {
   const { confirmEmailVerification } = useAuth()
   const [params] = useSearchParams()
   const token = params.get('token') ?? ''
+  const confirmingTokenRef = useRef<string | null>(null)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
@@ -16,6 +17,8 @@ export function VerifyEmailPage() {
       setError('Falta el token del enlace')
       return
     }
+    if (confirmingTokenRef.current === token) return
+    confirmingTokenRef.current = token
     void confirmEmailVerification(token)
       .then(() => setDone(true))
       .catch((err: unknown) => {

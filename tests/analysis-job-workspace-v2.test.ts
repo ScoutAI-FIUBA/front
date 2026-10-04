@@ -18,6 +18,7 @@ function shot(overrides: Partial<AnalysisJobShotChartShot> = {}): AnalysisJobSho
   return {
     shotId: 1,
     trackId: 7,
+    stablePlayerId: null,
     teamSide: 1,
     jerseyNumber: '7',
     rosterPlayerId: null,
@@ -65,6 +66,28 @@ test('shot drill-down filters existing moments locally and keeps unknown distinc
     filterAnalysisJobShots(shots, { ...DEFAULT_SHOT_EVIDENCE_FILTERS, points: '3' }).map((item) => item.shotId),
     [2],
   )
+})
+
+test('shot filtering and fallback selection prefer stable identity with track fallback', () => {
+  const stableShot = shot({ shotId: null, trackId: 7, stablePlayerId: 'stable-player-a' })
+  const samePlayerNewTrack = shot({ shotId: null, trackId: 18, stablePlayerId: 'stable-player-a' })
+  const legacyShot = shot({ shotId: 3, trackId: 9, stablePlayerId: null })
+
+  assert.deepEqual(
+    filterAnalysisJobShots(
+      [stableShot, legacyShot],
+      { ...DEFAULT_SHOT_EVIDENCE_FILTERS, player: 'stable:stable-player-a' },
+    ),
+    [stableShot],
+  )
+  assert.deepEqual(
+    filterAnalysisJobShots(
+      [stableShot, legacyShot],
+      { ...DEFAULT_SHOT_EVIDENCE_FILTERS, player: 'track:9' },
+    ),
+    [legacyShot],
+  )
+  assert.equal(analysisShotKey(stableShot, 0), analysisShotKey(samePlayerNewTrack, 12))
 })
 
 test('fallback shot identity remains stable across filtered arrays', () => {

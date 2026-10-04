@@ -38,8 +38,11 @@ export interface ApiAnalysisJobTeamShootingStats extends ApiShootingTotals {
 
 export interface ApiAnalysisJobPlayerShootingStats extends ApiShootingTotals {
   track_id: number
+  stable_player_id?: string | null
   team_id: AnalysisJobTeamSide | null
   jersey_number: string | null
+  observations?: number
+  on_court?: boolean
   roster_player_id: string | null
   roster_name: string | null
   display_name: string
@@ -48,6 +51,7 @@ export interface ApiAnalysisJobPlayerShootingStats extends ApiShootingTotals {
 export interface ApiAnalysisJobShotStat {
   shot_id: string | number | null
   track_id: number | null
+  stable_player_id?: string | null
   team_id: AnalysisJobTeamSide | null
   jersey_number: string | null
   roster_player_id: string | null
@@ -70,6 +74,7 @@ export interface ApiAnalysisJobStatsCoverage {
   shots_without_court_position: number
   shots_without_shooter: number
   players_tracked: number
+  players_on_court?: number
   players_with_jersey_number: number
   players_linked_to_roster: number
   measures: string[]
@@ -125,8 +130,11 @@ function mapTeam(team: ApiAnalysisJobTeamShootingStats): AnalysisJobTeamShooting
 function mapPlayer(player: ApiAnalysisJobPlayerShootingStats): AnalysisJobPlayerShootingStats {
   return {
     trackId: player.track_id,
+    stablePlayerId: player.stable_player_id ?? null,
     teamSide: player.team_id,
     jerseyNumber: player.jersey_number,
+    observations: player.observations ?? 0,
+    onCourt: player.on_court ?? false,
     rosterPlayerId: player.roster_player_id,
     rosterName: player.roster_name,
     displayName: player.display_name,
@@ -138,6 +146,7 @@ function mapShot(shot: ApiAnalysisJobShotStat): AnalysisJobShotStat {
   return {
     shotId: shot.shot_id,
     trackId: shot.track_id,
+    stablePlayerId: shot.stable_player_id ?? null,
     teamSide: shot.team_id,
     jerseyNumber: shot.jersey_number,
     rosterPlayerId: shot.roster_player_id,
@@ -162,6 +171,7 @@ function mapCoverage(coverage: ApiAnalysisJobStatsCoverage): AnalysisJobStatsCov
     shotsWithoutCourtPosition: coverage.shots_without_court_position,
     shotsWithoutShooter: coverage.shots_without_shooter,
     playersTracked: coverage.players_tracked,
+    playersOnCourt: coverage.players_on_court ?? 0,
     playersWithJerseyNumber: coverage.players_with_jersey_number,
     playersLinkedToRoster: coverage.players_linked_to_roster,
     measures: coverage.measures,

@@ -86,6 +86,14 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - Reduced-motion users receive the complete static selected-player trajectory and retain the player/view controls without automatic or spatial playback motion.
 - Movement trajectory and heatmap surfaces share a richer full basketball-court geometry with baselines, half court, centre circle, painted areas, backboards, hoops, and three-point geometry.
 - Similar analyses present unchanged backend scores as high-contrast comparison rows/bars, not nested score cards. Technical identifiers remain tertiary.
+- Model v2 player identity uses `stable_player_id` as the logical key whenever the backend provides it; v1 results continue to use `track_id` without changing their behavior.
+- Stats preserve v2 `observations` and `on_court`. The frontend treats `on_court` only as a backend ranking derived from total observations; it never presents the flag as a current lineup, a chronological state, or synchronized presence. Those players may be prioritized where a list is ordered, while every returned player remains available.
+- Shot filters, selected-shot fallback identity, court marker labels, Movement selection, trajectory grouping, playback reset identity, colours, and React keys prefer the stable identity and fall back to the legacy track identity.
+- Visible player labels continue to prefer roster name and confirmed jersey number. Raw stable ids remain internal; when v2 has no human identity the UI uses a neutral detected-player label rather than exposing the identifier.
+- The backend already groups v2 Court Positions paths by stable player before the frontend receives them. The frontend preserves that grouping and does not regroup or recalculate movement metrics.
+- Team-side remains a side-level contract based on backend-provided track counts, numbers, and roster matches. The frontend does not reinterpret those counts as stable-player counts.
+- Known backend issue: v2 confirmed jersey numbers may be keyed by `stable_player_id` while team-side still consumes track-keyed numbers. As a result, `numbers`, `roster_matches`, or `suggested_team_side` may be incomplete; the frontend renders the endpoint response and does not infer or patch mappings the contract did not return.
+- Similar-analysis scoring explicitly excludes player identity, so stable ids do not alter its request, ordering, or presentation.
 
 - Analysis list loads sessions through a single `analysisService.listSessions()` request and does not hydrate every row with detail requests.
 - Analysis list exposes an `Empezar análisis` action that keeps the global creation language consistent.
@@ -228,6 +236,9 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - The dedicated `analysisJobStatsService` maps the complete `/stats` response while remaining separate from both `AnalysisSession` and the team-side mutation boundary.
 - The dedicated `analysisJobShotChartService` maps court geometry, markers, per-player groups, and coverage without depending on the stats or team-side service contracts.
 - The dedicated `analysisJobCourtPositionsService` maps court paths, movement summaries, team-side metadata, and coverage without reading or mutating `our_team_side`.
+- Stats map `stable_player_id`, `observations`, `on_court`, and `coverage.players_on_court` when present, defaulting the additive v2 fields safely for older v1 responses.
+- Shot Chart maps `stable_player_id` on players and shots plus `filtered_to_stable_player_id`; the workspace keeps its existing one-request local filtering behavior and does not issue a new request per player selection.
+- Court Positions maps the optional `stable_player_id`; individual filters use a stable-key value for v2 and a track-key value for v1.
 - The dedicated `analysisJobSimilarService` maps processing-job similarity scores and keeps `limit=5` and `movement_weight=0.5` encapsulated in its request boundary.
 
 ## Non-Scope
@@ -246,7 +257,7 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 
 ## Verification
 
-- Automated frontend suite: 138/138 tests passing, including side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, workspace lifecycle states, timestamp eligibility, stable shot selection, embedded-player recovery, Movement sequence semantics, responsive navigation, gating, and request keys that prevent stale data or unnecessary refetches.
+- Automated frontend suite: 151/151 tests passing, including v1 track fallback, v2 stable identity, `observations`, `on_court`, non-chronological presence copy, stable shot filtering/selection, side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, workspace lifecycle states, timestamp eligibility, embedded-player recovery, Movement sequence semantics, responsive navigation, gating, and request keys that prevent stale data or unnecessary refetches.
 - The v2 processing-job workspace has focused coverage for `QUEUED -> RUNNING -> DONE` polling, persistent video placement across result tabs, made/missed/unknown local filters, nullable timestamps, imperative seeking, source URL refresh, and direct known-team video lookup without an all-team fan-out.
 - Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
 - Heatmap adds 10 focused tests for one-metre binning, boundary and invalid coordinates, out-of-court samples, dynamic court dimensions, relative intensity, filter-scoped normalization, empty valid samples, and request reuse across view and filter changes.
@@ -256,8 +267,7 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - A controlled mobile smoke test verified the completed workspace at `/analisis/jobs/job-qa?team_id=team-3`, including the compact identity header, persistent video recovery state, Overview metrics, shot filters and evidence actions, movement presentation, similar-analysis empty state, and technical Details.
 - Phase 1.1 visual QA covered the completed workspace at 1440 × 900 and 390 × 844, including Overview, Shots master-detail and selection, Movement before/during sequence playback, heatmap, Similar, compact source-video failure, and mobile module discovery. The dedicated local fixture copy uses basketball-oriented team, venue, and match labels; no backend data was changed.
 - Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.
-- The remaining real smoke test for team-side, Stats and Shot Chart is blocked only by the deployed backend being behind `origin/main`: the deployed API returns `404 {"detail":"Not Found"}` for `GET /jobs/{job_id}/team-sides`, while the route exists in the current backend contract and the frontend request matches it.
-- Production behavior must not add fallback mocks or synthetic results to hide that deployment mismatch.
+- The current real end-to-end smoke is blocked before team/video discovery: Docker is not running, no local frontend/backend/database ports are listening, the configured deployed backend requires an authenticated session even for its OpenAPI document, and this workspace has neither deployed credentials/session nor a video fixture. Contract-level v1/v2 fixtures remain covered without adding fallback mocks or synthetic production results.
 
 - Run `npm run build`.
 - Run `npm run lint`.

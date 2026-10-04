@@ -77,8 +77,20 @@ test('analysis copy explains detected shooting metrics without claiming an offic
   assert.match(shotChartSource, /Mapa de tiros/)
 
   const courtSource = readSource('../src/components/analysis/ShotChartCourt.tsx')
-  assert.match(courtSource, /`Seguimiento \$\{shot\.trackId\}`/)
+  assert.match(courtSource, /analysisJobPlayerLabelFromMap/)
   assert.doesNotMatch(courtSource, /`Track \$\{shot\.trackId\}`/)
+})
+
+test('on_court copy describes total observed presence instead of a current lineup', () => {
+  const statsSource = readSource('../src/pages/analysis/AnalysisJobShootingStats.tsx')
+  const shotsSource = readSource('../src/pages/analysis/AnalysisJobShotsWorkspace.tsx')
+  const detailsSource = readSource('../src/pages/analysis/AnalysisJobDetails.tsx')
+  const combinedSource = [statsSource, shotsSource, detailsSource].join('\n')
+
+  assert.match(combinedSource, /Mayor presencia observada/)
+  assert.match(statsSource, /observaciones totales/)
+  assert.doesNotMatch(combinedSource, /Jugadores (?:identificados )?en cancha/)
+  assert.doesNotMatch(statsSource, />En cancha</)
 })
 
 test('analysis modules replace raw failures with local product errors and retry', () => {

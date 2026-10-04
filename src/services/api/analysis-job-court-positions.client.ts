@@ -29,6 +29,7 @@ interface ApiCourtMovement {
 
 export interface ApiAnalysisJobCourtPositionsPlayer {
   track_id: number
+  stable_player_id?: string | null
   team_id: AnalysisJobTeamSide | null
   jersey_number: string | null
   positions: ApiCourtPosition[]
@@ -67,6 +68,7 @@ function mapPlayer(
 ): AnalysisJobCourtPositionsPlayer {
   return {
     trackId: player.track_id,
+    stablePlayerId: player.stable_player_id ?? null,
     teamSide: player.team_id,
     jerseyNumber: player.jersey_number,
     positions: player.positions.map(mapPosition),

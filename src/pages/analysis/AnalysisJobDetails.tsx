@@ -59,6 +59,7 @@ export function AnalysisJobDetails({
                 <div><dt className="text-muted-foreground">Tiros contabilizados</dt><dd className="mt-1 font-semibold text-foreground">{shootingSummary.coverage.shotsScored}</dd></div>
                 <div><dt className="text-muted-foreground">Sin posición de cancha</dt><dd className="mt-1 font-semibold text-foreground">{shootingSummary.coverage.shotsWithoutCourtPosition}</dd></div>
                 <div><dt className="text-muted-foreground">Sin tirador identificado</dt><dd className="mt-1 font-semibold text-foreground">{shootingSummary.coverage.shotsWithoutShooter}</dd></div>
+                {shootingSummary.coverage.playersOnCourt > 0 && <div><dt className="text-muted-foreground">Jugadores con mayor presencia observada</dt><dd className="mt-1 font-semibold text-foreground">{shootingSummary.coverage.playersOnCourt}</dd></div>}
               </>
             )}
             {movementSummary && (

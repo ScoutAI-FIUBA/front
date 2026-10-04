@@ -88,6 +88,8 @@ Current behavior documentation.
   always reports success, and `/restablecer-password` redeems the emailed token.
 - `/cuenta` edits the display name, changes the password, and can resend the
   verification email. Login is still allowed when the email is unverified.
+- Email verification guards the single-use token against React StrictMode's
+  repeated development effect before calling the backend.
 - Google login uses Google Identity Services when `VITE_GOOGLE_CLIENT_ID` is set
   and posts the ID token to `/auth/oauth/google`. Without the client id the
   button stays disabled.
@@ -100,6 +102,8 @@ Current behavior documentation.
 ## Verification
 
 - Run the auth client tests for login timeout and refresh/session behavior.
+- Run the account-route integration checks for recovery, verification, account,
+  AppShell navigation, Google configuration, and the single-use token guard.
 - Run `npm run build` for type and production build validation.
 - Run `npm run lint` for static checks.
 - Manually verify login, register, protected redirect, and logout if a backend or mocks are available.

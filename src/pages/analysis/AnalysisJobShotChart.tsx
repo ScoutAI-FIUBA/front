@@ -20,6 +20,11 @@ import {
   loadAnalysisJobShotChart,
   type AnalysisJobShotChartLoadContext,
 } from './analysis-job-shot-chart'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+} from './analysis-job-player-identity'
 
 interface AnalysisJobShotChartProps {
   job: ProcessingJob
@@ -79,7 +84,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
   const [chart, setChart] = useState<AnalysisJobShotChart | null>(null)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const [selectedTrack, setSelectedTrack] = useState('all')
+  const [selectedPlayer, setSelectedPlayer] = useState('all')
 
   useEffect(() => {
     let active = true
@@ -87,7 +92,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
     if (!loadKey) {
       setChart(null)
       setError('')
-      setSelectedTrack('all')
+      setSelectedPlayer('all')
       setLoadState('blocked')
       return () => {
         active = false
@@ -96,7 +101,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
 
     setChart(null)
     setError('')
-    setSelectedTrack('all')
+    setSelectedPlayer('all')
     setLoadState('loading')
     void loadAnalysisJobShotChart(context, analysisJobShotChartService).then(
       (loaded) => {
@@ -163,9 +168,10 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
     )
   }
 
-  const filteredShots = selectedTrack === 'all'
+  const filteredShots = selectedPlayer === 'all'
     ? chart.shots
-    : chart.shots.filter((shot) => shot.trackId === Number(selectedTrack))
+    : chart.shots.filter((shot) => analysisJobPlayerKey(shot) === selectedPlayer)
+  const playerLabels = buildAnalysisJobPlayerLabels(chart.players)
   const validShots = filteredShots.filter(
     (shot) => shotChartPointToPercent(chart.court, shot) != null,
   )
@@ -181,15 +187,15 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
           </p>
         </div>
         {chart.players.length > 0 && (
-          <Select value={selectedTrack} onValueChange={setSelectedTrack}>
+          <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
             <SelectTrigger className="w-full sm:w-56" aria-label="Filtrar tiros por jugador">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los jugadores</SelectItem>
               {chart.players.map((player) => (
-                <SelectItem key={player.trackId} value={String(player.trackId)}>
-                  {player.displayName}
+                <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
+                  {analysisJobPlayerLabelFromMap(player, playerLabels)}
                 </SelectItem>
               ))}
             </SelectContent>

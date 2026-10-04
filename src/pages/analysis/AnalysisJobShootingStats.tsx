@@ -18,6 +18,11 @@ import {
   type AnalysisJobStatsLoadContext,
 } from './analysis-job-stats'
 import { analysisJobTeamGroupLabel } from './analysis-job-team-side'
+import {
+  analysisJobPlayerKey,
+  analysisJobPlayerLabelFromMap,
+  buildAnalysisJobPlayerLabels,
+} from './analysis-job-player-identity'
 
 interface AnalysisJobShootingStatsProps {
   job: ProcessingJob
@@ -142,6 +147,7 @@ function CoverageSummary({ stats }: { stats: AnalysisJobShootingStats }) {
       <dl className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
         <div><dt>Tiros detectados</dt><dd className="font-semibold text-foreground">{coverage.shotsDetected}</dd></div>
         <div><dt>Tiros contabilizados</dt><dd className="font-semibold text-foreground">{coverage.shotsScored}</dd></div>
+        {coverage.playersOnCourt > 0 && <div><dt>Mayor presencia observada</dt><dd className="font-semibold text-foreground">{coverage.playersOnCourt}</dd></div>}
         <div><dt>Camisetas identificadas</dt><dd className="font-semibold text-foreground">{coverage.playersWithJerseyNumber}/{coverage.playersTracked}</dd></div>
         <div><dt>Jugadores vinculados al plantel</dt><dd className="font-semibold text-foreground">{coverage.playersLinkedToRoster}/{coverage.playersTracked}</dd></div>
       </dl>
@@ -254,6 +260,10 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
   }
 
   const isEmpty = stats.teams.length === 0 && stats.players.length === 0
+  const orderedPlayers = [...stats.players].sort(
+    (left, right) => Number(right.onCourt) - Number(left.onCourt),
+  )
+  const playerLabels = buildAnalysisJobPlayerLabels(orderedPlayers)
 
   return (
     <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="shooting-stats-title">
@@ -295,15 +305,26 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {stats.players.map((player) => (
-                      <tr key={player.trackId}>
+                    {orderedPlayers.map((player) => (
+                      <tr key={analysisJobPlayerKey(player)}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{player.rosterName ?? player.displayName}</span>
+                            <span className="font-medium text-foreground">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
                             {player.rosterName && <Badge variant="analyzed">Plantel</Badge>}
+                            {player.onCourt && (
+                              <Badge
+                                variant="outline"
+                                title="Identificado por el backend según su cantidad total de observaciones"
+                              >
+                                Mayor presencia
+                              </Badge>
+                            )}
                           </div>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            Seguimiento {player.trackId}{player.jerseyNumber ? ` · #${player.jerseyNumber}` : ''}
+                            {player.stablePlayerId
+                              ? `${player.observations} observaciones totales`
+                              : `Seguimiento ${player.trackId}`}
+                            {player.jerseyNumber ? ` · #${player.jerseyNumber}` : ''}
                           </p>
                           {Object.keys(player.byZone).length > 0 && (
                             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
