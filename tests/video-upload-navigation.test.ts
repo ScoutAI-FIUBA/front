@@ -28,6 +28,12 @@ test('upload returning to new analysis selects the created video', () => {
   assert.equal(videoUploadSuccessPath(params, { id: 'video/1', teamId: 'team-1' }), '/analisis/nuevo?team_id=team-1&video_id=video%2F1')
 })
 
+test('upload accepts Partidos as a product return destination', () => {
+  assert.equal(safeVideoUploadReturnPath('/partidos'), '/partidos')
+  const path = videoUploadPath({ returnTo: '/partidos' })
+  assert.equal(new URL(path, 'https://scoutai.local').searchParams.get('return_to'), '/partidos')
+})
+
 test('upload drop affordance has real handlers and a pending guard', () => {
   const source = readFileSync(new URL('../src/pages/videos/VideoUploadPage.tsx', import.meta.url), 'utf8')
   assert.match(source, /onDragEnter=/)

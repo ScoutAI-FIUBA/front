@@ -18,7 +18,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { StatusIndicator } from '@/components/ui/status-indicator'
 import { cn, formatDate } from '@/lib/utils'
-import { analysisService, videoService } from '@/services/registry'
+import { analysisService, isMockApiEnabled, videoService } from '@/services/registry'
 import type { AnalysisDetail, AnalysisStatus, GameEvent } from '@/types'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -69,6 +69,11 @@ export function AnalysisDetailPage() {
     setDetail(null)
 
     if (!id) {
+      setLoadState('not-found')
+      return
+    }
+
+    if (!isMockApiEnabled) {
       setLoadState('not-found')
       return
     }
@@ -172,7 +177,7 @@ export function AnalysisDetailPage() {
         <EmptyState
           icon={<CircleAlert className="h-5 w-5" aria-hidden="true" />}
           title="No encontramos este análisis"
-          description="Es posible que el enlace ya no sea válido o que el análisis no esté disponible."
+          description={isMockApiEnabled ? 'Es posible que el enlace ya no sea válido o que el análisis no esté disponible.' : 'Las revisiones manuales reales se guardan como colecciones de clips.'}
           action={(
             <Button asChild variant="outline">
               <Link to="/revision-manual">Ver todas las revisiones</Link>

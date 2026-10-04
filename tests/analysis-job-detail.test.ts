@@ -48,14 +48,14 @@ test('RUNNING and DONE jobs expose the correct action and refresh-safe detail UR
   assert.equal(canOpenAnalysisJob(doneJob), true)
 })
 
-test('FAILED jobs expose their product detail while QUEUED waits for processing', () => {
-  assert.equal(analysisJobDetailActionLabel(job('QUEUED')), null)
+test('QUEUED and FAILED jobs expose their existing product detail', () => {
+  assert.equal(analysisJobDetailActionLabel(job('QUEUED')), 'Ver progreso')
   assert.equal(analysisJobDetailActionLabel(job('FAILED')), 'Ver detalle')
-  assert.equal(canOpenAnalysisJob(job('QUEUED')), false)
+  assert.equal(canOpenAnalysisJob(job('QUEUED')), true)
   assert.equal(canOpenAnalysisJob(job('FAILED')), true)
 })
 
-test('the top action opens RUNNING progress while QUEUED stays non-navigable', () => {
+test('the top action opens active job progress without inventing another job', () => {
   const source = readFileSync(
     new URL('../src/pages/videos/VideoAnalysisJobs.tsx', import.meta.url),
     'utf8',
@@ -65,6 +65,7 @@ test('the top action opens RUNNING progress while QUEUED stays non-navigable', (
   assert.match(source, /<Link to=\{analysisJobDetailPath\(runningJob\)\}>/)
   assert.match(source, /runningJob \? \(/)
   assert.match(source, /activeJobExists\s*\? 'Análisis en curso'/)
+  assert.equal(analysisJobDetailActionLabel(job('QUEUED')), 'Ver progreso')
   assert.equal(analysisJobDetailActionLabel(job('DONE')), 'Ver análisis')
 })
 

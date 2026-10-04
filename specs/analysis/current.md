@@ -64,6 +64,12 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 
 ## Current Behavior
 
+### Manual-review truthfulness checkpoint
+
+- In real-API mode, manual review never loads or displays seeded mock sessions or legacy mock result details.
+- A real manual review persists its ranges as a backend `ClipCollection` and navigates to that collection; it does not fabricate an `AnalysisSession`.
+- Mock mode may retain local demo sessions for development, but detected-player presentation never exposes randomly generated analytics.
+
 ### Phase 2 global discovery
 
 - Desktop relies on the persistent sidebar for the global `Nuevo análisis` action; `/analisis` keeps the page-level action on smaller viewports and keeps a contextual action in the empty state.

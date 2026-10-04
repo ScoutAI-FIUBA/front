@@ -7,7 +7,7 @@ const readSource = (relativePath: string) => readFileSync(
   'utf8',
 )
 
-test('account recovery and verification routes are integrated without changing the shell', () => {
+test('account recovery and verification routes remain integrated in the redesigned shell', () => {
   const appSource = readSource('../src/App.tsx')
   const shellSource = readSource('../src/components/layout/AppShell.tsx')
 
@@ -20,7 +20,7 @@ test('account recovery and verification routes are integrated without changing t
     assert.match(appSource, new RegExp(`path="${route}"`))
   }
   assert.match(shellSource, /to="\/cuenta"/)
-  assert.match(shellSource, /pathname\.startsWith\('\/cuenta'\)/)
+  assert.match(shellSource, /aria-label=\{`Cuenta de/)
 })
 
 test('Google Sign-In remains disabled when no client id is configured', () => {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { toast } from 'sonner'
 import type { AppShellOutletContext } from '@/components/layout/AppShell'
-import { analysisService, clipCollectionService, playerService } from '@/services/registry'
+import { analysisService, clipCollectionService, isMockApiEnabled, playerService } from '@/services/registry'
 import type { Player } from '@/types'
 import { AnalysisSetup, type PreparedAnalysisSetup } from './AnalysisSetup'
 import {
@@ -280,6 +280,15 @@ export function AnalysisNewPage() {
           endMs: Math.round(clip.endSecond * 1000),
         })),
       )
+
+      if (!isMockApiEnabled) {
+        setSaveState('saved')
+        toast.success(`${clips.length} clips guardados`)
+        navigationTimerRef.current = window.setTimeout(() => {
+          navigate(`/videos/${preparedSetup.video.id}/colecciones/${collection.id}`)
+        }, SAVED_ACKNOWLEDGEMENT_MS)
+        return
+      }
 
       const relatedPlayerIds = [...new Set(clips.flatMap((clip) => clip.playerIds ?? []))]
       const session = await analysisService.saveManualAnalysis({
