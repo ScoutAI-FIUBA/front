@@ -72,6 +72,48 @@
     color-scheme: dark;
   }
 
+  .scout-product-theme {
+    --background: 225 24% 6%;
+    --foreground: 220 16% 96%;
+    --surface: 221 24% 11%;
+    --surface-elevated: 221 22% 13%;
+    --surface-subtle: 219 18% 16%;
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface-elevated);
+    --popover-foreground: var(--foreground);
+    --border: 220 20% 18%;
+    --border-strong: 220 18% 28%;
+    --input: var(--border);
+    --primary: 20 100% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 20 100% 61%;
+    --primary-hover-foreground: 0 0% 100%;
+    --primary-subtle: 20 50% 16%;
+    --muted: var(--surface-subtle);
+    --muted-foreground: 220 13% 68%;
+    --accent: var(--primary-subtle);
+    --accent-foreground: 20 100% 70%;
+    --ring: var(--primary);
+    --scout-bg: #0b0d12;
+    --scout-card: #151922;
+    --scout-panel: #11151d;
+    --scout-border: #252b38;
+    --scout-border-strong: #3a4254;
+    --scout-text: #f4f5f7;
+    --scout-muted: #a3abba;
+    --scout-accent: #ff6a1f;
+    min-height: 100vh;
+    font-family: "Barlow", "Segoe UI Variable", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+
+  .scout-display {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+
   * {
     @apply border-border;
   }

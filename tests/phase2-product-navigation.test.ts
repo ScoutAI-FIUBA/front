@@ -18,7 +18,7 @@ test('/analisis and Inicio use real ProcessingJob catalogue without legacy sessi
   assert.doesNotMatch(row, /job\.id\.slice/)
 })
 
-test('new automatic analysis is primary while manual routes stay available', () => {
+test('legacy analysis and manual routes stay available outside primary navigation', () => {
   const app = readSource('../src/App.tsx')
   const shell = readSource('../src/components/layout/AppShell.tsx')
 
@@ -26,18 +26,21 @@ test('new automatic analysis is primary while manual routes stay available', () 
   assert.match(app, /path="\/revision-manual" element=\{<ManualAnalysisPage/)
   assert.match(app, /path="\/revision-manual\/nuevo" element=\{<AnalysisNewPage/)
   assert.match(app, /path="\/analisis\/:id" element=\{<AnalysisDetailPage/)
-  assert.match(shell, /label: 'Revisión manual'/)
-  assert.match(shell, />Nuevo análisis</)
+  assert.doesNotMatch(shell, /label: 'Revisión manual'/)
+  assert.doesNotMatch(shell, /label: 'Análisis'/)
+  assert.doesNotMatch(shell, /label: 'Videos'/)
 })
 
-test('Partidos stays routable but leaves primary navigation and declares mock status', () => {
+test('Partidos is the real primary library over videos and ProcessingJobs', () => {
   const app = readSource('../src/App.tsx')
   const shell = readSource('../src/components/layout/AppShell.tsx')
   const matches = readSource('../src/pages/matches/MatchesPage.tsx')
 
   assert.match(app, /path="\/partidos" element=\{<MatchesPage/)
-  assert.doesNotMatch(shell, /to: '\/partidos'/)
-  assert.match(matches, /Herramienta experimental con datos de demostración/)
+  assert.match(shell, /to: '\/partidos', label: 'Partidos'/)
+  assert.match(matches, /useAnalysisJobCatalog/)
+  assert.match(matches, /buildMatchLibrary/)
+  assert.doesNotMatch(matches, /matchService|Herramienta experimental|datos de demostración/)
 })
 
 test('expired auth uses a neutral redirect state instead of a connection alert', () => {
@@ -66,14 +69,16 @@ test('direct Video playback and automatic job navigation remain visible', () => 
   assert.match(home, /analysisAction\.type === 'new-analysis' \? <Play[^:]+: <ArrowRight/)
 })
 
-test('desktop relies on the sidebar CTA while page CTAs stay available below lg', () => {
-  const home = readSource('../src/pages/dashboard/DashboardPage.tsx')
-  const analysis = readSource('../src/pages/analysis/AnalysisPage.tsx')
+test('the primary shell exposes only Inicio, Partidos, Equipos and Jugadores', () => {
+  const shell = readSource('../src/components/layout/AppShell.tsx')
 
-  assert.match(home, /action=\{<div className="lg:hidden">/)
-  assert.match(analysis, /<div className="lg:hidden">/)
-  assert.match(home, /Todavía no hay resultados terminados[\s\S]*Nuevo análisis/)
-  assert.match(analysis, /catalog\.items\.length === 0[\s\S]*Nuevo análisis/)
+  assert.match(shell, /to: '\/dashboard', label: 'Inicio'/)
+  assert.match(shell, /to: '\/partidos', label: 'Partidos'/)
+  assert.match(shell, /to: '\/equipos', label: 'Equipos'/)
+  assert.match(shell, /to: '\/jugadores', label: 'Jugadores'/)
+  assert.doesNotMatch(shell, /to: '\/videos'/)
+  assert.doesNotMatch(shell, /to: '\/analisis'/)
+  assert.doesNotMatch(shell, /to: '\/revision-manual'/)
 })
 
 test('temporary MVP copy is absent from login', () => {
