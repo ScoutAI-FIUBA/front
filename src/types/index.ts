@@ -460,7 +460,6 @@ export interface AnalysisDetail {
     name: string
     jerseyNumber: string
     position: string
-    heatmapPercent: number
   }>
 }
 

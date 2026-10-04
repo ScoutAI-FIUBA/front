@@ -27,6 +27,7 @@ Frontend integration for the backend clip collections foundation.
 - The collections page loads the selected video and its collections.
 - Users can create a collection with a required name and optional description.
 - Collection detail displays virtual clips in backend position order.
+- Because persisted items do not expose semantic labels, notes, or player associations, the UI uses an honest positional-and-range fallback such as `Clip 1 · 00:42–00:55`; it never reconstructs metadata that the backend did not persist.
 - Users add clips by defining `startMs` and `endMs`; no per-clip video file is uploaded.
 - The UI validates non-negative ranges, end after start, a maximum duration of 30 seconds, and the known video duration.
 - Users can delete virtual clips after confirmation.

@@ -276,10 +276,8 @@ export function VideoCollectionDetailPage() {
                 {selectedItem ? (
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium">Clip {selectedItem.position}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatSeconds(selectedItem.startMs / 1000)}–{formatSeconds(selectedItem.endMs / 1000)} · {formatDate(selectedItem.createdAt)}
-                      </p>
+                      <p className="font-medium">Clip {selectedItem.position} · {formatSeconds(selectedItem.startMs / 1000)}–{formatSeconds(selectedItem.endMs / 1000)}</p>
+                      <p className="text-xs text-muted-foreground">Guardado el {formatDate(selectedItem.createdAt)}</p>
                     </div>
                     <Button
                       variant="outline"
@@ -333,10 +331,8 @@ export function VideoCollectionDetailPage() {
                     <Play className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">Clip {item.position}</span>
-                    <span className="block text-xs text-muted-foreground">
-                      {formatSeconds(item.startMs / 1000)}–{formatSeconds(item.endMs / 1000)}
-                    </span>
+                    <span className="block truncate text-sm font-medium">Clip {item.position} · {formatSeconds(item.startMs / 1000)}–{formatSeconds(item.endMs / 1000)}</span>
+                    <span className="block text-xs text-muted-foreground">Rango del video original</span>
                   </span>
                 </button>
                 <Button

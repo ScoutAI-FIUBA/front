@@ -38,7 +38,6 @@ function buildDetail(sessionId: string): AnalysisDetail | null {
       name: `${p.firstName.charAt(0)}. ${p.lastName}`,
       jerseyNumber: p.jerseyNumber ?? '',
       position: p.primaryPosition,
-      heatmapPercent: Math.floor(Math.random() * 40) + 30,
     }))
 
   return { session, match, video, homeTeam, awayTeam, manualAnalysis, events, detectedPlayers }
