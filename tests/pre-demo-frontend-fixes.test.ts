@@ -62,6 +62,6 @@ test('video description is not represented as a rival', () => {
   assert.match(mockSource, /description: dto\.description/)
   assert.doesNotMatch(apiSource, /rivalName/)
   assert.doesNotMatch(mockSource, /rivalName/)
-  assert.match(pageSource, />Descripción</)
+  assert.match(pageSource, /video\.description/)
   assert.doesNotMatch(pageSource, />Rival</)
 })

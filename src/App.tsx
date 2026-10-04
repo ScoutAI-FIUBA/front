@@ -19,9 +19,11 @@ import { VideoUploadPage } from '@/pages/videos/VideoUploadPage'
 import { VideoCollectionsPage } from '@/pages/videos/VideoCollectionsPage'
 import { VideoCollectionDetailPage } from '@/pages/videos/VideoCollectionDetailPage'
 import { AnalysisPage } from '@/pages/analysis/AnalysisPage'
+import { AnalysisJobNewPage } from '@/pages/analysis/AnalysisJobNewPage'
 import { AnalysisNewPage } from '@/pages/analysis/AnalysisNewPage'
 import { AnalysisDetailPage } from '@/pages/analysis/AnalysisDetailPage'
 import { AnalysisJobDetailPage } from '@/pages/analysis/AnalysisJobDetailPage'
+import { ManualAnalysisPage } from '@/pages/analysis/ManualAnalysisPage'
 
 export default function App() {
   return (
@@ -45,8 +47,11 @@ export default function App() {
             <Route path="/videos/:videoId/colecciones" element={<VideoCollectionsPage />} />
             <Route path="/videos/:videoId/colecciones/:collectionId" element={<VideoCollectionDetailPage />} />
             <Route path="/analisis" element={<AnalysisPage />} />
-            <Route path="/analisis/nuevo" element={<AnalysisNewPage />} />
+            <Route path="/analisis/nuevo" element={<AnalysisJobNewPage />} />
             <Route path="/analisis/jobs/:jobId" element={<AnalysisJobDetailPage />} />
+            <Route path="/revision-manual" element={<ManualAnalysisPage />} />
+            <Route path="/revision-manual/nuevo" element={<AnalysisNewPage />} />
+            <Route path="/analisis/manual/nuevo" element={<Navigate to="/revision-manual/nuevo" replace />} />
             <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
           </Route>
         </Route>

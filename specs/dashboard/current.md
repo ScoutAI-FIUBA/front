@@ -2,86 +2,52 @@
 
 ## Status
 
-Implemented Phase 6B Inicio redesign.
+ScoutAI v2 Phase 2 automatic-analysis home.
 
-## Area
+## Route
 
-Protected `/dashboard` route, presented to users as Inicio.
+- `/dashboard`: protected Inicio surface.
 
 ## Current Behavior
 
-- The existing dashboard renders KPI cards, quick creation cards, recent mock activity, a synthetic system-health notice, and a player table with fabricated ratings.
-- Dashboard statistics and recent activity come from the mock analysis service.
-- The page does not distinguish loading, successful-empty, and service-error states.
+- Desktop relies on the persistent sidebar for the global `Nuevo análisis` action; the page-level action remains visible below the desktop breakpoint and empty states keep their contextual actions.
+- The desktop reading order is deliberately vertical: active work first, recent completed results second, and recent source material third. Typography, spacing, and dividers establish priority without KPI cards.
 
-## Goal
+- Inicio answers “what is happening and what do I do next?” with real automatic-analysis activity.
+- The page consumes the shared ProcessingJob catalogue used by Analysis and Videos; it does not read mock `AnalysisSession` records.
+- Active jobs appear first with backend status and real progress only when `progress_percent` exists.
+- Recently completed jobs use the source video title and team as their human identity and link directly to the result workspace.
+- Recent videos stay secondary. Their primary action follows the latest known ProcessingJob using the same labels and workspace URLs as Videos; only material without a known job offers `Analizar`. The team-scoped Videos context remains available.
+- The primary CTA is `Nuevo análisis` and targets `/analisis/nuevo`.
+- No decorative KPIs, synthetic insights, manual-session codes, fake health states, or fabricated progress are shown.
 
-Replace the KPI dashboard with a state-aware task entry point that only presents analysis work backed by trustworthy data available in the current frontend.
+## States
 
-## Scope
+- Initial loading uses layout-preserving skeletons.
+- Cached catalogue content remains visible while active jobs refresh.
+- Partial team/video/job failures preserve usable content and show a scoped warning.
+- A real network failure with no cached catalogue shows retry.
+- Authentication failure invalidates the shared token and ProtectedRoute returns to Login.
+- A new user with no videos sees `Subí tu primer video`.
+- A user with videos but no jobs sees a ready-to-analyse state instead of a false first-use state.
 
-- Present `/dashboard` as Inicio.
-- Load existing analysis sessions and resolve their details through the current analysis service.
-- Treat only details containing `manualAnalysis` as usable recent work on Inicio.
-- Keep loading, successful-empty, successful-with-work, and error states distinct.
-- Highlight at most one latest saved analysis and present up to three older items as lightweight rows.
-- Link review actions to the existing `/analisis/:id` route.
-- Provide a contextual `Empezar análisis` action in the successful-empty state.
+## Data And Performance
 
-## Non-Scope
+- Data comes from the frontend Phase 2 catalogue composition: teams → videos by team → jobs by video.
+- The catalogue uses bounded concurrency, a 60-second in-memory cache, partial results, and polling only for `QUEUED` or `RUNNING` jobs.
+- A dedicated authenticated global-jobs backend endpoint remains the long-term solution.
 
-- Changes to analysis seeds, service contracts, service implementations, types, or `/analisis` behavior.
-- Durable draft or resume support.
-- Displaying synthetic progress, frame counts, ratings, AI results, activity, or system health.
-- Redesigning the analysis list, setup, workspace, or review pages.
-
-## Routes
-
-- `/dashboard`: Inicio.
-- `/analisis/nuevo`: destination for `Empezar análisis`.
-- `/analisis/:id`: destination for reviewing saved manual analysis work.
-- `/analisis`: destination used when more saved work exists than Inicio displays.
-
-## Files Involved
+## Files
 
 - `src/pages/dashboard/DashboardPage.tsx`
-- `src/components/ui/page-header.tsx`
-- `src/components/ui/empty-state.tsx`
-- `src/components/ui/status-indicator.tsx`
-- `src/services/contracts/analysis.service.ts` (consumed without modification)
-- `src/services/mock/analysis.mock.ts` (consumed without modification)
-
-## Services And Data
-
-- `analysisService.listSessions()` supplies candidate session ids.
-- `analysisService.getBySessionId()` resolves detail records.
-- A detail is usable on Inicio only when `manualAnalysis` exists.
-- The local view model uses `manualAnalysis.name`, `manualAnalysis.savedAt`, `manualAnalysis.clips.length`, and the related video title.
-- Synthetic seed sessions remain available everywhere else and are filtered only in the Inicio presentation layer.
-
-## Acceptance Criteria
-
-- Loading is presented independently and cannot display the empty-state message.
-- A service failure presents an explicit error with a retry action and cannot display the empty state.
-- A successful response with no usable manual analysis displays `Empezá tu primer análisis` and one contextual primary action.
-- A successful response with usable work displays the latest item as `Listo para revisar`.
-- The highlighted item exposes only its meaningful title, real saved date, real clip count, video title, and review action.
-- Up to three older usable items appear below as lightweight rows.
-- `Ver todos los análisis` appears only when additional usable items are hidden.
-- No KPI cards, system-health message, fabricated rating, processing progress, frame count, SCAN id, or fake activity appears.
-- The mobile layout keeps the primary task first and uses no horizontal table.
+- `src/pages/analysis/use-analysis-job-catalog.ts`
+- `src/pages/analysis/analysis-job-catalog-store.ts`
+- `src/pages/analysis/analysis-job-catalog.ts`
+- `src/components/layout/AppShell.tsx`
 
 ## Verification
 
-- Run `npm run lint`.
-- Run `npm run build`.
-- Inspect successful-empty and successful-with-work states at desktop width.
-- Inspect Inicio and the mobile navigation at approximately 390px.
-- Verify that a forced service failure renders error rather than empty state where practical.
-
-## Risks Or Notes
-
-- Analysis remains mock-backed in the current service registry even when other domains use the backend.
-- Resolving detail records creates parallel mock calls because no recent-analysis summary endpoint exists.
-- Manual analysis metadata is session-scoped in the current frontend and is not equivalent to a durable draft.
-- The existing analysis list can show seed sessions while Inicio intentionally excludes them.
+- Focused Phase 2/2.1 tests and the full 170-test frontend suite pass.
+- `npm run build` passes with the known Vite chunk-size warning.
+- `npm run lint` reports 0 errors and the two pre-existing Fast Refresh warnings.
+- Phase 2.1 visual QA covers the prioritised activity state at 1440 × 900 and 390 × 844.

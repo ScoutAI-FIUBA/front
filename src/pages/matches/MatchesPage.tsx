@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Beaker, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -105,6 +105,14 @@ export function MatchesPage() {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+        <Beaker className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+        <div>
+          <p className="font-semibold text-foreground">Herramienta experimental con datos de demostración</p>
+          <p className="mt-1 text-muted-foreground">Partidos no alimenta el análisis automático actual. Para trabajar con material real, usá Videos y Análisis.</p>
+        </div>
       </div>
 
       <div className="grid gap-4">

@@ -32,7 +32,7 @@ test('only ready videos expose direct playback', () => {
   const pageSource = readSource('../src/pages/videos/VideosPage.tsx')
   assert.match(pageSource, /canOpenVideoPlayback\(video\)/)
   assert.match(pageSource, /onClick=\{\(\) => onPlayVideo\(video\)\}/)
-  assert.match(pageSource, /> Ver video/)
+  assert.match(pageSource, />Ver video/)
 })
 
 test('opening playback requests detail and returns its fresh URL', async () => {

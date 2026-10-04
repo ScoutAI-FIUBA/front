@@ -4,12 +4,14 @@ El estado operativo del working tree y el próximo punto de continuación están
 
 ## Status
 
-Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1.1 polish.
+Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery flow, preserving the Phase 1.1 result workspace.
 
 ## Routes
 
-- `/analisis`: analysis sessions list.
-- `/analisis/nuevo`: manual analysis playground for demo use.
+- `/analisis`: global real ProcessingJob catalogue composed from teams, videos, and per-video jobs.
+- `/analisis/nuevo`: automatic-analysis entry flow: choose a ready video or upload one, then create its ProcessingJob.
+- `/revision-manual`: secondary legacy/manual analysis list.
+- `/revision-manual/nuevo`: manual clipping playground preserved for compatibility.
 - `/analisis/:id`: analysis detail page.
 - `/analisis/jobs/:jobId?team_id=...`: real processing-job detail.
 
@@ -62,6 +64,16 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 
 ## Current Behavior
 
+### Phase 2 global discovery
+
+- Desktop relies on the persistent sidebar for the global `Nuevo análisis` action; `/analisis` keeps the page-level action on smaller viewports and keeps a contextual action in the empty state.
+- ProcessingJob status language is consistent across discovery surfaces: `QUEUED` is `En cola`, `RUNNING` is `En proceso`, `DONE` is `Completado`, and `FAILED` is `Fallido`.
+- Automatic ProcessingJobs are the primary meaning of Analysis. Legacy `AnalysisSession` records are confined to the secondary `Revisión manual` routes.
+- Because the backend has no global jobs endpoint, the frontend composes teams → team videos → jobs per video with bounded concurrency, partial-failure reporting, and a short in-memory session cache.
+- The catalogue polls only known `QUEUED` or `RUNNING` jobs through the job detail endpoint. It never repeats the complete discovery graph on each polling interval.
+- Analysis identity is human-first: video title and team are primary; dates, duration, state, and real progress are supporting metadata. UUIDs remain in technical Details.
+- A dedicated backend endpoint for the authenticated user's global analyses remains the correct long-term replacement for this client-side composition.
+
 - `/analisis/jobs/:jobId?team_id=...` is a dedicated dark analysis workspace organized around persistent source video, one active result surface, and evidence-oriented navigation.
 - The workspace header uses video title, team, status, analysis date, and optional duration as its primary identity. The job UUID is confined to Details.
 - The embedded source player resolves a fresh team-scoped playback URL, keeps loading/error/retry states local, exposes a stable seek capability, and preserves playback time when refreshing an expired or failed signed URL where the browser permits it.
@@ -95,14 +107,12 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - Known backend issue: v2 confirmed jersey numbers may be keyed by `stable_player_id` while team-side still consumes track-keyed numbers. As a result, `numbers`, `roster_matches`, or `suggested_team_side` may be incomplete; the frontend renders the endpoint response and does not infer or patch mappings the contract did not return.
 - Similar-analysis scoring explicitly excludes player identity, so stable ids do not alter its request, ordering, or presentation.
 
-- Analysis list loads sessions through a single `analysisService.listSessions()` request and does not hydrate every row with detail requests.
-- Analysis list exposes an `Empezar análisis` action that keeps the global creation language consistent.
-- Analysis list is a single scannable work list rather than a grid of equally weighted cards.
-- Each row uses only reliable `AnalysisSession` fields: session code, pending/processing/completed status, and state-relevant progress metadata.
-- Completed rows omit the redundant 100% progress bar and lead to review; processing rows expose progress and remaining time; pending rows do not fabricate progress detail.
+- The secondary `/revision-manual` list loads legacy sessions through `analysisService.listSessions()` and does not hydrate every row with detail requests.
+- Manual work remains a single scannable list under human `Revisión manual` language; it is not the primary meaning of Analysis.
+- Legacy rows use only reliable `AnalysisSession` fields and preserve their existing detail routes without being mixed into the automatic catalogue.
 - A real `RUNNING` processing-job detail with a numeric `progressPercent` supplements the existing accessible percentage and progress bar with a decorative shot arc. Ball position and visible trajectory are derived only from that real percentage, never from synthetic phases or autonomous looping; reduced-motion users receive the corresponding static frame.
 - Analysis list distinguishes loading, retryable error, successful empty, and successful populated states.
-- New analysis uses progressive disclosure inside the existing `/analisis/nuevo` route.
+- Manual clip creation uses progressive disclosure inside `/revision-manual/nuevo`; `/analisis/nuevo` now starts an automatic ProcessingJob from a ready video.
 - Setup first asks which material the user wants to analyze and offers an existing video or a new local file.
 - The workspace, timeline, clip editor, roster, and `Guardar análisis` action are not rendered during Setup.
 - Existing videos are not considered ready until `videoService.getById()` resolves a usable playback URL and the browser can read its media metadata.
@@ -229,8 +239,8 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - A parallel `IAnalysisJobService` models backend processing jobs without replacing the existing analysis-session service.
 - The API implementation exposes `listForVideo(videoId, teamId)` through `GET /videos/{video_id}/jobs?team_id=...` and `get(jobId, teamId)` through `GET /jobs/{job_id}?team_id=...`.
 - Processing job statuses remain the backend values `QUEUED`, `RUNNING`, `DONE`, and `FAILED`; nullable `progress_percent` is mapped to `progressPercent`.
-- The Videos page consumes only `listForVideo(videoId, teamId)` inside a per-video history disclosure; the global Analysis pages remain on `AnalysisSession` and the mock `analysisService`.
-- The job-specific detail consumes `get(jobId, teamId)` while `/analisis`, `/analisis/nuevo`, and `/analisis/:id` remain on the existing mock/session flow.
+- Videos, Inicio, and `/analisis` share a client-composed catalogue built from `listForVideo(videoId, teamId)`; per-video history keeps the same real boundary.
+- `/analisis/nuevo` creates a ProcessingJob from a ready video. `/revision-manual`, `/revision-manual/nuevo`, and the compatibility `/analisis/:id` route retain the mock/manual `AnalysisSession` flow.
 - The dedicated `analysisJobTeamSideService` reads detected sides and persists side `0 | 1` without extending `AnalysisSession`.
 - Team-side confirmation sends `PUT /jobs/{jobId}/our-team?team_id=...` with `{ "team_side": 0 | 1 }` and maps the returned processing job.
 - The dedicated `analysisJobStatsService` maps the complete `/stats` response while remaining separate from both `AnalysisSession` and the team-side mutation boundary.
@@ -244,7 +254,7 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 ## Non-Scope
 
 - There is no real backend `AnalysisSession` API wired in the registry.
-- Listing jobs globally is not part of the current processing-job boundary.
+- Listing jobs globally is not part of the backend processing-job boundary; Phase 2 therefore composes the catalogue client-side with bounded concurrency, partial results, a short session cache, and active-only polling.
 - The new analysis playground is a sprint/demo flow, not the final backend contract.
 - Manual-analysis labels are not persisted on backend collection items.
 - Persisted collection items cannot currently be updated through the frontend service contract; clip editing is limited to staged local drafts before analysis save.
@@ -257,7 +267,7 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 
 ## Verification
 
-- Automated frontend suite: 151/151 tests passing, including v1 track fallback, v2 stable identity, `observations`, `on_court`, non-chronological presence copy, stable shot filtering/selection, side `0`, side `1`, side changes, Shooting Stats, Shot Chart, Court Positions, Heatmap, similar analyses, workspace lifecycle states, timestamp eligibility, embedded-player recovery, Movement sequence semantics, responsive navigation, gating, and request keys that prevent stale data or unnecessary refetches.
+- Automated frontend suite: 166/166 tests passing, including the Phase 1.1 result workspace plus global ProcessingJob composition, partial failures, active-only polling, human identity, automatic/manual routing, video/analysis status separation, contextual upload, direct playback, and auth expiry.
 - The v2 processing-job workspace has focused coverage for `QUEUED -> RUNNING -> DONE` polling, persistent video placement across result tabs, made/missed/unknown local filters, nullable timestamps, imperative seeking, source URL refresh, and direct known-team video lookup without an all-team fan-out.
 - Court Positions adds 11 focused tests for mapping, `0 | 1 | null` sides, jersey/track labels, empty and truncated coverage, retry, local filters, side changes without refetch, 28 × 15 coordinate mapping, and responsive width guards.
 - Heatmap adds 10 focused tests for one-metre binning, boundary and invalid coordinates, out-of-court samples, dynamic court dimensions, relative intensity, filter-scoped normalization, empty valid samples, and request reuse across view and filter changes.
@@ -267,7 +277,7 @@ Implemented behavior through the ScoutAI v2 automatic Analysis Workspace Phase 1
 - A controlled mobile smoke test verified the completed workspace at `/analisis/jobs/job-qa?team_id=team-3`, including the compact identity header, persistent video recovery state, Overview metrics, shot filters and evidence actions, movement presentation, similar-analysis empty state, and technical Details.
 - Phase 1.1 visual QA covered the completed workspace at 1440 × 900 and 390 × 844, including Overview, Shots master-detail and selection, Movement before/during sequence playback, heatmap, Similar, compact source-video failure, and mobile module discovery. The dedicated local fixture copy uses basketball-oriented team, venue, and match labels; no backend data was changed.
 - Real job `f504888a-978a-4f43-a130-280e730c5a04` was verified through `QUEUED → RUNNING → DONE` with working polling.
-- The current real end-to-end smoke is blocked before team/video discovery: Docker is not running, no local frontend/backend/database ports are listening, the configured deployed backend requires an authenticated session even for its OpenAPI document, and this workspace has neither deployed credentials/session nor a video fixture. Contract-level v1/v2 fixtures remain covered without adding fallback mocks or synthetic production results.
+- Phase 2 visual smoke used the mock teams/videos plus a controlled local ProcessingJob service with `DONE`, `RUNNING`, and `FAILED` states. A separate controlled 401 verified refresh failure, token invalidation, and redirect to Login without a connection alert. Full real-backend upload-to-results smoke remains dependent on authenticated backend services and a processable video fixture.
 
 - Run `npm run build`.
 - Run `npm run lint`.
