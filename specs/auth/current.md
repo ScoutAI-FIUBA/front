@@ -13,7 +13,8 @@ Current behavior documentation.
 - `/verificar-email`: confirm an emailed verification token.
 - `/cuenta`: authenticated profile, password change, and verification.
 - Protected routes redirect unauthenticated users to `/login`.
-- Authenticated users visiting `/login` are redirected to `/dashboard`.
+- Authenticated users visiting `/login` return to a preserved internal deep
+  link when one exists, otherwise they are redirected to `/dashboard`.
 
 ## Files Involved
 
@@ -40,13 +41,17 @@ Current behavior documentation.
 
 - Protected data pages distinguish an unrecoverable HTTP 401 from a network failure. Refreshable expiry remains silent through the shared HTTP retry; failed refresh clears auth and pages avoid showing a misleading connection-error alert before the protected-route redirect.
 
-- `AuthProvider` restores an existing token on mount.
-- If a token exists, the app asks `authService.getCurrentUser(stored)` for the current user.
+- `AuthProvider` restores the session on mount even when the access token is not
+  present in `sessionStorage`: the API client first attempts the HttpOnly refresh
+  session and, after a successful rotation, verifies the user through `/auth/me`.
+- A definitive refresh or `/auth/me` authentication failure clears the access
+  token. Timeout, network, and `5xx` failures preserve the session material and
+  expose a retryable restoration state instead of treating the user as logged out.
 - API requests use a 20-second timeout by default. Credential login opts into a
   60-second timeout because production authentication can occasionally take
   longer, without changing the timeout used by the rest of the application.
-- Login timeout errors tell the user that the server is taking longer than
-  usual and that the attempt can be retried; they do not expose backend URLs.
+- Login maps invalid credentials, timeout, network, and server failures to
+  product-facing copy. It never exposes raw backend messages or backend URLs.
 - Login calls `authService.login`, then stores user and token in context state.
 - Login and Register allow each password field to toggle between masked and
   visible text locally without changing the submitted password value.
@@ -57,8 +62,13 @@ Current behavior documentation.
 - Login keeps React hooks in a stable order while auth state restores, and submits the browser form values so password-manager autofill is honored even when React state has not received change events yet.
 - Register calls `authService.register`, then stores user and token in context state.
 - Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.
-- `ProtectedRoute` shows `Cargando...` while auth state is loading.
-- `ProtectedRoute` redirects unauthenticated users to `/login`.
+- `ProtectedRoute` shows an explicit session-restoration state while auth is
+  loading and adds neutral delayed-wait copy after eight seconds.
+- A transient restoration failure keeps the original route in place and offers
+  a retry. A definitively unauthenticated user is redirected to `/login` with
+  the original path, query, and hash in router state.
+- Successful credential or Google login returns to that internal deep link;
+  direct login without one continues to `/dashboard`.
 - Access-token storage publishes changes to `AuthProvider`. When refresh fails
   after a protected request receives `401`, the client clears the token once,
   `AuthProvider` immediately clears its authenticated state, and protected

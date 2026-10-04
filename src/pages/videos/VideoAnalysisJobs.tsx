@@ -20,6 +20,7 @@ import { getAnalysisJobPresentation } from './analysis-job-presentation'
 import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs-polling'
 import { addCreatedJobToAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
 import { isApiAuthenticationError } from '@/services/api/errors'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 
 type LoadState = 'loading' | 'success' | 'error' | 'session-expired'
 
@@ -51,6 +52,7 @@ export function VideoAnalysisJobs({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
+  const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
   const requestInFlightRef = useRef<Promise<ProcessingJob[]> | null>(null)
 
   const requestJobs = useCallback((): Promise<ProcessingJob[]> => {
@@ -73,6 +75,7 @@ export function VideoAnalysisJobs({
       const data = await requestJobs()
       setJobs(data)
       setLoadState('success')
+      setIsPollingDisconnected(false)
     } catch (error) {
       setJobs([])
       setLoadState(isApiAuthenticationError(error) ? 'session-expired' : 'error')
@@ -86,6 +89,7 @@ export function VideoAnalysisJobs({
       const data = await requestJobs()
       setJobs(data)
       setLoadState('success')
+      setIsPollingDisconnected(false)
     } catch (error) {
       if (isApiAuthenticationError(error)) setLoadState('session-expired')
       else setLoadState('error')
@@ -117,7 +121,14 @@ export function VideoAnalysisJobs({
 
     const poller = createAnalysisJobsPoller({
       load: requestJobs,
-      onJobs: setJobs,
+      onJobs: (nextJobs) => {
+        setJobs(nextJobs)
+        setIsPollingDisconnected(false)
+      },
+      onError: (error) => {
+        if (isApiAuthenticationError(error)) setLoadState('session-expired')
+        else setIsPollingDisconnected(true)
+      },
     })
     poller.start(jobs)
     return () => poller.stop()
@@ -186,6 +197,8 @@ export function VideoAnalysisJobs({
           </div>
         </Alert>
       )}
+
+      {isPollingDisconnected && <AnalysisPollingNotice />}
 
       {loadState === 'loading' && (
         <div

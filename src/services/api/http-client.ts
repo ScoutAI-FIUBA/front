@@ -1,4 +1,9 @@
-import { ApiResponseError, parseApiError } from './errors.ts'
+import {
+  ApiNetworkError,
+  ApiResponseError,
+  ApiTimeoutError,
+  parseApiError,
+} from './errors.ts'
 import { clearStoredToken, getStoredToken, setStoredToken } from './token.ts'
 
 export const API_BASE_URL =
@@ -51,11 +56,12 @@ interface LoginResponse {
 
 let refreshPromise: Promise<string | null> | null = null
 
-async function tryRefreshToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
+      let res: Response
       try {
-        const res = await fetchWithTimeout(
+        res = await fetchWithTimeout(
           `${API_BASE_URL}/auth/refresh`,
           {
             method: 'POST',
@@ -63,20 +69,27 @@ async function tryRefreshToken(): Promise<string | null> {
           },
           DEFAULT_REQUEST_TIMEOUT_MS,
         )
-        if (!res.ok) {
-          clearStoredToken()
-          return null
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new ApiTimeoutError('El servidor no respondió a tiempo. Intentá nuevamente.')
         }
-        const data = (await res.json()) as LoginResponse
-        setStoredToken(data.access_token)
-        return data.access_token
-      } catch {
+        throw new ApiNetworkError('No pudimos conectarnos con el servidor.')
+      }
+
+      if (res.status === 401 || res.status === 403) {
         clearStoredToken()
         return null
-      } finally {
-        refreshPromise = null
       }
-    })()
+      if (!res.ok) {
+        throw new ApiResponseError(await parseApiError(res), res.status)
+      }
+
+      const data = (await res.json()) as LoginResponse
+      setStoredToken(data.access_token)
+      return data.access_token
+    })().finally(() => {
+      refreshPromise = null
+    })
   }
   return refreshPromise
 }
@@ -115,17 +128,17 @@ export async function apiFetch(
     )
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(timeoutMessage ?? 'El servidor no respondió a tiempo. Intentá nuevamente.')
+      throw new ApiTimeoutError(
+        timeoutMessage ?? 'El servidor no respondió a tiempo. Intentá nuevamente.',
+      )
     }
-    throw new Error(
-      `No se pudo conectar con el backend (${API_BASE_URL}). Verificá tu conexión o la URL de la API.`,
-    )
+    throw new ApiNetworkError('No pudimos conectarnos con el servidor.')
   }
 
   if (res.status === 401 && auth && skipRefresh) {
     clearStoredToken()
   } else if (res.status === 401 && auth && token) {
-    const newToken = await tryRefreshToken()
+    const newToken = await refreshAccessToken()
     if (newToken) {
       return apiFetch(path, init, { ...options, skipRefresh: true })
     }

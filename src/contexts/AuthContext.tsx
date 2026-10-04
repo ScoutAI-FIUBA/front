@@ -15,7 +15,9 @@ interface AuthContextValue {
   user: User | null
   token: string | null
   isLoading: boolean
+  sessionRestoreError: boolean
   isAuthenticated: boolean
+  retrySessionRestore: () => Promise<void>
   login: (credentials: UserCredentials) => Promise<void>
   register: (dto: RegisterDto) => Promise<void>
   loginWithGoogle: (idToken: string) => Promise<void>
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(getStoredToken())
   const [isLoading, setIsLoading] = useState(true)
+  const [sessionRestoreError, setSessionRestoreError] = useState(false)
 
   useEffect(
     () =>
@@ -44,50 +47,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  useEffect(() => {
-    async function restore() {
-      const stored = getStoredToken()
-      if (!stored) {
-        setIsLoading(false)
-        return
-      }
-      try {
-        const current = await authService.getCurrentUser(stored)
-        if (current) {
-          setUser(current)
-          setToken(getStoredToken())
-        } else {
-          setToken(null)
-        }
-      } finally {
-        setIsLoading(false)
-      }
+  const retrySessionRestore = useCallback(async () => {
+    setIsLoading(true)
+    setSessionRestoreError(false)
+    try {
+      const current = await authService.getCurrentUser(getStoredToken() ?? '')
+      setUser(current)
+      setToken(getStoredToken())
+    } catch {
+      setSessionRestoreError(true)
+    } finally {
+      setIsLoading(false)
     }
-    void restore()
   }, [])
+
+  useEffect(() => {
+    void retrySessionRestore()
+  }, [retrySessionRestore])
 
   const login = useCallback(async (credentials: UserCredentials) => {
     const result = await authService.login(credentials)
     setUser(result.user)
     setToken(result.token)
+    setSessionRestoreError(false)
   }, [])
 
   const register = useCallback(async (dto: RegisterDto) => {
     const result = await authService.register(dto)
     setUser(result.user)
     setToken(result.token)
+    setSessionRestoreError(false)
   }, [])
 
   const loginWithGoogle = useCallback(async (idToken: string) => {
     const result = await authService.loginWithGoogle(idToken)
     setUser(result.user)
     setToken(result.token)
+    setSessionRestoreError(false)
   }, [])
 
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
     setToken(null)
+    setSessionRestoreError(false)
   }, [])
 
   const requestPasswordReset = useCallback(async (email: string) => {
@@ -121,7 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       isLoading,
+      sessionRestoreError,
       isAuthenticated: !!user && !!token,
+      retrySessionRestore,
       login,
       register,
       loginWithGoogle,
@@ -137,6 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       token,
       isLoading,
+      sessionRestoreError,
+      retrySessionRestore,
       login,
       register,
       loginWithGoogle,

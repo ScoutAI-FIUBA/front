@@ -1,5 +1,5 @@
 import { type FormEvent, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,19 +8,24 @@ import { Separator } from '@/components/ui/separator'
 import { Alert } from '@/components/ui/alert'
 import { LoginCourtBackdrop } from '@/components/auth/LoginCourtBackdrop'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import { SessionRestoreStatus } from '@/components/auth/SessionRestoreStatus'
 import { useAuth } from '@/contexts/AuthContext'
+import { googleLoginErrorMessage, loginErrorMessage } from './login-errors'
+import { loginDestination } from './login-navigation'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const destination = loginDestination(location.state)
 
-  if (isLoading) return null
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  if (isLoading) return <SessionRestoreStatus />
+  if (isAuthenticated) return <Navigate to={destination} replace />
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -37,9 +42,9 @@ export function LoginPage() {
     setLoading(true)
     try {
       await login({ email: submittedEmail, password: submittedPassword })
-      navigate('/dashboard')
+      navigate(destination, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      setError(loginErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -120,9 +125,9 @@ export function LoginPage() {
               setLoading(true)
               try {
                 await loginWithGoogle(idToken)
-                navigate('/dashboard')
+                navigate(destination, { replace: true })
               } catch (err) {
-                setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión con Google')
+                setError(googleLoginErrorMessage(err))
               } finally {
                 setLoading(false)
               }

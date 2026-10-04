@@ -19,6 +19,7 @@ export function useAnalysisJobCatalog(pollIntervalMs = 10_000) {
     initialCatalog ? 'success' : 'loading',
   )
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
 
   const load = useCallback(async (force = false) => {
     if (catalog) setIsRefreshing(true)
@@ -28,6 +29,7 @@ export function useAnalysisJobCatalog(pollIntervalMs = 10_000) {
       const next = await loadAnalysisJobCatalog({ force })
       setCatalog(next)
       setLoadState('success')
+      setIsPollingDisconnected(false)
     } catch (error) {
       if (isApiAuthenticationError(error)) {
         setLoadState('session-expired')
@@ -49,7 +51,12 @@ export function useAnalysisJobCatalog(pollIntervalMs = 10_000) {
     const timer = globalThis.setTimeout(() => {
       void refreshCachedActiveAnalysisJobs(catalog).then(
         (next) => {
-          if (!cancelled) setCatalog(next)
+          if (!cancelled) {
+            setCatalog(next)
+            setIsPollingDisconnected(
+              next.partialFailures.some((failure) => failure.scope === 'active-job'),
+            )
+          }
         },
         (error: unknown) => {
           if (!cancelled && isApiAuthenticationError(error)) setLoadState('session-expired')
@@ -67,6 +74,7 @@ export function useAnalysisJobCatalog(pollIntervalMs = 10_000) {
     catalog,
     loadState,
     isRefreshing,
+    isPollingDisconnected,
     refresh: () => load(true),
   }
 }

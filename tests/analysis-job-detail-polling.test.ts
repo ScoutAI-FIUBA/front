@@ -175,6 +175,33 @@ test('never overlaps detail requests', async () => {
   assert.equal(scheduler.timers.size, 1)
 })
 
+test('reports a transient detail failure, preserves polling, and recovers on success', async () => {
+  const scheduler = new ManualScheduler()
+  const events: string[] = []
+  let attempts = 0
+  const poller = createAnalysisJobDetailPoller({
+    scheduler,
+    load: async () => {
+      attempts += 1
+      if (attempts === 1) throw new Error('network')
+      return job('RUNNING', 55)
+    },
+    onJob: () => events.push('job'),
+    onError: () => events.push('error'),
+  })
+
+  poller.start('RUNNING')
+  scheduler.runNext()
+  await flushPromises()
+  assert.deepEqual(events, ['error'])
+  assert.equal(scheduler.timers.size, 1)
+
+  scheduler.runNext()
+  await flushPromises()
+  assert.deepEqual(events, ['error', 'job'])
+  assert.equal(scheduler.timers.size, 1)
+})
+
 test('terminal jobs do not leave detail polling active', () => {
   for (const status of ['DONE', 'FAILED'] as const) {
     const scheduler = new ManualScheduler()
@@ -199,4 +226,6 @@ test('the detail wires polling to the existing team-scoped job endpoint', () => 
   assert.match(source, /load: \(\) => analysisJobService\.get\(jobId, teamId\)/)
   assert.match(source, /setDetail\(\(current\) => current && current\.job\.id === updatedJob\.id/)
   assert.match(source, /return \(\) => poller\.stop\(\)/)
+  assert.match(source, /setIsPollingDisconnected\(true\)/)
+  assert.match(source, /<AnalysisPollingNotice/)
 })

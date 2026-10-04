@@ -14,11 +14,12 @@ import { analysisJobDetailPath } from './analysis-job-detail'
 import { addCreatedJobToAnalysisCatalog } from './analysis-job-catalog-store'
 import { useAnalysisJobCatalog } from './use-analysis-job-catalog'
 import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 
 export function AnalysisJobNewPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { catalog, loadState, refresh } = useAnalysisJobCatalog()
+  const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
   const [selectedVideoId, setSelectedVideoId] = useState(searchParams.get('video_id') ?? '')
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
@@ -81,6 +82,8 @@ export function AnalysisJobNewPage() {
       {loadState === 'loading' && !catalog && <div className="flex min-h-40 items-center gap-3 border-y py-8 text-sm text-muted-foreground"><LoaderCircle className="h-5 w-5 animate-spin text-primary" />Buscando videos listos…</div>}
       {loadState === 'session-expired' && <div className="flex min-h-32 items-center gap-3 border-y py-8 text-sm text-muted-foreground"><LoaderCircle className="h-5 w-5 animate-spin text-primary" />Tu sesión terminó. Redirigiendo al ingreso…</div>}
       {loadState === 'error' && !catalog && <Alert className="flex items-center gap-3 border-destructive/25 bg-destructive/5 p-5"><CircleAlert className="h-5 w-5 text-destructive" /><div className="flex-1"><p className="font-semibold">No pudimos consultar tus videos</p><p className="mt-1 text-sm text-muted-foreground">Revisá la conexión y reintentá.</p></div><Button variant="outline" size="sm" onClick={() => void refresh()}>Reintentar</Button></Alert>}
+
+      {isPollingDisconnected && <AnalysisPollingNotice />}
 
       {catalog && (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">

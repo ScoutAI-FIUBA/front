@@ -10,6 +10,7 @@ export interface AnalysisJobDetailPollingScheduler {
 interface AnalysisJobDetailPollerOptions {
   load: () => Promise<ProcessingJob>
   onJob: (job: ProcessingJob) => void
+  onError?: (error: unknown) => void
   intervalMs?: number
   scheduler?: AnalysisJobDetailPollingScheduler
 }
@@ -35,6 +36,7 @@ const browserScheduler: AnalysisJobDetailPollingScheduler = {
 export function createAnalysisJobDetailPoller({
   load,
   onJob,
+  onError,
   intervalMs = ANALYSIS_JOB_DETAIL_POLL_INTERVAL_MS,
   scheduler = browserScheduler,
 }: AnalysisJobDetailPollerOptions): AnalysisJobDetailPoller {
@@ -68,8 +70,8 @@ export function createAnalysisJobDetailPoller({
       if (!isActiveStatus(job.status)) {
         running = false
       }
-    } catch {
-      // Preserve the last successful snapshot and retry after the normal interval.
+    } catch (error) {
+      onError?.(error)
     } finally {
       requestInFlight = false
       schedule()

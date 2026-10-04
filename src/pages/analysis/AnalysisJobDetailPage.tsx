@@ -33,6 +33,8 @@ import { AnalysisJobCourtPositionsView, type AnalysisMovementTechnicalSummary } 
 import { AnalysisJobSimilarAnalysesView } from './AnalysisJobSimilarAnalyses'
 import { AnalysisJobOverview } from './AnalysisJobOverview'
 import { AnalysisJobDetails } from './AnalysisJobDetails'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
+import { isApiAuthenticationError } from '@/services/api/errors'
 import {
   AnalysisJobShotsWorkspace,
   type AnalysisShootingSummary,
@@ -91,6 +93,7 @@ export function AnalysisJobDetailPage() {
   const [shootingSummary, setShootingSummary] = useState<AnalysisShootingSummary | null>(null)
   const [movementSummary, setMovementSummary] = useState<AnalysisMovementTechnicalSummary | null>(null)
   const [videoState, setVideoState] = useState<AnalysisWorkspaceVideoState>('loading')
+  const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
   const playerRef = useRef<AnalysisWorkspaceVideoHandle | null>(null)
   const moduleButtonRefs = useRef<Partial<Record<WorkspaceModule, HTMLButtonElement | null>>>({})
   const previousStatusRef = useRef<ProcessingJob['status'] | null>(null)
@@ -106,6 +109,7 @@ export function AnalysisJobDetailPage() {
     setShootingSummary(null)
     setMovementSummary(null)
     previousStatusRef.current = null
+    setIsPollingDisconnected(false)
   }, [jobId])
 
   useEffect(() => {
@@ -156,6 +160,7 @@ export function AnalysisJobDetailPage() {
     const poller = createAnalysisJobDetailPoller({
       load: () => analysisJobService.get(jobId, teamId),
       onJob: (updatedJob) => {
+        setIsPollingDisconnected(false)
         const previousStatus = previousStatusRef.current
         previousStatusRef.current = updatedJob.status
         setDetail((current) => current && current.job.id === updatedJob.id
@@ -164,6 +169,9 @@ export function AnalysisJobDetailPage() {
         if (previousStatus !== 'DONE' && updatedJob.status === 'DONE') {
           toast.success('El análisis está listo para revisar')
         }
+      },
+      onError: (error) => {
+        if (!isApiAuthenticationError(error)) setIsPollingDisconnected(true)
       },
     })
     poller.start(jobStatus)
@@ -261,6 +269,8 @@ export function AnalysisJobDetailPage() {
         </div>
         <StatusIndicator state={presentation.indicatorState}>{presentation.label}</StatusIndicator>
       </header>
+
+      {isPollingDisconnected && <AnalysisPollingNotice />}
 
       <div className={cn(
         'grid items-start gap-5',
