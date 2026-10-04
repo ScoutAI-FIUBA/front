@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/utils'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { AnalysisCatalogRow } from './AnalysisCatalogRow'
 import { useAnalysisJobCatalog } from './use-analysis-job-catalog'
 
@@ -19,7 +20,7 @@ const FILTERS: Array<{ id: AnalysisFilter; label: string }> = [
 ]
 
 export function AnalysisPage() {
-  const { catalog, loadState, isRefreshing, refresh } = useAnalysisJobCatalog()
+  const { catalog, loadState, isPollingDisconnected, isRefreshing, refresh } = useAnalysisJobCatalog()
   const [filter, setFilter] = useState<AnalysisFilter>('all')
 
   const items = useMemo(() => {
@@ -72,9 +73,11 @@ export function AnalysisPage() {
         </Alert>
       )}
 
+      {isPollingDisconnected && <AnalysisPollingNotice />}
+
       {catalog && (
         <>
-          {catalog.partialFailures.length > 0 && (
+          {catalog.partialFailures.some((failure) => failure.scope !== 'active-job') && (
             <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4">
               <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
               <div className="min-w-0 flex-1 text-sm"><p className="font-semibold text-foreground">Mostramos los análisis que pudimos verificar</p><p className="mt-1 text-muted-foreground">Algunos videos no respondieron. El trabajo disponible se conserva mientras reintentás.</p></div>

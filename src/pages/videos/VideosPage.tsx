@@ -16,6 +16,7 @@ import { VideoPlaybackDialog } from './VideoPlaybackDialog'
 import { canOpenVideoPlayback } from './video-playback'
 import { videoUploadPath } from './video-upload-navigation'
 import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import {
   filterVideoLibrary,
@@ -82,7 +83,7 @@ function useVideosLayout(): VideosLayout {
 
 export function VideosPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { catalog, loadState, refresh } = useAnalysisJobCatalog()
+  const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
   const [expandedVideoId, setExpandedVideoId] = useState<string | null>(null)
   const [playbackVideo, setPlaybackVideo] = useState<Video | null>(null)
   const videosLayout = useVideosLayout()
@@ -120,9 +121,11 @@ export function VideosPage() {
       {loadState === 'session-expired' && <div className="flex min-h-32 items-center gap-3 border-y py-8 text-sm text-muted-foreground"><LoaderCircle className="h-5 w-5 animate-spin text-primary" />Tu sesión terminó. Redirigiendo al ingreso…</div>}
       {loadState === 'error' && !catalog && <Alert className="flex max-w-2xl flex-col gap-4 border-destructive/25 bg-destructive/5 p-5 sm:flex-row sm:items-center"><CircleAlert className="h-5 w-5 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-semibold">No pudimos cargar los videos</p><p className="mt-1 text-sm text-muted-foreground">No hubo respuesta de los servicios. Revisá la conexión y reintentá.</p></div><Button variant="outline" size="sm" onClick={() => void refresh()}>Reintentar</Button></Alert>}
 
+      {isPollingDisconnected && <AnalysisPollingNotice />}
+
       {catalog && (
         <>
-          {catalog.partialFailures.length > 0 && <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><p className="text-sm font-semibold">Algunos historiales no están disponibles</p><p className="mt-1 text-sm text-muted-foreground">La biblioteca permanece visible. Los videos no verificados no se clasifican como “Sin análisis”.</p></div></Alert>}
+          {catalog.partialFailures.some((failure) => failure.scope !== 'active-job') && <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><p className="text-sm font-semibold">Algunos historiales no están disponibles</p><p className="mt-1 text-sm text-muted-foreground">La biblioteca permanece visible. Los videos no verificados no se clasifican como “Sin análisis”.</p></div></Alert>}
 
           <section className="border-y py-4" aria-label="Filtros de la biblioteca">
             <div className="grid gap-3 sm:grid-cols-3">

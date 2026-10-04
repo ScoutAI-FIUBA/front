@@ -79,6 +79,10 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - The embedded source player resolves a fresh team-scoped playback URL, keeps loading/error/retry states local, exposes a stable seek capability, and preserves playback time when refreshing an expired or failed signed URL where the browser permits it.
 - The source player remains mounted while switching Overview, Shots, Movement, Similar, and Details. Result panels remain mounted but only the active panel is visible, preserving local filters and selections.
 - QUEUED and RUNNING render inside the same workspace and both remain live through the existing team-scoped polling endpoint. Polling stops only at DONE or FAILED, and a transition to DONE exposes results without a page reload.
+- A transient polling failure preserves the last successful job snapshot and
+  displays a connection-loss notice while scheduled retries continue. The
+  notice clears on the next successful poll; the UI never presents stale
+  progress as if it were still verified live.
 - Overview contains only server-backed status, timestamps, detected shooting totals/coverage, and navigation actions. It does not generate qualitative or AI-authored conclusions.
 - Shots combines headline shooting metrics, local result/points/player/zone filters, the existing court visualization, and an individual-moment list from the returned shot payloads.
 - Selecting a shot marker or moment preserves that shot as selected. A shot with `timestampSeconds` seeks the persistent source player; a shot without it remains inspectable but never exposes a fake video action.

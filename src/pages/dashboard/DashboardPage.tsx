@@ -10,9 +10,10 @@ import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import { latestVideoAnalysisJob, videoMaterialLabel, videoMaterialState, videoPrimaryAnalysisAction } from '@/pages/videos/video-library-filters'
 import { formatDate } from '@/lib/utils'
+import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 
 export function DashboardPage() {
-  const { catalog, loadState, refresh } = useAnalysisJobCatalog()
+  const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
   const active = catalog?.items.filter(({ job }) => job.status === 'QUEUED' || job.status === 'RUNNING') ?? []
   const completed = catalog?.items.filter(({ job }) => job.status === 'DONE').slice(0, 3) ?? []
   const recentVideos = catalog?.videos.slice(0, 3) ?? []
@@ -41,6 +42,8 @@ export function DashboardPage() {
         <Alert className="flex max-w-2xl flex-col gap-4 border-destructive/25 bg-destructive/5 p-5 sm:flex-row sm:items-center"><CircleAlert className="h-5 w-5 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-semibold">No pudimos cargar tu actividad</p><p className="mt-1 text-sm text-muted-foreground">No hubo respuesta de los servicios. Revisá la conexión y reintentá.</p></div><Button variant="outline" size="sm" onClick={() => void refresh()}>Reintentar</Button></Alert>
       )}
 
+      {isPollingDisconnected && <AnalysisPollingNotice />}
+
       {catalog && !hasWork && (
         <EmptyState
           icon={<VideoIcon className="h-5 w-5" />}
@@ -52,7 +55,7 @@ export function DashboardPage() {
 
       {catalog && hasWork && (
         <>
-          {catalog.partialFailures.length > 0 && <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><p className="text-sm font-semibold">Actividad parcialmente actualizada</p><p className="mt-1 text-sm text-muted-foreground">Conservamos los análisis y videos disponibles mientras algunos historiales vuelven a responder.</p></div></Alert>}
+          {catalog.partialFailures.some((failure) => failure.scope !== 'active-job') && <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><p className="text-sm font-semibold">Actividad parcialmente actualizada</p><p className="mt-1 text-sm text-muted-foreground">Conservamos los análisis y videos disponibles mientras algunos historiales vuelven a responder.</p></div></Alert>}
 
           {active.length > 0 && (
             <section aria-labelledby="active-analysis-title">

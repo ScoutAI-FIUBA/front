@@ -190,3 +190,30 @@ test('never overlaps requests when one takes longer than the interval', async ()
   scheduler.runNext()
   assert.equal(requests, 2)
 })
+
+test('reports a transient history failure and keeps retrying the last known jobs', async () => {
+  const scheduler = new ManualScheduler()
+  const events: string[] = []
+  let attempts = 0
+  const poller = createAnalysisJobsPoller({
+    scheduler,
+    load: async () => {
+      attempts += 1
+      if (attempts === 1) throw new Error('network')
+      return [job('RUNNING')]
+    },
+    onJobs: () => events.push('jobs'),
+    onError: () => events.push('error'),
+  })
+
+  poller.start([job('RUNNING')])
+  scheduler.runNext()
+  await flushPromises()
+  assert.deepEqual(events, ['error'])
+  assert.equal(scheduler.timers.size, 1)
+
+  scheduler.runNext()
+  await flushPromises()
+  assert.deepEqual(events, ['error', 'jobs'])
+  assert.equal(scheduler.timers.size, 1)
+})

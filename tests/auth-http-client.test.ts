@@ -6,8 +6,19 @@ import {
   LOGIN_TIMEOUT_MESSAGE,
   apiAuthService,
 } from '../src/services/api/auth.api.ts'
-import { ApiResponseError } from '../src/services/api/errors.ts'
+import {
+  ApiNetworkError,
+  ApiResponseError,
+  ApiTimeoutError,
+} from '../src/services/api/errors.ts'
 import { apiFetch, DEFAULT_REQUEST_TIMEOUT_MS } from '../src/services/api/http-client.ts'
+import {
+  INVALID_CREDENTIALS_MESSAGE,
+  LOGIN_NETWORK_MESSAGE,
+  LOGIN_SERVER_MESSAGE,
+  loginErrorMessage,
+} from '../src/pages/auth/login-errors.ts'
+import { loginDestination } from '../src/pages/auth/login-navigation.ts'
 import {
   getStoredToken,
   setStoredToken,
@@ -245,6 +256,82 @@ test('failed refresh clears auth immediately and later 401s do not start refresh
   assert.equal(refreshRequests, 1)
 })
 
+test('session restore refreshes first when sessionStorage has no access token', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const requests: Array<{ url: string; authorization: string | null }> = []
+
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input)
+    const authorization = new Headers(init?.headers).get('Authorization')
+    requests.push({ url, authorization })
+    if (url.endsWith('/auth/refresh')) return loginResponse('access-restored')
+    return Response.json({
+      user: {
+        id: 'user-1',
+        email: 'analyst@example.com',
+        role: 'analyst',
+        email_verified: true,
+      },
+    })
+  }) as typeof fetch
+
+  const user = await apiAuthService.getCurrentUser('')
+
+  assert.equal(user?.id, 'user-1')
+  assert.equal(getStoredToken(), 'access-restored')
+  assert.equal(requests.length, 2)
+  assert.match(requests[0]?.url ?? '', /\/auth\/refresh$/)
+  assert.equal(requests[0]?.authorization, null)
+  assert.match(requests[1]?.url ?? '', /\/auth\/me$/)
+  assert.equal(requests[1]?.authorization, 'Bearer access-restored')
+})
+
+test('transient auth me failures preserve the access token and remain retryable', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  setStoredToken('access-existing')
+  globalThis.fetch = (async () => new Response('Unavailable', { status: 503 })) as typeof fetch
+
+  await assert.rejects(
+    apiAuthService.getCurrentUser('access-existing'),
+    (error: unknown) => error instanceof ApiResponseError && error.status === 503,
+  )
+  assert.equal(getStoredToken(), 'access-existing')
+})
+
+test('transient refresh failures preserve the expired token instead of forcing logout', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  setStoredToken('access-expired')
+
+  globalThis.fetch = (async (input: string | URL | Request) => (
+    String(input).endsWith('/auth/refresh')
+      ? new Response('Unavailable', { status: 503 })
+      : new Response(null, { status: 401 })
+  )) as typeof fetch
+
+  await assert.rejects(
+    apiAuthService.getCurrentUser('access-expired'),
+    (error: unknown) => error instanceof ApiResponseError && error.status === 503,
+  )
+  assert.equal(getStoredToken(), 'access-expired')
+})
+
+test('login errors use product copy without exposing backend messages', () => {
+  assert.equal(loginErrorMessage(new ApiResponseError('Invalid credentials', 401)), INVALID_CREDENTIALS_MESSAGE)
+  assert.equal(loginErrorMessage(new ApiTimeoutError(LOGIN_TIMEOUT_MESSAGE)), LOGIN_TIMEOUT_MESSAGE)
+  assert.equal(loginErrorMessage(new ApiNetworkError('backend url')), LOGIN_NETWORK_MESSAGE)
+  assert.equal(loginErrorMessage(new ApiResponseError('database unavailable', 503)), LOGIN_SERVER_MESSAGE)
+  assert.doesNotMatch(loginErrorMessage(new ApiResponseError('Invalid credentials', 401)), /Invalid credentials/)
+})
+
+test('login destination preserves an internal deep link and rejects unsafe targets', () => {
+  assert.equal(loginDestination({ from: { pathname: '/analisis/jobs/job-1', search: '?team_id=team-1', hash: '#shots' } }), '/analisis/jobs/job-1?team_id=team-1#shots')
+  assert.equal(loginDestination({ from: { pathname: '//external.example/path' } }), '/dashboard')
+  assert.equal(loginDestination(undefined), '/dashboard')
+})
+
 test('AuthContext subscribes to token invalidation and clears both user and token', () => {
   const source = readFileSync(
     new URL('../src/contexts/AuthContext.tsx', import.meta.url),
@@ -254,4 +341,24 @@ test('AuthContext subscribes to token invalidation and clears both user and toke
   assert.match(source, /subscribeToStoredToken\(\(nextToken\) =>/)
   assert.match(source, /setToken\(nextToken\)/)
   assert.match(source, /if \(!nextToken\) setUser\(null\)/)
+  assert.match(source, /authService\.getCurrentUser\(getStoredToken\(\) \?\? ''\)/)
+  assert.match(source, /setSessionRestoreError\(true\)/)
+})
+
+test('protected auth loading explains restoration and preserves the original route', () => {
+  const protectedRoute = readFileSync(
+    new URL('../src/components/layout/ProtectedRoute.tsx', import.meta.url),
+    'utf8',
+  )
+  const loading = readFileSync(
+    new URL('../src/components/auth/SessionRestoreStatus.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(protectedRoute, /state=\{\{ from: location \}\}/)
+  assert.match(protectedRoute, /No pudimos verificar tu sesión/)
+  assert.match(loading, /AUTH_SLOW_RESTORE_DELAY_MS = 8_000/)
+  assert.match(loading, /Restaurando tu sesión/)
+  assert.match(loading, /Está tardando más de lo habitual/)
+  assert.doesNotMatch(loading, /cold start|despertando/i)
 })

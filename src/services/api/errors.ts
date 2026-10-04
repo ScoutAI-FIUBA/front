@@ -8,6 +8,20 @@ export class ApiResponseError extends Error {
   }
 }
 
+export class ApiTimeoutError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ApiTimeoutError'
+  }
+}
+
+export class ApiNetworkError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ApiNetworkError'
+  }
+}
+
 export function isApiErrorStatus(error: unknown, status: number): boolean {
   return error instanceof ApiResponseError && error.status === status
 }
