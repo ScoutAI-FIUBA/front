@@ -1,5 +1,11 @@
 # Matches Current Spec
 
+## Phase 2 product decision
+
+- `/partidos` remains available as a compatibility route, but it is removed from primary navigation because its service is mock-only.
+- The page identifies itself as an experimental planning tool and does not imply that its records are the source of automatic video analysis.
+- No real matches backend or data relationship is invented in Phase 2.
+
 ## Status
 
 Current behavior documentation.

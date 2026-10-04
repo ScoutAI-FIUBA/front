@@ -37,7 +37,7 @@ export const authService: IAuthService = isMockApiEnabled ? mockAuthService : ap
 export const teamService: ITeamService = isMockApiEnabled ? mockTeamService : apiTeamService
 export const playerService: IPlayerService = isMockApiEnabled ? mockPlayerService : apiPlayerService
 
-/** Partidos y análisis siguen en mock hasta que existan en el backend */
+/** Partidos y el flujo manual legacy siguen en mock; el análisis automático usa ProcessingJobs reales. */
 export const matchService: IMatchService = mockMatchService
 export const videoService: IVideoService = isMockApiEnabled ? mockVideoService : apiVideoService
 export const getVideoByIdForTeam = (videoId: string, teamId: string) => (

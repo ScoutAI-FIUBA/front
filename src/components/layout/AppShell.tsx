@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
-  CalendarDays,
   House,
   LogOut,
   Menu,
@@ -10,6 +9,7 @@ import {
   PanelLeftOpen,
   Plus,
   ShieldCheck,
+  Scissors,
   UserCheck,
   Users,
   Video,
@@ -25,15 +25,11 @@ const navGroups = [
     items: [{ to: '/dashboard', label: 'Inicio', icon: House }],
   },
   {
-    label: 'Trabajo',
+    label: 'Principal',
     items: [
       { to: '/analisis', label: 'Análisis', icon: BarChart3 },
-      { to: '/partidos', label: 'Partidos', icon: CalendarDays },
+      { to: '/videos', label: 'Videos', icon: Video },
     ],
-  },
-  {
-    label: 'Material',
-    items: [{ to: '/videos', label: 'Videos', icon: Video }],
   },
   {
     label: 'Scouting',
@@ -41,6 +37,10 @@ const navGroups = [
       { to: '/equipos', label: 'Equipos', icon: Users },
       { to: '/jugadores', label: 'Jugadores', icon: UserCheck },
     ],
+  },
+  {
+    label: 'Herramientas',
+    items: [{ to: '/revision-manual', label: 'Revisión manual', icon: Scissors }],
   },
 ]
 
@@ -67,6 +67,8 @@ export function AppShell() {
   const currentSection =
     pathname.startsWith('/cuenta')
       ? 'Cuenta'
+      : pathname.startsWith('/partidos')
+        ? 'Partidos · Experimental'
       : navItems.find((item) => pathname.startsWith(item.to))?.label ?? 'ScoutAI'
   const userInitials = (user?.fullName ?? 'Analista')
     .split(/\s+/)
@@ -140,15 +142,15 @@ export function AppShell() {
         <div className="px-3 pt-3">
           <Button
             className={cn('w-full', compactWorkspaceRail && 'lg:px-0')}
-            aria-label="Empezar análisis"
-            title={compactWorkspaceRail ? 'Empezar análisis' : undefined}
+            aria-label="Nuevo análisis"
+            title={compactWorkspaceRail ? 'Nuevo análisis' : undefined}
             onClick={() => {
               setSidebarOpen(false)
               navigate('/analisis/nuevo')
             }}
           >
             <Plus className="h-4 w-4" />
-            <span className={cn(compactWorkspaceRail && 'lg:hidden')}>Empezar análisis</span>
+            <span className={cn(compactWorkspaceRail && 'lg:hidden')}>Nuevo análisis</span>
           </Button>
         </div>
 

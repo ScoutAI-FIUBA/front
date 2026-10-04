@@ -36,6 +36,10 @@ Current behavior documentation.
 
 ## Current Behavior
 
+- The login brand panel uses the ScoutAI name without the temporary `ScoutAI MVP` footer copy.
+
+- Protected data pages distinguish an unrecoverable HTTP 401 from a network failure. Refreshable expiry remains silent through the shared HTTP retry; failed refresh clears auth and pages avoid showing a misleading connection-error alert before the protected-route redirect.
+
 - `AuthProvider` restores an existing token on mount.
 - If a token exists, the app asks `authService.getCurrentUser(stored)` for the current user.
 - API requests use a 20-second timeout by default. Credential login opts into a

@@ -1,4 +1,4 @@
-export const VIDEOS_DESKTOP_BREAKPOINT_PX = 1280
+export const VIDEOS_DESKTOP_BREAKPOINT_PX = 1024
 
 export type VideosLayout = 'cards' | 'table'
 

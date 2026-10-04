@@ -12,6 +12,7 @@ const readSource = (relativePath: string) => readFileSync(
 )
 
 test('videos use cards at mobile widths and preserve the desktop table', () => {
+  assert.equal(VIDEOS_DESKTOP_BREAKPOINT_PX, 1024)
   assert.equal(videosLayoutForViewport(390), 'cards')
   assert.equal(videosLayoutForViewport(VIDEOS_DESKTOP_BREAKPOINT_PX - 1), 'cards')
   assert.equal(videosLayoutForViewport(VIDEOS_DESKTOP_BREAKPOINT_PX), 'table')
@@ -27,29 +28,32 @@ test('videos use cards at mobile widths and preserve the desktop table', () => {
 test('videos distinguish primary loading, error, retry, and empty states', () => {
   const source = readSource('../src/pages/videos/VideosPage.tsx')
 
-  assert.match(source, /Cargando videos y equipos/)
+  assert.match(source, /Cargando videos/)
   assert.match(source, /No pudimos cargar los videos/)
   assert.match(source, />\s*Reintentar\s*</)
   assert.match(source, /Todavía no hay videos/)
   assert.match(source, /No hay videos para estos filtros/)
-  assert.match(source, /loadVideosPageData/)
+  assert.match(source, /useAnalysisJobCatalog/)
 })
 
-test('recent activity is visibly restricted to mock mode', () => {
+test('videos no longer render mock recent activity', () => {
   const pageSource = readSource('../src/pages/videos/VideosPage.tsx')
   const dataSource = readSource('../src/pages/videos/videos-page-data.ts')
 
-  assert.match(pageSource, /isMockApiEnabled && \(/)
-  assert.match(pageSource, /loadVideosRecentActivity\(isMockApiEnabled, analysisService\)/)
+  assert.doesNotMatch(pageSource, /Actividad reciente/)
+  assert.doesNotMatch(pageSource, /loadVideosRecentActivity/)
   assert.match(dataSource, /if \(!mockModeEnabled\) return \[\]/)
 })
 
-test('videos expose ProcessingJob history as the only visible analysis entry', () => {
+test('videos expose automatic analysis directly and keep history secondary', () => {
   const source = readSource('../src/pages/videos/VideosPage.tsx')
+  const librarySource = readSource('../src/pages/videos/video-library-filters.ts')
 
   assert.doesNotMatch(source, /lucide-react[^\n]*\bEye\b/)
   assert.doesNotMatch(source, /to=\{`\/analisis\/\$\{/)
   assert.match(source, /Historial de análisis/)
+  assert.match(source, /videoPrimaryAnalysisAction\(video, latestJob\)/)
+  assert.match(librarySource, /newAnalysisLabel = 'Nuevo análisis'/)
 })
 
 test('DONE workspace keeps team confirmation and technical identity secondary', () => {

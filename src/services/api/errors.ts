@@ -12,6 +12,10 @@ export function isApiErrorStatus(error: unknown, status: number): boolean {
   return error instanceof ApiResponseError && error.status === status
 }
 
+export function isApiAuthenticationError(error: unknown): boolean {
+  return isApiErrorStatus(error, 401)
+}
+
 export async function parseApiError(response: Response): Promise<string> {
   const text = await response.text()
   if (!text) return response.statusText || 'Error de servidor'

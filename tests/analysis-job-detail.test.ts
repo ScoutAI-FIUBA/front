@@ -48,11 +48,11 @@ test('RUNNING and DONE jobs expose the correct action and refresh-safe detail UR
   assert.equal(canOpenAnalysisJob(doneJob), true)
 })
 
-test('QUEUED and FAILED jobs keep no visible detail action', () => {
+test('FAILED jobs expose their product detail while QUEUED waits for processing', () => {
   assert.equal(analysisJobDetailActionLabel(job('QUEUED')), null)
-  assert.equal(analysisJobDetailActionLabel(job('FAILED')), null)
+  assert.equal(analysisJobDetailActionLabel(job('FAILED')), 'Ver detalle')
   assert.equal(canOpenAnalysisJob(job('QUEUED')), false)
-  assert.equal(canOpenAnalysisJob(job('FAILED')), false)
+  assert.equal(canOpenAnalysisJob(job('FAILED')), true)
 })
 
 test('the top action opens RUNNING progress while QUEUED stays non-navigable', () => {

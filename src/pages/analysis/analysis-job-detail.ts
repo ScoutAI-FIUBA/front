@@ -24,6 +24,7 @@ export function canOpenAnalysisJob(job: ProcessingJob): boolean {
 export function analysisJobDetailActionLabel(job: ProcessingJob): string | null {
   if (job.status === 'RUNNING') return 'Ver progreso'
   if (job.status === 'DONE') return 'Ver análisis'
+  if (job.status === 'FAILED') return 'Ver detalle'
   return null
 }
 

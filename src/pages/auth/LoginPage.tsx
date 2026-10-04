@@ -48,16 +48,15 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
       <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl md:grid-cols-2">
-        <div className="relative flex flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground">
+        <div className="relative flex flex-col overflow-hidden bg-primary p-10 text-primary-foreground">
           <LoginCourtBackdrop />
           <p className="relative text-lg font-bold">ScoutAI</p>
-          <div className="relative">
+          <div className="relative flex flex-1 flex-col justify-center">
             <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
             <p className="mt-4 text-primary-foreground">
               Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
             </p>
           </div>
-          <p className="relative text-xs text-primary-foreground">ScoutAI MVP</p>
         </div>
 
         <div className="p-10">

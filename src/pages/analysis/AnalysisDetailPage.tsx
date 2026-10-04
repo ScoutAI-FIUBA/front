@@ -126,7 +126,7 @@ export function AnalysisDetailPage() {
   if (loadState === 'loading') {
     return (
       <div className="mx-auto w-full max-w-[1200px] space-y-6">
-        <Link to="/analisis" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <Link to="/revision-manual" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver a Análisis
         </Link>
         <section
@@ -144,7 +144,7 @@ export function AnalysisDetailPage() {
   if (loadState === 'error') {
     return (
       <div className="mx-auto w-full max-w-[1200px] space-y-6">
-        <Link to="/analisis" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <Link to="/revision-manual" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver a Análisis
         </Link>
         <Alert className="flex max-w-2xl flex-col gap-4 border-destructive/25 bg-destructive/5 p-5 sm:flex-row sm:items-center">
@@ -166,7 +166,7 @@ export function AnalysisDetailPage() {
   if (loadState === 'not-found' || !detail) {
     return (
       <div className="mx-auto w-full max-w-[1200px] space-y-6">
-        <Link to="/analisis" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+        <Link to="/revision-manual" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver a Análisis
         </Link>
         <EmptyState
@@ -175,7 +175,7 @@ export function AnalysisDetailPage() {
           description="Es posible que el enlace ya no sea válido o que el análisis no esté disponible."
           action={(
             <Button asChild variant="outline">
-              <Link to="/analisis">Ver todos los análisis</Link>
+              <Link to="/revision-manual">Ver todas las revisiones</Link>
             </Button>
           )}
         />
@@ -193,7 +193,7 @@ export function AnalysisDetailPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px] space-y-8">
-      <Link to="/analisis" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+      <Link to="/revision-manual" className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver a Análisis
       </Link>
 

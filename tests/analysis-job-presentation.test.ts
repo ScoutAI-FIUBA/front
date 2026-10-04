@@ -29,8 +29,11 @@ test('maps every backend status to the expected UI status', () => {
     indicatorState: 'neutral',
     message: 'El procesamiento está esperando para comenzar.',
   })
+  assert.equal(getAnalysisJobPresentation(job('RUNNING')).label, 'En proceso')
   assert.equal(getAnalysisJobPresentation(job('RUNNING')).indicatorState, 'information')
+  assert.equal(getAnalysisJobPresentation(job('DONE')).label, 'Completado')
   assert.equal(getAnalysisJobPresentation(job('DONE')).indicatorState, 'success')
+  assert.equal(getAnalysisJobPresentation(job('FAILED')).label, 'Fallido')
   assert.equal(getAnalysisJobPresentation(job('FAILED')).indicatorState, 'destructive')
 })
 

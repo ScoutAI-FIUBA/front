@@ -18,8 +18,10 @@ import {
 } from '@/pages/analysis/analysis-job-detail'
 import { getAnalysisJobPresentation } from './analysis-job-presentation'
 import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs-polling'
+import { addCreatedJobToAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
+import { isApiAuthenticationError } from '@/services/api/errors'
 
-type LoadState = 'loading' | 'success' | 'error'
+type LoadState = 'loading' | 'success' | 'error' | 'session-expired'
 
 interface VideoAnalysisJobsProps {
   videoId: string
@@ -71,9 +73,9 @@ export function VideoAnalysisJobs({
       const data = await requestJobs()
       setJobs(data)
       setLoadState('success')
-    } catch {
+    } catch (error) {
       setJobs([])
-      setLoadState('error')
+      setLoadState(isApiAuthenticationError(error) ? 'session-expired' : 'error')
     }
   }, [requestJobs])
 
@@ -84,9 +86,9 @@ export function VideoAnalysisJobs({
       const data = await requestJobs()
       setJobs(data)
       setLoadState('success')
-    } catch {
-      setJobs([])
-      setLoadState('error')
+    } catch (error) {
+      if (isApiAuthenticationError(error)) setLoadState('session-expired')
+      else setLoadState('error')
     } finally {
       setIsRefreshing(false)
     }
@@ -96,6 +98,7 @@ export function VideoAnalysisJobs({
     create: () => analysisJobService.create(videoId, { teamId }),
     onCreated: (job) => {
       setJobs((current) => addCreatedAnalysisJob(current, job))
+      addCreatedJobToAnalysisCatalog(job)
       setCreationError(null)
       setLoadState('success')
     },
@@ -210,6 +213,13 @@ export function VideoAnalysisJobs({
         </Alert>
       )}
 
+      {loadState === 'session-expired' && (
+        <div className="flex min-h-28 items-center gap-3 border-y py-6 text-sm text-muted-foreground" role="status">
+          <LoaderCircle className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+          Tu sesión terminó. Redirigiendo al ingreso…
+        </div>
+      )}
+
       {loadState === 'success' && jobs.length === 0 && (
         <EmptyState
           className="py-5 sm:py-8"
@@ -230,9 +240,7 @@ export function VideoAnalysisJobs({
               <article key={job.id} className="px-1 py-5 sm:px-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-foreground">
-                      Análisis <span className="font-mono text-sm">{job.id.slice(0, 8)}</span>
-                    </h3>
+                    <h3 className="font-semibold text-foreground">{videoTitle}</h3>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Solicitada {formatJobDate(job.createdAt)}
                     </p>
