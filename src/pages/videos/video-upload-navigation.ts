@@ -2,6 +2,7 @@ import { teamVideosPath } from './video-team-navigation.ts'
 import { matchDetailPath } from '../matches/match-detail.ts'
 
 export const VIDEO_UPLOAD_RETURN_QUERY_PARAM = 'return_to'
+export const NEW_MATCH_PATH = '/partidos/nuevo'
 
 export function safeVideoUploadReturnPath(value: string | null): string | null {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return null
@@ -35,6 +36,12 @@ export function videoUploadPath({
   if (safeReturn) params.set(VIDEO_UPLOAD_RETURN_QUERY_PARAM, safeReturn)
   const query = params.toString()
   return query ? `/videos/subir?${query}` : '/videos/subir'
+}
+
+export function newMatchPath({ teamId }: { teamId?: string } = {}): string {
+  if (!teamId) return NEW_MATCH_PATH
+  const params = new URLSearchParams({ team_id: teamId })
+  return `${NEW_MATCH_PATH}?${params.toString()}`
 }
 
 export function videoUploadReturnPath(searchParams: URLSearchParams, selectedTeamId: string): string {

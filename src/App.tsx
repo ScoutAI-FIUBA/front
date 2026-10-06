@@ -43,6 +43,7 @@ export default function App() {
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
             <Route path="/partidos" element={<MatchesPage />} />
+            <Route path="/partidos/nuevo" element={<VideoUploadPage />} />
             <Route path="/partidos/:videoId" element={<MatchDetailPage />} />
             <Route path="/videos" element={<VideosPage />} />
             <Route path="/videos/subir" element={<VideoUploadPage />} />

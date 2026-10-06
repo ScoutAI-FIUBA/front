@@ -9,6 +9,7 @@
 ## Route and navigation
 
 - Primary route: `/partidos`.
+- Canonical new-match route: `/partidos/nuevo`. It presents the existing upload contract as a product flow named `Nuevo partido`, with the desktop sequence `01 Equipo`, `02 Archivo`, and `03 Confirmar`.
 - Canonical detail route: `/partidos/:videoId`.
 - Detail tabs are refresh-safe query states: `?tab=video`, `?tab=reporte`, and `?tab=clips`; an absent or invalid value falls back to Video.
 - The completed Reporte has refresh-safe subsections in the same URL: `?tab=reporte&seccion=resumen`, `tiros`, `movimiento`, or `similares`. An absent or invalid `seccion` falls back to `resumen`, and subsection links use normal browser history.
@@ -60,7 +61,9 @@
 
 ## Navigation reuse
 
-- Upload keeps the existing `/videos/subir` compatibility route, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
+- Partidos upload CTAs open `/partidos/nuevo`. The flow reuses `teamService.list()` and the existing video upload boundary without adding analysis creation or new backend fields. Team loading, inline retry, empty teams, selection, file picking/drop, current video-type validation, filename-derived title, and single-flight submission remain explicit.
+- The confirmation step exposes the selected team and file, editable title, optional description, and clarifies that the date shown later is the upload date rather than the sporting date. Its Reporte preview describes only conditional real capabilities: detected shots and court location, video evidence when a shot has a recorded moment, player movement/heatmaps, and comparable team analyses when they exist.
+- Upload keeps the existing `/videos/subir` compatibility route through the same implementation, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
 - A Partido whose material is still `PENDING_UPLOAD` stays on that route and polls the existing video detail boundary at a bounded interval until the real material status becomes `READY` or `FAILED`. It does not invent upload progress or navigate away.
 - Once the material is ready, `Analizar partido` creates the ProcessingJob inline through the existing endpoint and single-flight guard. The returned job becomes `latestJob` and is added to the shared catalogue immediately, so the existing QUEUED/RUNNING polling reveals DONE in the same Reporte. FAILED retry uses the same inline flow. Legacy upload and analysis routes remain available as compatibility entry points.
 - New analysis uses `/analisis/nuevo` with the real team and video ids.
@@ -76,6 +79,7 @@
 - No backend `/matches` integration.
 - No invented opponent/score/competition, fabricated progress/statistics, analysis stages, ETA, or processed-frame counts. R3-C changes only the desktop no-job, QUEUED, RUNNING, and FAILED Partido Reporte states; completed Reporte, mobile, backend contracts, Auth, Clips, and upload remain unchanged.
 - No changes to backend contracts, authentication, or analysis result rendering.
+- R4-B does not add upload progress, multipart cancellation, inline team creation, automatic analysis, or mobile-specific redesign.
 
 ## Verification
 

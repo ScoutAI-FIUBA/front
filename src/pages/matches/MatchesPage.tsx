@@ -5,7 +5,7 @@ import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
-import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
+import { newMatchPath } from '@/pages/videos/video-upload-navigation'
 import { getVideoByIdForTeam } from '@/services/registry'
 import {
   buildMatchLibrary,
@@ -151,7 +151,7 @@ export function MatchesPage() {
 
   const items = useMemo(() => (catalog ? buildMatchLibrary(catalog) : []), [catalog])
   const filteredItems = useMemo(() => filterMatchLibrary(items, filter), [filter, items])
-  const uploadPath = videoUploadPath({ returnTo: '/partidos' })
+  const uploadPath = newMatchPath()
   const hasPartialFailure =
     catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
 

@@ -218,3 +218,12 @@ test('Partidos renders loading, retry, empty, partial failure and responsive car
   assert.doesNotMatch(source, /Video ·|>\s*Reporte\s*</)
   assert.doesNotMatch(source, /score|rival|competencia|64%|10\/2\/8\/14/i)
 })
+
+test('Partidos uses the canonical Nuevo partido entry', () => {
+  const source = readFileSync(new URL('../src/pages/matches/MatchesPage.tsx', import.meta.url), 'utf8')
+  const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(source, /newMatchPath\(\)/)
+  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<VideoUploadPage \/>\}/)
+  assert.match(appSource, /path="\/videos\/subir" element=\{<VideoUploadPage \/>\}/)
+})
