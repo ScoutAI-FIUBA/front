@@ -7,6 +7,7 @@ import {
   clipTimeRange,
   loadMatchClips,
   loadMatchDetail,
+  matchAnalysisElapsedLabel,
   matchAnalysisPath,
   matchDetailPath,
   matchReportPath,
@@ -134,6 +135,17 @@ test('the analysis CTA reuses the existing real creation route', () => {
     matchAnalysisPath(video),
     '/analisis/nuevo?team_id=team%2F1&video_id=video%2F1',
   )
+})
+
+test('elapsed analysis time is shown only from a valid real start timestamp', () => {
+  const now = Date.parse('2026-10-01T15:30:00Z')
+
+  assert.equal(matchAnalysisElapsedLabel(null, now), null)
+  assert.equal(matchAnalysisElapsedLabel('not-a-date', now), null)
+  assert.equal(matchAnalysisElapsedLabel('2026-10-01T15:29:40Z', now), 'menos de un minuto')
+  assert.equal(matchAnalysisElapsedLabel('2026-10-01T15:07:00Z', now), '23 min')
+  assert.equal(matchAnalysisElapsedLabel('2026-10-01T13:30:00Z', now), '2 h')
+  assert.equal(matchAnalysisElapsedLabel('2026-10-01T13:17:00Z', now), '2 h 13 min')
 })
 
 const collection: ClipCollection = {
@@ -275,6 +287,32 @@ test('R3-B1.1 compacts only the Partido report header', () => {
   assert.match(detailSource, /isCompactReportHeader \? 'min-h-12' : 'min-h-\[58px\]'/)
   assert.match(detailSource, /isCompactReportHeader \? 'pt-4' : 'pt-8'/)
   assert.match(detailSource, /text-\[clamp\(3\.2rem,8vw,5rem\)\]/)
+})
+
+test('R3-C keeps every non-DONE Reporte state product-facing and contract-honest', () => {
+  const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+  const queuedStart = detailSource.indexOf("job.status === 'QUEUED'")
+  const runningStart = detailSource.indexOf("job.status === 'RUNNING'")
+  const failedStart = detailSource.indexOf("job.status === 'FAILED'")
+  const doneStart = detailSource.indexOf('aria-label="Secciones del reporte"')
+  const queuedSource = detailSource.slice(queuedStart, runningStart)
+  const runningSource = detailSource.slice(runningStart, failedStart)
+  const failedSource = detailSource.slice(failedStart, doneStart)
+
+  assert.match(detailSource, /Este partido todavía no tiene reporte/)
+  assert.match(detailSource, />\s*Analizar partido\s*</)
+  assert.match(detailSource, /ReportStructurePreview/)
+  assert.match(queuedSource, /Tu partido está en cola/)
+  assert.match(queuedSource, /job\.progressPercent != null/)
+  assert.doesNotMatch(queuedSource, /analysisJobDetailPath|LoaderCircle/)
+  assert.match(runningSource, /Estamos analizando tu partido/)
+  assert.match(runningSource, /matchAnalysisElapsedLabel\(job\.startedAt\)/)
+  assert.match(runningSource, /job\.progressPercent != null/)
+  assert.doesNotMatch(runningSource, /analysisJobDetailPath|LoaderCircle/)
+  assert.match(failedSource, /No se pudo analizar este partido/)
+  assert.match(failedSource, /matchAnalysisPath\(video\)/)
+  assert.match(failedSource, /analysisJobDetailPath\(job\)/)
+  assert.doesNotMatch(detailSource, /Detectando jugadores|Procesando tiros|frames procesados|\bETA\b/i)
 })
 
 test('legacy analysis, video and collection routes remain available', () => {

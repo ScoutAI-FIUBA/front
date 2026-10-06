@@ -36,7 +36,10 @@
 - The header shows only the real video title, team, upload date, and composed Partido state.
 - When `tab=reporte` is active, the Partido header uses a compact desktop variant: it preserves the title, team, upload date, composed state, and Video / Reporte / Clips navigation while reducing vertical spacing and keeping the title on one line when space allows. The Video tab keeps the existing large hero header.
 - Video reuses the existing signed-playback player and renewal behavior with reduced chrome.
-- Reporte explains the automatic output before analysis and keeps the existing queued/running/failed states and actions unchanged.
+- Reporte keeps its compact Partido header and editorial report space before results exist. A ready video without a job explains that no report exists yet, previews only the four future sections by name and purpose, and exposes one primary `Analizar partido` action through the existing new-analysis route without fake result data.
+- QUEUED and RUNNING remain inside Partido and reuse the existing team-scoped polling loop. QUEUED states that the party is in the real queue; RUNNING states that analysis is in progress. A real `progressPercent` is rendered only when non-null, and elapsed time is shown only from a valid real `startedAt`. Neither state invents stages, ETA, frames, or intermediate findings, and neither routes the user to the legacy job workspace.
+- Polling replaces the latest job snapshot in place. A transition from QUEUED or RUNNING to DONE reveals the completed Reporte in the same Partido route without automatic external navigation.
+- FAILED uses the product statement `No se pudo analizar este partido`. The primary recovery action opens the existing new-analysis flow for the same team and video; the exact legacy job detail remains a secondary technical-support action. Raw backend errors are not promoted as user-facing reasons because the current contract does not mark them as safe copy.
 - A completed Reporte embeds the real result workspace for the latest job directly inside the Partido detail. It does not render a second Partido header or a second source player and does not require an `Abrir reporte completo` gateway.
 - The completed Reporte index is `01 Resumen`, `02 Tiros`, `03 Movimiento`, and `04 Similares`. It reuses the same result surfaces and exact-job Similar links as the legacy job route.
 - The embedded workspace owns one shared Stats/Shot Chart controller after team-side confirmation. Resumen and Tiros consume the same loaded result; Resumen does not mount a hidden Tiros screen to obtain shooting data.
@@ -57,7 +60,7 @@
 
 - Upload uses the existing video upload route and returns to `/partidos`.
 - New analysis uses `/analisis/nuevo` with the real team and video ids.
-- Progress and failure actions keep using the existing analysis job workspace route. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy `/analisis/jobs/:jobId?team_id=...` route.
+- Active report progress remains inline in Partido. A failed job may open its exact legacy `/analisis/jobs/:jobId?team_id=...` route only as a secondary technical-detail action, while recovery reuses `/analisis/nuevo` with the same team and video. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy job route.
 
 ## Resilience
 
@@ -67,7 +70,7 @@
 ## Non-scope
 
 - No backend `/matches` integration.
-- No invented opponent/score/competition or fabricated progress/statistics. R3-B1 does not redesign Movimiento, Similares, mobile, or the QUEUED/RUNNING/FAILED report states.
+- No invented opponent/score/competition, fabricated progress/statistics, analysis stages, ETA, or processed-frame counts. R3-C changes only the desktop no-job, QUEUED, RUNNING, and FAILED Partido Reporte states; completed Reporte, mobile, backend contracts, Auth, Clips, and upload remain unchanged.
 - No changes to backend contracts, authentication, or analysis result rendering.
 
 ## Verification

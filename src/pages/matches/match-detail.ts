@@ -68,6 +68,23 @@ export function matchAnalysisPath(video: Video): string {
   return `/analisis/nuevo?${searchParams.toString()}`
 }
 
+export function matchAnalysisElapsedLabel(
+  startedAt: string | null,
+  nowMs = Date.now(),
+): string | null {
+  if (!startedAt) return null
+  const startedMs = Date.parse(startedAt)
+  if (!Number.isFinite(startedMs) || !Number.isFinite(nowMs)) return null
+
+  const minutes = Math.floor(Math.max(0, nowMs - startedMs) / 60_000)
+  if (minutes < 1) return 'menos de un minuto'
+
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (hours === 0) return `${minutes} min`
+  return remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`
+}
+
 export async function loadMatchDetail(
   videoId: string,
   dependencies: MatchDetailDependencies,
