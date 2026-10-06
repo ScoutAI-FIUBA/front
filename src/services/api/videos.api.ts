@@ -1,23 +1,10 @@
 import type { IVideoService, UploadVideoDto } from '../contracts/videos.service'
 import type { Video, VideoStatus } from '@/types'
 import { apiJson } from './http-client'
+import { mapApiVideo, type ApiVideo } from './contract-mappers'
 
 interface ApiTeamRef {
   id: string
-}
-
-interface ApiVideo {
-  id: string
-  team_id: string
-  storage_key: string
-  title: string
-  description: string | null
-  status: 'PENDING_UPLOAD' | 'READY' | 'FAILED' | 'DELETED'
-  mime_type: string | null
-  size_bytes: number | null
-  duration_ms: number | null
-  created_at: string
-  updated_at: string
 }
 
 interface InitUploadResponse {
@@ -32,6 +19,7 @@ interface InitUploadResponse {
 interface GetVideoResponse {
   video: ApiVideo
   presigned_playback_url: string
+  presigned_thumbnail_url?: string | null
 }
 
 const PART_SIZE_BYTES = 5 * 1024 * 1024
@@ -57,12 +45,6 @@ async function uploadPart(url: string, chunk: Blob, contentType: string): Promis
   return etag
 }
 
-function mapVideoStatus(status: ApiVideo['status']): VideoStatus {
-  if (status === 'READY') return 'uploaded'
-  if (status === 'FAILED') return 'failed'
-  return 'processing'
-}
-
 function mapBackendStatus(status: VideoStatus | 'all'): string | null {
   if (status === 'uploaded') return 'READY'
   if (status === 'processing') return 'PENDING_UPLOAD'
@@ -70,26 +52,16 @@ function mapBackendStatus(status: VideoStatus | 'all'): string | null {
   return null
 }
 
-function mapApiVideo(video: ApiVideo, playbackUrl = ''): Video {
-  return {
-    id: video.id,
-    teamId: video.team_id,
-    title: video.title,
-    storageUrl: playbackUrl,
-    durationMs: video.duration_ms ?? undefined,
-    description: video.description ?? undefined,
-    uploadedAt: video.created_at,
-    status: mapVideoStatus(video.status),
-    resolution: video.mime_type ?? undefined,
-  }
-}
-
 export async function getApiVideoByIdForTeam(id: string, teamId: string): Promise<Video> {
   const data = await apiJson<GetVideoResponse>(
     `/videos/${encodeURIComponent(id)}?team_id=${encodeURIComponent(teamId)}`,
   )
 
-  return mapApiVideo(data.video, data.presigned_playback_url)
+  return mapApiVideo(
+    data.video,
+    data.presigned_playback_url,
+    data.presigned_thumbnail_url ?? '',
+  )
 }
 
 async function listTeamVideos(teamId: string, status?: string | null): Promise<Video[]> {

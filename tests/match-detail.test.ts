@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
+  clipDisplayTitle,
   clipFallbackLabel,
+  clipTimeRange,
   loadMatchClips,
   loadMatchDetail,
   matchAnalysisPath,
@@ -168,6 +170,19 @@ test('Clips supports an honest empty state and persisted collections', async () 
   assert.equal(existing.collections[0].items?.length, 1)
   assert.equal(existing.hasPartialFailure, false)
   assert.equal(clipFallbackLabel(collectionDetail.items[0]), 'Clip 1 · 00:42–00:55')
+  assert.equal(clipDisplayTitle(collectionDetail.items[0]), 'Clip 1 · 00:42–00:55')
+  assert.equal(clipTimeRange(collectionDetail.items[0]), '00:42–00:55')
+})
+
+test('Clips uses a persisted description as title and keeps the real range visible', () => {
+  const describedItem = {
+    ...collectionDetail.items[0],
+    description: 'Pick and roll central',
+  }
+
+  assert.equal(clipDisplayTitle(describedItem), 'Pick and roll central')
+  assert.equal(clipTimeRange(describedItem), '00:42–00:55')
+  assert.equal(clipDisplayTitle({ ...describedItem, description: '   ' }), 'Clip 1 · 00:42–00:55')
 })
 
 test('a partial clip failure preserves the real collection without inventing empty content', async () => {
@@ -197,6 +212,7 @@ test('the detail shell covers Video, Reporte, Clips and every real job state', (
   assert.match(detailSource, /Abrir reporte completo/)
   assert.match(detailSource, /minimalChrome/)
   assert.match(playerSource, /getVideoByIdForTeam/)
+  assert.match(playerSource, /poster=\{playbackVideo\.thumbnailUrl \|\| undefined\}/)
   assert.match(detailSource, /Gestionar clips/)
   assert.doesNotMatch(detailSource, /score|rival|competencia|64%|10\/2\/8\/14/i)
 })

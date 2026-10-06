@@ -212,6 +212,8 @@ test('Partidos renders loading, retry, empty, partial failure and responsive car
   assert.match(source, /Subí tus partidos, seguí el análisis y encontrá cada jugada/)
   assert.match(source, /flex-nowrap items-center gap-2 overflow-x-auto/)
   assert.match(source, /text-balance/)
+  assert.match(source, /requestMatchPoster\(video, getVideoByIdForTeam\)/)
+  assert.match(source, /posterUrl=\{posterUrls\[item\.video\.id\]\}/)
   assert.doesNotMatch(source, /Video ·|>\s*Reporte\s*</)
   assert.doesNotMatch(source, /score|rival|competencia|64%|10\/2\/8\/14/i)
 })

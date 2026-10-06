@@ -35,7 +35,8 @@ import {
   type MatchLibraryDisplayState,
 } from './match-library'
 import {
-  clipFallbackLabel,
+  clipDisplayTitle,
+  clipTimeRange,
   loadMatchClips,
   loadMatchDetail,
   matchAnalysisPath,
@@ -398,8 +399,15 @@ function MatchClipsTab({ videoId }: { videoId: string }) {
                       to={`/videos/${encodeURIComponent(videoId)}/colecciones/${encodeURIComponent(collection.id)}`}
                       className="group flex min-h-16 items-center justify-between gap-4 py-3"
                     >
-                      <span className="scout-display text-2xl font-bold text-[#FF6A1F]">
-                        {clipFallbackLabel(item)}
+                      <span className="min-w-0">
+                        <span className="scout-display block text-2xl font-bold text-[#FF6A1F]">
+                          {clipDisplayTitle(item)}
+                        </span>
+                        {item.description?.trim() ? (
+                          <span className="mt-1 block text-xs font-medium uppercase tracking-[0.12em] text-[#A3ABBA]">
+                            Clip {item.position} · {clipTimeRange(item)}
+                          </span>
+                        ) : null}
                       </span>
                       <Play aria-hidden="true" className="h-4 w-4 shrink-0 text-[#A3ABBA] group-hover:text-[#F4F5F7]" />
                     </Link>

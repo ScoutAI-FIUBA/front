@@ -112,6 +112,7 @@ export interface ClipCollectionItem {
   collectionId: string
   startMs: number
   endMs: number
+  description?: string | null
   position: number
   createdAt: string
 }

@@ -27,8 +27,8 @@ Frontend integration for the backend clip collections foundation.
 - The collections page loads the selected video and its collections.
 - Users can create a collection with a required name and optional description.
 - Collection detail displays virtual clips in backend position order.
-- Because persisted items do not expose semantic labels, notes, or player associations, the UI uses an honest positional-and-range fallback such as `Clip 1 · 00:42–00:55`; it never reconstructs metadata that the backend did not persist.
-- Users add clips by defining `startMs` and `endMs`; no per-clip video file is uploaded.
+- Persisted items may expose an optional backend `description`, which the UI presents as the clip title while keeping the time range visible. Legacy items without it use the honest fallback `Clip 1 · 00:42–00:55`; the UI never reconstructs notes or player associations.
+- Users add clips by defining `startMs`, `endMs`, and an optional description of at most 200 characters; no per-clip video file is uploaded.
 - The UI validates non-negative ranges, end after start, a maximum duration of 30 seconds, and the known video duration.
 - Users can delete virtual clips after confirmation.
 - Clip playback seeks the original video to `startMs` and pauses at `endMs`.
@@ -45,6 +45,7 @@ Frontend integration for the backend clip collections foundation.
 - `GET /videos/{video_id}/collections/{collection_id}`
 - `POST /videos/{video_id}/collections/{collection_id}/clips`
 - `POST /videos/{video_id}/collections/{collection_id}/clips/batch`
+- `PATCH /videos/{video_id}/collections/{collection_id}/clips/{item_id}` (backend contract available; frontend editing is not part of this increment)
 - `POST /videos/{video_id}/collections/{collection_id}/clips/{item_id}/export`
 - `DELETE /videos/{video_id}/collections/{collection_id}/clips/{item_id}`
 
@@ -52,9 +53,8 @@ Backend snake_case payloads are mapped to frontend camelCase types inside the AP
 
 ## Non-Scope
 
-- Persisting labels on collection items because the backend range model does not expose a label field.
 - Editing, deleting, or reordering collections because the backend has no endpoints for those actions.
-- Editing or reordering collection items.
+- Editing existing descriptions or reordering collection items.
 
 ## Verification
 

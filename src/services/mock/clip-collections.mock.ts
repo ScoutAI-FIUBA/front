@@ -96,6 +96,7 @@ export const mockClipCollectionService: IClipCollectionService = {
         collectionId,
         startMs: clip.startMs,
         endMs: clip.endMs,
+        description: clip.description?.trim() || null,
         position,
         createdAt: new Date().toISOString(),
       }

@@ -103,3 +103,11 @@ function formatClipTime(milliseconds: number): string {
 export function clipFallbackLabel(item: ClipCollectionItem): string {
   return `Clip ${item.position} · ${formatClipTime(item.startMs)}–${formatClipTime(item.endMs)}`
 }
+
+export function clipDisplayTitle(item: ClipCollectionItem): string {
+  return item.description?.trim() || clipFallbackLabel(item)
+}
+
+export function clipTimeRange(item: ClipCollectionItem): string {
+  return `${formatClipTime(item.startMs)}–${formatClipTime(item.endMs)}`
+}

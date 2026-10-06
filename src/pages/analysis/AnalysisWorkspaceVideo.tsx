@@ -152,6 +152,7 @@ export const AnalysisWorkspaceVideo = forwardRef<
           ref={videoRef}
           key={playbackVideo.storageUrl}
           src={playbackVideo.storageUrl}
+          poster={playbackVideo.thumbnailUrl || undefined}
           controls
           preload="metadata"
           className="aspect-video w-full bg-black"

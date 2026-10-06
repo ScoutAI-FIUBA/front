@@ -64,6 +64,8 @@ Current limits:
 - `requestAnalysis(videoId)` is only available in mock mode because the backend does not expose analysis request endpoints yet.
 - `storage_key` is internal object metadata and is not used as a browser URL.
 - For a ready video, `apiVideoService.getById` calls `GET /videos/{video_id}?team_id=...` and maps the returned `presigned_playback_url` to the frontend `storageUrl`.
+- The same detail response may include nullable `presigned_thumbnail_url`; the frontend maps it to `thumbnailUrl` and uses it as the native video poster. It is a fresh signed URL with the backend's current 3600-second lifetime, not a public stable URL.
+- `GET /videos?team_id=...` deliberately does not include a thumbnail field. After rendering that base catalog, Partidos progressively calls the existing detail endpoint with at most four concurrent requests. Signed poster URLs are cached in memory for 55 minutes; null and failed lookups keep the schematic fallback and are negatively cached for five minutes. No additional backend contract is required.
 - Non-ready videos do not request a presigned playback URL.
 
 ## Clip Collections Backend Integration
@@ -75,18 +77,18 @@ Authenticated clip collection endpoints are scoped to an owned video:
 - `GET /videos/{video_id}/collections/{collection_id}`.
 - `POST /videos/{video_id}/collections/{collection_id}/clips`.
 - `POST /videos/{video_id}/collections/{collection_id}/clips/batch`.
+- `PATCH /videos/{video_id}/collections/{collection_id}/clips/{item_id}`.
 - `POST /videos/{video_id}/collections/{collection_id}/clips/{item_id}/export`.
 - `DELETE /videos/{video_id}/collections/{collection_id}/clips/{item_id}`.
 
-The API service maps backend snake_case payloads to frontend camelCase types. Collection items are virtual ranges containing `id`, `start_ms`, `end_ms`, and `position`; they no longer contain per-clip file metadata.
+The API service maps backend snake_case payloads to frontend camelCase types. Collection items are virtual ranges containing `id`, `start_ms`, `end_ms`, nullable `description`, and `position`; they do not contain per-clip file metadata. Create and batch payloads accept the optional `description` with a backend maximum of 200 characters, while legacy responses without the field normalize it to `null`.
 
 Current limits:
 
 - Range duration is limited to 30 seconds and validated against `video.duration_ms` when known.
 - Playback uses the original video URL plus the item's temporal range.
 - Export synchronously generates or reuses a physical clip and returns `download_url`.
-- Collection update/delete and item update/reorder endpoints do not exist.
-- Manual-analysis labels are not part of this contract.
+- Collection update/delete and item reorder endpoints do not exist. The backend can update only an item's description through PATCH; frontend editing of existing descriptions is not included yet.
 
 ## Known Standalone Helper
 

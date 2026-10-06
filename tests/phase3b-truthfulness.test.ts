@@ -51,19 +51,14 @@ test('real manual review persists clips and exits before fabricating an Analysis
   )
 })
 
-test('clip fallback uses only persisted position and time range', () => {
+test('clip fallback remains honest while a persisted backend description may be displayed', () => {
   const pageSource = readSource('../src/pages/videos/VideoCollectionDetailPage.tsx')
   const typeSource = readSource('../src/types/index.ts')
   const itemShape = typeSource.match(/export interface ClipCollectionItem \{([\s\S]*?)\n\}/)?.[1]
 
   assert.ok(itemShape)
   assert.doesNotMatch(itemShape, /\blabel\b|\bnote\b|\bplayerIds?\b/)
-  assert.match(
-    pageSource,
-    /Clip \{item\.position\} · \{formatSeconds\(item\.startMs \/ 1000\)\}–\{formatSeconds\(item\.endMs \/ 1000\)\}/,
-  )
-  assert.match(
-    pageSource,
-    /Clip \{selectedItem\.position\} · \{formatSeconds\(selectedItem\.startMs \/ 1000\)\}–\{formatSeconds\(selectedItem\.endMs \/ 1000\)\}/,
-  )
+  assert.match(itemShape, /description\?: string \| null/)
+  assert.match(pageSource, /item\.description\?\.trim\(\) \|\| `Clip \$\{item\.position\} · \$\{clipRange\(item\)\}`/)
+  assert.doesNotMatch(pageSource, /Pick and Roll|Defensa/)
 })
