@@ -23,9 +23,10 @@ test('upload rejects external return targets and falls back to team Videos', () 
   assert.equal(videoUploadReturnPath(new URLSearchParams('return_to=https://evil.example'), 'team-1'), '/videos?team_id=team-1')
 })
 
-test('upload returning to new analysis selects the created video', () => {
+test('upload success enters the exact Partido report regardless of legacy return context', () => {
   const params = new URLSearchParams('return_to=%2Fanalisis%2Fnuevo%3Fteam_id%3Dteam-1')
-  assert.equal(videoUploadSuccessPath(params, { id: 'video/1', teamId: 'team-1' }), '/analisis/nuevo?team_id=team-1&video_id=video%2F1')
+  assert.equal(videoUploadSuccessPath(params, { id: 'video/1', teamId: 'team-1' }), '/partidos/video%2F1?tab=reporte')
+  assert.equal(videoUploadSuccessPath(new URLSearchParams(), { id: 'video/1', teamId: 'team-1' }), '/partidos/video%2F1?tab=reporte')
 })
 
 test('upload accepts Partidos as a product return destination', () => {
@@ -40,5 +41,6 @@ test('upload drop affordance has real handlers and a pending guard', () => {
   assert.match(source, /onDragOver=/)
   assert.match(source, /onDrop=\{handleDrop\}/)
   assert.match(source, /isUploading/)
+  assert.match(source, /upsertVideoInAnalysisCatalog\(uploaded\)/)
   assert.match(source, /videoUploadSuccessPath/)
 })

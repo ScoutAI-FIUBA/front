@@ -88,7 +88,7 @@ test('keeps the visual decorative, reduced-motion safe, and preserves the legacy
   assert.match(overviewSource.slice(runningStart, failedStart), /<ProcessingShotArc/)
   assert.match(overviewSource.slice(runningStart, failedStart), /presentation="legacy"/)
   assert.doesNotMatch(overviewSource.slice(doneStart), /<ProcessingShotArc/)
-  assert.match(reportSource, /variant=\{ready \? 'waiting' : 'preparing'\}/)
+  assert.match(reportSource, /variant=\{failed \? 'failed' : ready \? 'waiting' : 'preparing'\}/)
   assert.match(reportSource, /variant="queued"/)
   assert.match(reportSource, /variant="running"/)
   assert.match(reportSource, /variant="failed"/)

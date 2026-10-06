@@ -126,6 +126,7 @@ test('QUEUED, RUNNING, DONE and FAILED jobs use product-facing CTAs', () => {
 test('Partidos exposes one product-facing state instead of video and job states', () => {
   const cases: Array<[Video['status'], ProcessingJobStatus | null, string]> = [
     ['processing', null, 'Preparando archivo'],
+    ['failed', null, 'Archivo con error'],
     ['uploaded', null, 'Sin analizar'],
     ['uploaded', 'QUEUED', 'En cola'],
     ['uploaded', 'RUNNING', 'Analizando'],

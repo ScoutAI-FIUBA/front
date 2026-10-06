@@ -92,9 +92,12 @@ export async function loadMatchDetail(
   const video = await dependencies.videos.getById(videoId)
   if (!video) return null
 
+  const canHaveAnalysis = video.status === 'uploaded' || video.status === 'analyzed'
   const [teamResult, jobsResult] = await Promise.allSettled([
     dependencies.teams.getById(video.teamId),
-    dependencies.jobs.listForVideo(video.id, video.teamId),
+    canHaveAnalysis
+      ? dependencies.jobs.listForVideo(video.id, video.teamId)
+      : Promise.resolve([]),
   ])
 
   const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : []
@@ -102,7 +105,7 @@ export async function loadMatchDetail(
     video,
     team: teamResult.status === 'fulfilled' ? teamResult.value : null,
     latestJob: latestVideoAnalysisJob(video.id, jobs),
-    jobsUnavailable: jobsResult.status === 'rejected',
+    jobsUnavailable: canHaveAnalysis && jobsResult.status === 'rejected',
   }
 }
 

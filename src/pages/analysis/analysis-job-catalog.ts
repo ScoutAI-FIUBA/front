@@ -64,6 +64,34 @@ function newestFirst(left: AnalysisCatalogItem, right: AnalysisCatalogItem): num
   return Date.parse(right.job.createdAt) - Date.parse(left.job.createdAt)
 }
 
+function newestVideoFirst(left: Video, right: Video): number {
+  return Date.parse(right.uploadedAt) - Date.parse(left.uploadedAt)
+}
+
+export function upsertAnalysisCatalogVideo(
+  catalog: AnalysisJobCatalog,
+  video: Video,
+  now: () => number = Date.now,
+): AnalysisJobCatalog {
+  return {
+    ...catalog,
+    videos: [
+      video,
+      ...catalog.videos.filter((candidate) => candidate.id !== video.id),
+    ].sort(newestVideoFirst),
+    items: catalog.items.map((item) => (
+      item.video.id === video.id ? { ...item, video } : item
+    )),
+    loadedJobVideoIds: catalog.loadedJobVideoIds.includes(video.id)
+      ? catalog.loadedJobVideoIds
+      : [...catalog.loadedJobVideoIds, video.id],
+    partialFailures: catalog.partialFailures.filter((failure) => (
+      failure.videoId !== video.id || failure.scope !== 'jobs'
+    )),
+    updatedAt: now(),
+  }
+}
+
 export async function composeAnalysisJobCatalog(
   dependencies: AnalysisCatalogDependencies,
   options: {
@@ -120,7 +148,7 @@ export async function composeAnalysisJobCatalog(
   return {
     items: itemGroups.flat().sort(newestFirst),
     teams,
-    videos: [...videos].sort((left, right) => Date.parse(right.uploadedAt) - Date.parse(left.uploadedAt)),
+    videos: [...videos].sort(newestVideoFirst),
     loadedJobVideoIds,
     partialFailures,
     updatedAt: options.now?.() ?? Date.now(),

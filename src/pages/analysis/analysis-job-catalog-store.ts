@@ -1,8 +1,9 @@
 import { analysisJobService, teamService, videoService } from '@/services/registry'
-import type { ProcessingJob } from '@/types'
+import type { ProcessingJob, Video } from '@/types'
 import {
   composeAnalysisJobCatalog,
   refreshActiveCatalogJobs,
+  upsertAnalysisCatalogVideo,
   type AnalysisCatalogSeed,
   type AnalysisJobCatalog,
 } from './analysis-job-catalog'
@@ -60,6 +61,11 @@ export function addCreatedJobToAnalysisCatalog(job: ProcessingJob): void {
     ],
     updatedAt: Date.now(),
   }
+}
+
+export function upsertVideoInAnalysisCatalog(video: Video): void {
+  if (!cachedCatalog) return
+  cachedCatalog = upsertAnalysisCatalogVideo(cachedCatalog, video)
 }
 
 export function resetAnalysisJobCatalogForTests(): void {

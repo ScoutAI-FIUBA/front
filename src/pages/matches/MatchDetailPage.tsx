@@ -23,8 +23,15 @@ import {
 import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
 import { createAnalysisJobDetailPoller } from '@/pages/analysis/analysis-job-detail-polling'
 import {
+  addCreatedJobToAnalysisCatalog,
+  upsertVideoInAnalysisCatalog,
+} from '@/pages/analysis/analysis-job-catalog-store'
+import { createAnalysisJobSubmission } from '@/pages/videos/analysis-job-creation'
+import { isApiAuthenticationError } from '@/services/api/errors'
+import {
   analysisJobService,
   clipCollectionService,
+  getVideoByIdForTeam,
   teamService,
   videoService,
 } from '@/services/registry'
@@ -44,7 +51,6 @@ import {
   loadMatchClips,
   loadMatchDetail,
   matchAnalysisElapsedLabel,
-  matchAnalysisPath,
   matchDetailPath,
   matchReportPath,
   resolveMatchDetailTab,
@@ -54,6 +60,7 @@ import {
   type MatchDetailTab,
   type MatchReportSection,
 } from './match-detail'
+import { createMatchVideoPreparationPoller } from './match-video-preparation-polling'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
 
@@ -107,7 +114,7 @@ function displayStateFor(model: MatchDetailModel): MatchLibraryDisplayState {
 
 function stateTone(state: MatchLibraryDisplayState): string {
   if (state === 'report-ready') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-  if (state === 'analysis-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
+  if (state === 'analysis-error' || state === 'material-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
   if (state === 'queued' || state === 'analyzing') {
     return 'border-[#FF6A1F]/40 bg-[#FF6A1F]/10 text-[#FF9A68]'
   }
@@ -178,12 +185,18 @@ function MatchReportTab({
   activeSection,
   onSectionChange,
   onJobUpdated,
+  onStartAnalysis,
+  isCreatingAnalysis,
+  creationError,
 }: {
   model: MatchDetailModel
   onRetry: () => void
   activeSection: MatchReportSection
   onSectionChange: (section: AnalysisJobResultsSection) => void
   onJobUpdated: (job: ProcessingJob) => void
+  onStartAnalysis: () => void
+  isCreatingAnalysis: boolean
+  creationError: string | null
 }) {
   const { latestJob: job, video } = model
 
@@ -205,34 +218,39 @@ function MatchReportTab({
   }
 
   if (!job) {
-    const ready = videoMaterialState(video) === 'ready'
+    const materialState = videoMaterialState(video)
+    const ready = materialState === 'ready'
+    const failed = materialState === 'failed'
     return (
       <section className="space-y-10 py-3">
         <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte del partido</p>
             <h2 className="scout-display mt-3 max-w-4xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              Este partido todavía no tiene reporte
+              {failed ? 'No se pudo preparar este archivo' : 'Este partido todavía no tiene reporte'}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-              Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.
+              {failed
+                ? 'El material no quedó disponible para reproducirlo o analizarlo.'
+                : 'Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.'}
             </p>
             {ready ? (
               <Button
-                asChild
+                type="button"
+                disabled={isCreatingAnalysis}
+                onClick={onStartAnalysis}
                 className="mt-6 h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
               >
-                <Link to={matchAnalysisPath(video)}>
-                  Analizar partido
-                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                </Link>
+                {isCreatingAnalysis ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowRight aria-hidden="true" className="h-4 w-4" />}
+                {isCreatingAnalysis ? 'Iniciando…' : 'Analizar partido'}
               </Button>
-            ) : (
+            ) : failed ? null : (
               <p className="mt-6 max-w-sm text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
             )}
+            {creationError ? <p className="mt-3 text-sm text-red-300" role="alert">{creationError}</p> : null}
           </div>
           <ProcessingShotArc
-            variant={ready ? 'waiting' : 'preparing'}
+            variant={failed ? 'failed' : ready ? 'waiting' : 'preparing'}
             presentation="report"
           />
         </div>
@@ -329,16 +347,15 @@ function MatchReportTab({
             </p>
             <p className="mt-2 max-w-2xl text-xs text-[#788397]">El detalle técnico de esta ejecución queda disponible como información secundaria para soporte.</p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button asChild className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
-                <Link to={matchAnalysisPath(video)}>
-                  Reintentar análisis
-                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                </Link>
+              <Button type="button" disabled={isCreatingAnalysis} onClick={onStartAnalysis} className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+                {isCreatingAnalysis ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowRight aria-hidden="true" className="h-4 w-4" />}
+                {isCreatingAnalysis ? 'Iniciando…' : 'Reintentar análisis'}
               </Button>
               <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
                 <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
               </Button>
             </div>
+            {creationError ? <p className="mt-3 text-sm text-red-300" role="alert">{creationError}</p> : null}
           </div>
           <ProcessingShotArc variant="failed" presentation="report" />
         </div>
@@ -536,6 +553,9 @@ export function MatchDetailPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [model, setModel] = useState<MatchDetailModel | null>(null)
   const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
+  const [isPreparationPollingStopped, setIsPreparationPollingStopped] = useState(false)
+  const [isCreatingAnalysis, setIsCreatingAnalysis] = useState(false)
+  const [creationError, setCreationError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!videoId) {
@@ -553,6 +573,7 @@ export function MatchDetailPage() {
       setModel(next)
       setLoadState(next ? 'success' : 'not-found')
       setIsPollingDisconnected(false)
+      setIsPreparationPollingStopped(false)
     } catch {
       setLoadState('error')
     }
@@ -562,6 +583,39 @@ export function MatchDetailPage() {
     void load()
   }, [load])
 
+  const preparationVideoId = model?.video.id ?? null
+  const preparationTeamId = model?.video.teamId ?? null
+  const preparationStatus = model?.video.status ?? null
+  useEffect(() => {
+    if (loadState !== 'success' || !preparationVideoId || !preparationTeamId || preparationStatus !== 'processing') return
+
+    const poller = createMatchVideoPreparationPoller({
+      load: () => getVideoByIdForTeam(preparationVideoId, preparationTeamId),
+      onVideo: (video) => {
+        setIsPollingDisconnected(false)
+        setIsPreparationPollingStopped(false)
+        upsertVideoInAnalysisCatalog(video)
+        setModel((current) => current?.video.id === video.id
+          ? { ...current, video }
+          : current)
+      },
+      onError: () => setIsPollingDisconnected(true),
+      onExhausted: () => {
+        setIsPollingDisconnected(false)
+        setIsPreparationPollingStopped(true)
+      },
+    })
+    poller.start(preparationStatus)
+    return () => poller.stop()
+  }, [loadState, preparationStatus, preparationTeamId, preparationVideoId])
+
+  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
+    addCreatedJobToAnalysisCatalog(updatedJob)
+    setModel((current) => current?.latestJob?.id === updatedJob.id
+      ? { ...current, latestJob: updatedJob }
+      : current)
+  }, [])
+
   const latestJob = model?.latestJob
   useEffect(() => {
     if (!latestJob || (latestJob.status !== 'QUEUED' && latestJob.status !== 'RUNNING')) return
@@ -570,21 +624,44 @@ export function MatchDetailPage() {
       load: () => analysisJobService.get(latestJob.id, latestJob.teamId),
       onJob: (job) => {
         setIsPollingDisconnected(false)
-        setModel((current) => current ? { ...current, latestJob: job } : current)
+        handleJobUpdated(job)
       },
       onError: () => setIsPollingDisconnected(true),
     })
     poller.start(latestJob.status)
     return () => poller.stop()
-  }, [latestJob])
+  }, [handleJobUpdated, latestJob])
+
+  const analysisVideoId = model?.video.id ?? null
+  const analysisTeamId = model?.video.teamId ?? null
+  const analysisSubmission = useMemo(() => {
+    if (!analysisVideoId || !analysisTeamId) return null
+
+    return createAnalysisJobSubmission({
+      create: () => analysisJobService.create(analysisVideoId, { teamId: analysisTeamId }),
+      onCreated: (job) => {
+        addCreatedJobToAnalysisCatalog(job)
+        setCreationError(null)
+        setModel((current) => current?.video.id === job.videoId
+          ? { ...current, latestJob: job, jobsUnavailable: false }
+          : current)
+      },
+      onError: (error) => {
+        if (!isApiAuthenticationError(error)) {
+          setCreationError('No pudimos iniciar el análisis. El partido sigue disponible para reintentar.')
+        }
+      },
+      onSubmittingChange: setIsCreatingAnalysis,
+    })
+  }, [analysisTeamId, analysisVideoId])
+
+  const handleStartAnalysis = useCallback(() => {
+    if (!analysisSubmission || !model || videoMaterialState(model.video) !== 'ready') return
+    setCreationError(null)
+    void analysisSubmission.submit()
+  }, [analysisSubmission, model])
 
   const displayState = useMemo(() => model ? displayStateFor(model) : null, [model])
-
-  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
-    setModel((current) => current?.latestJob?.id === updatedJob.id
-      ? { ...current, latestJob: updatedJob }
-      : current)
-  }, [])
 
   const handleReportSectionChange = useCallback((section: AnalysisJobResultsSection) => {
     if (!videoId) return
@@ -690,7 +767,21 @@ export function MatchDetailPage() {
         })}
       </nav>
 
-      {isPollingDisconnected ? <div className="mt-6"><AnalysisPollingNotice /></div> : null}
+      {isPreparationPollingStopped ? (
+        <section className="mt-6 flex flex-col items-start gap-4 border-y border-amber-500/25 py-4 sm:flex-row sm:items-center sm:justify-between" role="status">
+          <p className="text-sm text-amber-100">La preparación sigue pendiente. Actualizá el estado para continuar verificándola.</p>
+          <Button type="button" variant="outline" className="rounded-full" onClick={() => void load()}>
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            Actualizar estado
+          </Button>
+        </section>
+      ) : isPollingDisconnected ? (
+        model.video.status === 'processing' ? (
+          <section className="mt-6 border-y border-amber-500/25 py-4 text-sm text-amber-100" role="status">
+            No pudimos actualizar la preparación del archivo. Mostramos el último estado conocido y seguimos intentando.
+          </section>
+        ) : <div className="mt-6"><AnalysisPollingNotice /></div>
+      ) : null}
 
       <main className={isCompactReportHeader ? 'pt-4' : 'pt-8'}>
         {activeTab === 'video' ? <MatchVideoTab video={model.video} /> : null}
@@ -701,6 +792,9 @@ export function MatchDetailPage() {
             activeSection={activeReportSection}
             onSectionChange={handleReportSectionChange}
             onJobUpdated={handleJobUpdated}
+            onStartAnalysis={handleStartAnalysis}
+            isCreatingAnalysis={isCreatingAnalysis}
+            creationError={creationError}
           />
         ) : null}
         {activeTab === 'clips' ? <MatchClipsTab videoId={model.video.id} /> : null}

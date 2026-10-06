@@ -13,6 +13,7 @@ export type MatchLibraryFilter = 'all' | 'active' | 'done' | 'failed'
 
 export type MatchLibraryDisplayState =
   | 'preparing-file'
+  | 'material-error'
   | 'unanalyzed'
   | 'queued'
   | 'analyzing'
@@ -38,6 +39,7 @@ export interface MatchLibraryItem {
 export function matchLibraryDisplayState(
   item: Pick<MatchLibraryItem, 'materialState' | 'analysisState'>,
 ): MatchLibraryDisplayState {
+  if (item.materialState === 'failed') return 'material-error'
   if (item.materialState !== 'ready') return 'preparing-file'
 
   switch (item.analysisState) {
@@ -60,6 +62,8 @@ export function matchLibraryDisplayLabel(state: MatchLibraryDisplayState): strin
   switch (state) {
     case 'preparing-file':
       return 'Preparando archivo'
+    case 'material-error':
+      return 'Archivo con error'
     case 'unanalyzed':
       return 'Sin analizar'
     case 'queued':

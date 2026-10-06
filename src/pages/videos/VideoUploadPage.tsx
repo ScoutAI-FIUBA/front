@@ -11,6 +11,7 @@ import type { Team } from '@/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
+import { upsertVideoInAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
 
 export function VideoUploadPage() {
   const navigate = useNavigate()
@@ -65,6 +66,7 @@ export function VideoUploadPage() {
     try {
       setIsUploading(true)
       const uploaded = await videoService.upload({ title: title.trim(), teamId, description: description.trim(), file })
+      upsertVideoInAnalysisCatalog(uploaded)
       toast.success('Video subido correctamente')
       navigate(videoUploadSuccessPath(searchParams, uploaded))
     } catch (error) {

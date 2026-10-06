@@ -130,6 +130,21 @@ test('job history failure stays explicit and never becomes a false no-job state'
   assert.equal(model?.jobsUnavailable, true)
 })
 
+test('preparing material loads as a Partido without requesting an impossible job history', async () => {
+  let jobRequests = 0
+  const preparingVideo = { ...video, status: 'processing' as const }
+  const model = await loadMatchDetail(preparingVideo.id, {
+    videos: { async getById() { return preparingVideo } },
+    teams: { async getById() { return team } },
+    jobs: { async listForVideo() { jobRequests += 1; return [] } },
+  })
+
+  assert.equal(model?.video.status, 'processing')
+  assert.equal(model?.latestJob, null)
+  assert.equal(model?.jobsUnavailable, false)
+  assert.equal(jobRequests, 0)
+})
+
 test('the analysis CTA reuses the existing real creation route', () => {
   assert.equal(
     matchAnalysisPath(video),
@@ -300,7 +315,7 @@ test('R3-C keeps every non-DONE Reporte state product-facing and contract-honest
   const failedSource = detailSource.slice(failedStart, doneStart)
 
   assert.match(detailSource, /Este partido todavía no tiene reporte/)
-  assert.match(detailSource, />\s*Analizar partido\s*</)
+  assert.match(detailSource, /'Analizar partido'/)
   assert.match(detailSource, /ReportStructurePreview/)
   assert.match(queuedSource, /Tu partido está en cola/)
   assert.match(queuedSource, /job\.progressPercent != null/)
@@ -310,9 +325,25 @@ test('R3-C keeps every non-DONE Reporte state product-facing and contract-honest
   assert.match(runningSource, /job\.progressPercent != null/)
   assert.doesNotMatch(runningSource, /analysisJobDetailPath|LoaderCircle/)
   assert.match(failedSource, /No se pudo analizar este partido/)
-  assert.match(failedSource, /matchAnalysisPath\(video\)/)
+  assert.match(failedSource, /onClick=\{onStartAnalysis\}/)
   assert.match(failedSource, /analysisJobDetailPath\(job\)/)
   assert.doesNotMatch(detailSource, /Detectando jugadores|Procesando tiros|frames procesados|\bETA\b/i)
+})
+
+test('R4-A keeps upload preparation and analysis creation inside the exact Partido', () => {
+  const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+  const uploadSource = readFileSync(new URL('../src/pages/videos/VideoUploadPage.tsx', import.meta.url), 'utf8')
+  const navigationSource = readFileSync(new URL('../src/pages/videos/video-upload-navigation.ts', import.meta.url), 'utf8')
+
+  assert.match(navigationSource, /matchDetailPath\(uploaded\.id, 'reporte'\)/)
+  assert.match(uploadSource, /upsertVideoInAnalysisCatalog\(uploaded\)/)
+  assert.match(detailSource, /createMatchVideoPreparationPoller/)
+  assert.match(detailSource, /getVideoByIdForTeam\(preparationVideoId, preparationTeamId\)/)
+  assert.match(detailSource, /analysisJobService\.create\(analysisVideoId, \{ teamId: analysisTeamId \}\)/)
+  assert.match(detailSource, /createAnalysisJobSubmission/)
+  assert.match(detailSource, /addCreatedJobToAnalysisCatalog\(job\)/)
+  assert.match(detailSource, /latestJob: job, jobsUnavailable: false/)
+  assert.doesNotMatch(detailSource, /navigate\(analysisJobDetailPath/)
 })
 
 test('legacy analysis, video and collection routes remain available', () => {

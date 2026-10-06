@@ -1,4 +1,5 @@
 import { teamVideosPath } from './video-team-navigation.ts'
+import { matchDetailPath } from '../matches/match-detail.ts'
 
 export const VIDEO_UPLOAD_RETURN_QUERY_PARAM = 'return_to'
 
@@ -43,14 +44,8 @@ export function videoUploadReturnPath(searchParams: URLSearchParams, selectedTea
 }
 
 export function videoUploadSuccessPath(
-  searchParams: URLSearchParams,
+  _searchParams: URLSearchParams,
   uploaded: { id: string; teamId: string },
 ): string {
-  const destination = videoUploadReturnPath(searchParams, uploaded.teamId)
-  if (!destination.startsWith('/analisis/nuevo')) return destination
-
-  const parsed = new URL(destination, 'https://scoutai.local')
-  parsed.searchParams.set('team_id', uploaded.teamId)
-  parsed.searchParams.set('video_id', uploaded.id)
-  return `${parsed.pathname}${parsed.search}`
+  return matchDetailPath(uploaded.id, 'reporte')
 }

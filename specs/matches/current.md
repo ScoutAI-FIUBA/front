@@ -60,7 +60,9 @@
 
 ## Navigation reuse
 
-- Upload uses the existing video upload route and returns to `/partidos`.
+- Upload keeps the existing `/videos/subir` compatibility route, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
+- A Partido whose material is still `PENDING_UPLOAD` stays on that route and polls the existing video detail boundary at a bounded interval until the real material status becomes `READY` or `FAILED`. It does not invent upload progress or navigate away.
+- Once the material is ready, `Analizar partido` creates the ProcessingJob inline through the existing endpoint and single-flight guard. The returned job becomes `latestJob` and is added to the shared catalogue immediately, so the existing QUEUED/RUNNING polling reveals DONE in the same Reporte. FAILED retry uses the same inline flow. Legacy upload and analysis routes remain available as compatibility entry points.
 - New analysis uses `/analisis/nuevo` with the real team and video ids.
 - Active report progress remains inline in Partido. A failed job may open its exact legacy `/analisis/jobs/:jobId?team_id=...` route only as a secondary technical-detail action, while recovery reuses `/analisis/nuevo` with the same team and video. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy job route.
 

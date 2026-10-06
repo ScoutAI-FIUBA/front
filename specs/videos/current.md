@@ -34,8 +34,8 @@ ScoutAI v2 Phase 2 material library.
 ## Upload Context
 
 - `team_id` preselects a valid team.
-- `return_to` is allow-listed to `/videos` or `/analisis/nuevo`; external or unsupported targets are rejected.
-- Upload success returns to the relevant team library or to automatic-analysis selection with the created `video_id` selected.
+- `return_to` is allow-listed to `/videos`, `/analisis/nuevo`, or `/partidos`; external or unsupported targets are rejected.
+- Upload success updates the shared catalogue with the returned video and opens `/partidos/:videoId?tab=reporte`; contextual return paths remain available for cancel/back behavior and legacy entry compatibility.
 - Drag-and-drop has real drag/drop handlers and accepts one video file; picker and drop share the same validation.
 - Submission is single-flight and controls are disabled while the upload is pending.
 
