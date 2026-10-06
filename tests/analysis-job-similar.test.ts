@@ -215,7 +215,7 @@ test('load identity is independent from our_team_side', () => {
 
 test('the independent Similar module remains separate from Movement in job detail', () => {
   const source = readFileSync(
-    new URL('../src/pages/analysis/AnalysisJobDetailPage.tsx', import.meta.url),
+    new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url),
     'utf8',
   )
   const courtPositionsIndex = source.indexOf('<AnalysisJobCourtPositionsView')
@@ -223,4 +223,31 @@ test('the independent Similar module remains separate from Movement in job detai
 
   assert.ok(courtPositionsIndex >= 0)
   assert.ok(similarIndex > courtPositionsIndex)
+})
+
+test('R3-B2 presents Similar as editorial rows and keeps exact legacy job navigation', () => {
+  const source = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobSimilarAnalyses.tsx', import.meta.url),
+    'utf8',
+  )
+  const workspaceSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /presentation = 'legacy'/)
+  assert.match(source, /presentation === 'match-report'/)
+  assert.match(source, /SimilarAnalysisReportRow/)
+  assert.match(source, /formatSimilarityScore\(result\.score\)/)
+  assert.match(source, /text-\[#F4F5F7\]/)
+  assert.match(source, /Similitud de tiros/)
+  assert.match(source, /Similitud de movimiento/)
+  assert.match(source, /Sin título disponible/)
+  assert.match(source, /Fecha no disponible/)
+  assert.match(source, /analysisJobSimilarPath\(result\.jobId, teamId\)/)
+  assert.match(source, /divide-y divide-\[#252B38\] border-y/)
+  assert.doesNotMatch(source, /probabilidad|confianza|calidad|precisión/i)
+  assert.match(workspaceSource, /AnalysisJobSimilarAnalysesView[^\n]+presentation=\{presentation\}/)
+  assert.match(workspaceSource, /activeSection === 'movement' \|\| activeSection === 'similar'/)
+  assert.match(workspaceSource, /reportContentOnlySection \? 'hidden'/)
 })

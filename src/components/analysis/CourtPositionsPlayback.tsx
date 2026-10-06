@@ -9,6 +9,7 @@ import {
 } from 'motion/react'
 import { Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { AnalysisJobCourtPositions, AnalysisJobCourtPositionsPlayer } from '@/types'
 import { movementSequenceIndex } from '@/pages/analysis/analysis-job-court-positions'
 import { validCourtPositions } from './court-positions-court'
@@ -21,9 +22,10 @@ import {
 interface CourtPositionsPlaybackProps {
   court: AnalysisJobCourtPositions['court']
   player: AnalysisJobCourtPositionsPlayer
+  presentation?: 'legacy' | 'match-report'
 }
 
-export function CourtPositionsPlayback({ court, player }: CourtPositionsPlaybackProps) {
+export function CourtPositionsPlayback({ court, player, presentation = 'legacy' }: CourtPositionsPlaybackProps) {
   const reduceMotion = useReducedMotion()
   const positions = useMemo(
     () => validCourtPositions(court, player.positions),
@@ -124,16 +126,24 @@ export function CourtPositionsPlayback({ court, player }: CourtPositionsPlayback
 
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-xl border border-border-strong bg-[#d7b985]" style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}>
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-xl border',
+          presentation === 'match-report'
+            ? 'border-[#3A4254] bg-[#11151D]'
+            : 'border-border-strong bg-[#d7b985]',
+        )}
+        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+      >
         <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${court.lengthM} ${court.widthM}`} preserveAspectRatio="none" role="img" aria-label={`Recorrido espacial de ${playerLabel}`}>
           <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />
           {positions.length > 1 && (
             <>
-              <polyline points={points} fill="none" stroke="rgba(15,23,42,0.28)" strokeWidth="0.24" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points={points} fill="none" stroke={presentation === 'match-report' ? 'rgba(244,245,247,0.2)' : 'rgba(15,23,42,0.28)'} strokeWidth="0.24" strokeLinecap="round" strokeLinejoin="round" />
               <motion.polyline
                 points={points}
                 fill="none"
-                stroke="#b45309"
+                stroke={presentation === 'match-report' ? '#FF6A1F' : '#b45309'}
                 strokeWidth="0.3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -142,7 +152,7 @@ export function CourtPositionsPlayback({ court, player }: CourtPositionsPlayback
               />
             </>
           )}
-          <motion.circle cx={markerX} cy={markerY} r="0.48" fill="#111827" stroke="white" strokeWidth="0.12" />
+          <motion.circle cx={markerX} cy={markerY} r="0.48" fill={presentation === 'match-report' ? '#FF6A1F' : '#111827'} stroke="white" strokeWidth="0.12" />
           <motion.text x={markerX} y={markerY} dy="0.16" textAnchor="middle" fill="white" fontSize="0.46" fontWeight="700">
             {markerLabel}
           </motion.text>

@@ -2,13 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  BarChart3,
   CircleAlert,
-  Clock3,
-  FileSearch,
-  GitCompareArrows,
   LoaderCircle,
-  MapPinned,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert } from '@/components/ui/alert'
@@ -29,39 +24,15 @@ import {
 } from './analysis-job-detail'
 import { createAnalysisJobDetailPoller } from './analysis-job-detail-polling'
 import { getAnalysisJobPresentation } from '@/pages/videos/analysis-job-presentation'
-import { AnalysisJobCourtPositionsView, type AnalysisMovementTechnicalSummary } from './AnalysisJobCourtPositions'
-import { AnalysisJobSimilarAnalysesView } from './AnalysisJobSimilarAnalyses'
-import { AnalysisJobOverview } from './AnalysisJobOverview'
-import { AnalysisJobDetails } from './AnalysisJobDetails'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import {
-  AnalysisJobShotsWorkspace,
-  type AnalysisShootingSummary,
-} from './AnalysisJobShotsWorkspace'
-import {
-  AnalysisWorkspaceVideo,
-  type AnalysisWorkspaceVideoHandle,
-  type AnalysisWorkspaceVideoState,
-} from './AnalysisWorkspaceVideo'
+  AnalysisJobResultsWorkspace,
+  type AnalysisJobResultsSection,
+} from './AnalysisJobResultsWorkspace'
 import type { ProcessingJob } from '@/types'
-import { cn } from '@/lib/utils'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
-type WorkspaceModule = 'overview' | 'shots' | 'movement' | 'similar' | 'details'
-
-const MODULES: Array<{
-  id: WorkspaceModule
-  label: string
-  icon: typeof BarChart3
-  resultsOnly?: boolean
-}> = [
-  { id: 'overview', label: 'Resumen', icon: BarChart3 },
-  { id: 'shots', label: 'Tiros', icon: Clock3, resultsOnly: true },
-  { id: 'movement', label: 'Movimiento', icon: MapPinned, resultsOnly: true },
-  { id: 'similar', label: 'Similares', icon: GitCompareArrows, resultsOnly: true },
-  { id: 'details', label: 'Detalles', icon: FileSearch },
-]
 
 function formatJobDate(value: string): string {
   return new Date(value).toLocaleString('es-AR', {
@@ -89,13 +60,8 @@ export function AnalysisJobDetailPage() {
   const teamId = searchParams.get('team_id')?.trim() ?? ''
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [detail, setDetail] = useState<AnalysisJobDetailModel | null>(null)
-  const [activeModule, setActiveModule] = useState<WorkspaceModule>('overview')
-  const [shootingSummary, setShootingSummary] = useState<AnalysisShootingSummary | null>(null)
-  const [movementSummary, setMovementSummary] = useState<AnalysisMovementTechnicalSummary | null>(null)
-  const [videoState, setVideoState] = useState<AnalysisWorkspaceVideoState>('loading')
+  const [activeModule, setActiveModule] = useState<AnalysisJobResultsSection>('overview')
   const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
-  const playerRef = useRef<AnalysisWorkspaceVideoHandle | null>(null)
-  const moduleButtonRefs = useRef<Partial<Record<WorkspaceModule, HTMLButtonElement | null>>>({})
   const previousStatusRef = useRef<ProcessingJob['status'] | null>(null)
 
   useEffect(() => {
@@ -105,19 +71,9 @@ export function AnalysisJobDetailPage() {
 
   useEffect(() => {
     setActiveModule('overview')
-    setVideoState('loading')
-    setShootingSummary(null)
-    setMovementSummary(null)
     previousStatusRef.current = null
     setIsPollingDisconnected(false)
   }, [jobId])
-
-  useEffect(() => {
-    const button = moduleButtonRefs.current[activeModule]
-    if (!button || !globalThis.matchMedia?.('(max-width: 639px)').matches) return
-    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    button.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest', inline: 'center' })
-  }, [activeModule])
 
   const loadDetail = useCallback(async () => {
     setDetail(null)
@@ -185,17 +141,6 @@ export function AnalysisJobDetailPage() {
       : current)
   }, [])
 
-  const handleSeekToVideo = useCallback((seconds: number) => {
-    if (!playerRef.current?.seekTo(seconds)) return
-    if (globalThis.matchMedia?.('(max-width: 1279px)').matches) {
-      const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-      document.getElementById('analysis-source-video')?.scrollIntoView({
-        behavior: reduceMotion ? 'auto' : 'smooth',
-        block: 'start',
-      })
-    }
-  }, [])
-
   if (loadState === 'loading') {
     return (
       <div className="mx-auto w-full max-w-[1520px] space-y-5">
@@ -249,7 +194,6 @@ export function AnalysisJobDetailPage() {
   const title = video?.title || 'Análisis de video'
   const teamLabel = team?.name || `Equipo ${job.teamId}`
   const duration = formatDuration(video?.durationMs)
-  const availableModules = MODULES.filter((module) => !module.resultsOnly || job.status === 'DONE')
 
   return (
     <div className="mx-auto w-full max-w-[1520px] space-y-5">
@@ -272,83 +216,14 @@ export function AnalysisJobDetailPage() {
 
       {isPollingDisconnected && <AnalysisPollingNotice />}
 
-      <div className={cn(
-        'grid items-start gap-5',
-        videoState === 'error'
-          ? 'xl:grid-cols-[minmax(340px,0.72fr)_minmax(620px,1.28fr)]'
-          : 'xl:grid-cols-[minmax(420px,0.9fr)_minmax(560px,1.1fr)]',
-      )}>
-        <div className="min-w-0 xl:sticky xl:top-20">
-          <AnalysisWorkspaceVideo
-            ref={playerRef}
-            video={video}
-            videoId={job.videoId}
-            teamId={job.teamId}
-            title={title}
-            onStateChange={setVideoState}
-          />
-        </div>
-
-        <div className="min-w-0">
-          <nav className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-surface p-1.5" aria-label="Secciones del análisis">
-            <div className="flex min-w-max snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {availableModules.map(({ id, label, icon: Icon }) => (
-                <button
-                  type="button"
-                  key={id}
-                  ref={(element) => { moduleButtonRefs.current[id] = element }}
-                  className={cn(
-                    'inline-flex h-10 snap-start items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors motion-reduce:transition-none',
-                    activeModule === id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-surface-subtle hover:text-foreground',
-                  )}
-                  aria-current={activeModule === id ? 'page' : undefined}
-                  onClick={() => setActiveModule(id)}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="pointer-events-none absolute inset-y-1.5 right-1.5 w-6 rounded-r-lg bg-gradient-to-l from-surface to-transparent sm:hidden" aria-hidden="true" />
-          </nav>
-
-          <div className="min-h-[480px] px-1 py-2 sm:px-2 lg:px-3">
-            <div hidden={activeModule !== 'overview'}>
-              <AnalysisJobOverview
-                job={job}
-                shootingSummary={shootingSummary}
-                onJobUpdated={handleJobUpdated}
-                onNavigate={setActiveModule}
-              />
-            </div>
-            <div hidden={activeModule !== 'shots'}>
-              <AnalysisJobShotsWorkspace
-                job={job}
-                onSeekToVideo={handleSeekToVideo}
-                onSummaryChange={setShootingSummary}
-                onOpenOverview={() => setActiveModule('overview')}
-              />
-            </div>
-            <div hidden={activeModule !== 'movement'}>
-              <AnalysisJobCourtPositionsView job={job} onTechnicalSummaryChange={setMovementSummary} />
-            </div>
-            <div hidden={activeModule !== 'similar'}>
-              <AnalysisJobSimilarAnalysesView job={job} teamName={team?.name} />
-            </div>
-            <div hidden={activeModule !== 'details'}>
-              <AnalysisJobDetails
-                job={job}
-                video={video}
-                team={team}
-                shootingSummary={shootingSummary}
-                movementSummary={movementSummary}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <AnalysisJobResultsWorkspace
+        job={job}
+        video={video}
+        team={team}
+        activeSection={activeModule}
+        onSectionChange={setActiveModule}
+        onJobUpdated={handleJobUpdated}
+      />
     </div>
   )
 }

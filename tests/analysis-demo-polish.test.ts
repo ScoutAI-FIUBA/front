@@ -59,6 +59,7 @@ test('videos expose automatic analysis directly and keep history secondary', () 
 test('DONE workspace keeps team confirmation and technical identity secondary', () => {
   const teamSideSource = readSource('../src/pages/analysis/AnalysisJobTeamSide.tsx')
   const detailSource = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
+  const workspaceSource = readSource('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx')
   const technicalSource = readSource('../src/pages/analysis/AnalysisJobDetails.tsx')
 
   assert.match(teamSideSource, /Tu equipo:/)
@@ -66,7 +67,7 @@ test('DONE workspace keeps team confirmation and technical identity secondary', 
   assert.match(teamSideSource, />\s*Cancelar\s*</)
   assert.match(teamSideSource, /setIsExpanded\(loaded\.ourTeamSide == null\)/)
   assert.doesNotMatch(detailSource, /job-completed-title/)
-  assert.match(detailSource, /id: 'details', label: 'Detalles'/)
+  assert.match(workspaceSource, /id: 'details', label: 'Detalles'/)
   assert.doesNotMatch(detailSource, /ID de análisis \{job\.id\}/)
   assert.match(technicalSource, /ID técnico del análisis/)
 })

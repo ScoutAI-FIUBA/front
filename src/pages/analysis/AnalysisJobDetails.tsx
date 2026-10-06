@@ -2,7 +2,7 @@ import { CircleAlert, FileSearch, Info } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import type { ProcessingJob, Team, Video } from '@/types'
 import type { AnalysisMovementTechnicalSummary } from './AnalysisJobCourtPositions'
-import type { AnalysisShootingSummary } from './AnalysisJobShotsWorkspace'
+import type { AnalysisShootingSummary } from './use-analysis-job-shooting-data'
 
 interface AnalysisJobDetailsProps {
   job: ProcessingJob

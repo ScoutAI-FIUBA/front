@@ -10,12 +10,16 @@ import {
   Play,
   RefreshCw,
 } from 'lucide-react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
+import {
+  AnalysisJobResultsWorkspace,
+  type AnalysisJobResultsSection,
+} from '@/pages/analysis/AnalysisJobResultsWorkspace'
 import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
 import { createAnalysisJobDetailPoller } from '@/pages/analysis/analysis-job-detail-polling'
 import {
@@ -39,12 +43,16 @@ import {
   clipTimeRange,
   loadMatchClips,
   loadMatchDetail,
+  matchAnalysisElapsedLabel,
   matchAnalysisPath,
   matchDetailPath,
+  matchReportPath,
   resolveMatchDetailTab,
+  resolveMatchReportSection,
   type MatchClipsModel,
   type MatchDetailModel,
   type MatchDetailTab,
+  type MatchReportSection,
 } from './match-detail'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -58,6 +66,26 @@ const TABS: Array<{
   { id: 'reporte', label: 'Reporte', icon: BarChart3 },
   { id: 'clips', label: 'Clips', icon: Clapperboard },
 ]
+
+const REPORT_SECTIONS: Array<{
+  id: MatchReportSection
+  label: string
+  description: string
+  workspaceSection: Exclude<AnalysisJobResultsSection, 'details'>
+}> = [
+  { id: 'resumen', label: 'Resumen', description: 'Una lectura general del partido.', workspaceSection: 'overview' },
+  { id: 'tiros', label: 'Tiros', description: 'Ubicaciones, resultados y evidencia disponible.', workspaceSection: 'shots' },
+  { id: 'movimiento', label: 'Movimiento', description: 'Recorridos y mapas de calor por jugador.', workspaceSection: 'movement' },
+  { id: 'similares', label: 'Similares', description: 'Comparaciones con otros análisis del equipo.', workspaceSection: 'similar' },
+]
+
+function workspaceSectionFor(section: MatchReportSection): Exclude<AnalysisJobResultsSection, 'details'> {
+  return REPORT_SECTIONS.find((candidate) => candidate.id === section)?.workspaceSection ?? 'overview'
+}
+
+function reportSectionFor(section: AnalysisJobResultsSection): MatchReportSection {
+  return REPORT_SECTIONS.find((candidate) => candidate.workspaceSection === section)?.id ?? 'resumen'
+}
 
 function formatUploadDate(value: string): string {
   const date = new Date(value)
@@ -119,32 +147,43 @@ function MatchVideoTab({ video }: { video: Video }) {
   )
 }
 
-function ReportAction({ job }: { job: ProcessingJob }) {
-  const label = job.status === 'DONE'
-    ? 'Abrir reporte completo'
-    : job.status === 'FAILED'
-      ? 'Ver problema'
-      : 'Abrir progreso'
-
+function ReportStructurePreview({ title }: { title: string }) {
   return (
-    <Button
-      asChild
-      className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
-    >
-      <Link to={analysisJobDetailPath(job)}>
-        {label}
-        <ArrowRight aria-hidden="true" className="h-4 w-4" />
-      </Link>
-    </Button>
+    <section aria-labelledby="report-structure-title">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Estructura del reporte</p>
+          <h3 id="report-structure-title" className="scout-display mt-1 text-2xl font-bold text-[#F4F5F7]">{title}</h3>
+        </div>
+        <p className="text-xs text-[#788397]">Sin datos anticipados</p>
+      </div>
+      <ol className="grid divide-y divide-[#252B38] border-y border-[#252B38] lg:grid-cols-4 lg:divide-x lg:divide-y-0">
+        {REPORT_SECTIONS.map((section, index) => (
+          <li key={section.id} className="min-w-0 py-4 lg:px-5 lg:first:pl-0 lg:last:pr-0">
+            <p className="scout-display text-xl font-bold text-[#F4F5F7]">
+              <span className="mr-2 tabular-nums text-[#788397]">{String(index + 1).padStart(2, '0')}</span>
+              {section.label}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[#A3ABBA]">{section.description}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 
 function MatchReportTab({
   model,
   onRetry,
+  activeSection,
+  onSectionChange,
+  onJobUpdated,
 }: {
   model: MatchDetailModel
   onRetry: () => void
+  activeSection: MatchReportSection
+  onSectionChange: (section: AnalysisJobResultsSection) => void
+  onJobUpdated: (job: ProcessingJob) => void
 }) {
   const { latestJob: job, video } = model
 
@@ -168,117 +207,183 @@ function MatchReportTab({
   if (!job) {
     const ready = videoMaterialState(video) === 'ready'
     return (
-      <section className="grid gap-8 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.55fr)] lg:items-end">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">
-            Reporte automático
-          </p>
-          <h2 className="scout-display mt-3 max-w-3xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold text-[#F4F5F7]">
-            Convertí el video en evidencia para revisar
-          </h2>
-          <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#A3ABBA]">
-            Vas a obtener: Resumen · Tiros con evidencia · Movimiento · Similares
-          </p>
-          <p className="mt-2 max-w-2xl text-sm text-[#A3ABBA]">
-            La disponibilidad de cada resultado depende de los datos detectados en el video.
-          </p>
-        </div>
-        <div className="lg:text-right">
-          {ready ? (
-            <Button
-              asChild
-              className="h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
-            >
-              <Link to={matchAnalysisPath(video)}>Analizar partido</Link>
-            </Button>
-          ) : (
-            <p className="inline-flex min-h-[52px] items-center rounded-full border border-[#3A4254] px-6 text-sm font-medium text-[#A3ABBA]">
-              Disponible cuando el archivo esté listo
+      <section className="space-y-10 py-3">
+        <div className="grid gap-8 border-b border-[#252B38] pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte del partido</p>
+            <h2 className="scout-display mt-3 max-w-4xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              Este partido todavía no tiene reporte
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
+              Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.
             </p>
-          )}
+          </div>
+          <div className="lg:pb-1">
+            {ready ? (
+              <Button
+                asChild
+                className="h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
+              >
+                <Link to={matchAnalysisPath(video)}>
+                  Analizar partido
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </Link>
+              </Button>
+            ) : (
+              <p className="max-w-xs text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
+            )}
+          </div>
         </div>
+        <ReportStructurePreview title="Lo que vas a poder revisar" />
       </section>
     )
   }
 
   if (job.status === 'QUEUED') {
+    const hasProgress = job.progressPercent != null
     return (
-      <section className="space-y-7 py-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">En cola</p>
-          <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold text-[#F4F5F7]">
-            El análisis está esperando para comenzar
+      <section className="space-y-9 py-3" aria-live="polite">
+        <div className="border-b border-[#252B38] pb-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
+          <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+            Tu partido está en cola
           </h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-            El reporte se actualizará cuando el procesamiento empiece.
+            La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <LoaderCircle className="h-5 w-5 animate-spin text-[#FF6A1F] motion-reduce:animate-none" aria-hidden="true" />
-          <ReportAction job={job} />
+        <div>
+          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Solicitud recibida</dt>
+              <dd className="mt-1 font-medium text-[#F4F5F7]">{formatUploadDate(job.createdAt)}</dd>
+            </div>
+            {hasProgress ? (
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
+                <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+              </div>
+            ) : null}
+          </dl>
+          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
         </div>
+        <ReportStructurePreview title="El reporte aparecerá acá" />
       </section>
     )
   }
 
   if (job.status === 'RUNNING') {
+    const elapsed = matchAnalysisElapsedLabel(job.startedAt)
+    const hasProgress = job.progressPercent != null
     return (
-      <section className="space-y-7 py-4">
-        <div className="flex flex-wrap items-end justify-between gap-5">
+      <section className="space-y-9 py-3" aria-live="polite">
+        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[#252B38] pb-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Analizando</p>
-            <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold text-[#F4F5F7]">
-              Estamos procesando el partido
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis en curso</p>
+            <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              Estamos analizando tu partido
             </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán en este mismo espacio cuando el análisis termine.</p>
           </div>
-          {job.progressPercent != null ? (
-            <span className="scout-display text-5xl font-extrabold text-[#FF6A1F]">
+          {hasProgress ? (
+            <span className="scout-display text-6xl font-extrabold tabular-nums text-[#F4F5F7]">
               {job.progressPercent}%
             </span>
           ) : null}
         </div>
-        {job.progressPercent != null ? (
-          <Progress value={job.progressPercent} aria-label={`Progreso del análisis: ${job.progressPercent}%`} />
-        ) : (
-          <div className="flex items-center gap-3 text-sm text-[#A3ABBA]" role="status">
-            <LoaderCircle className="h-4 w-4 animate-spin text-[#FF6A1F] motion-reduce:animate-none" aria-hidden="true" />
-            Procesando sin porcentaje informado.
-          </div>
-        )}
-        <ReportAction job={job} />
+        <div>
+          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
+            <div>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Estado</dt>
+              <dd className="mt-1 flex items-center gap-2 font-medium text-[#F4F5F7]"><span className="h-2 w-2 rounded-full bg-[#FF6A1F] animate-pulse motion-reduce:animate-none" aria-hidden="true" />Análisis en curso</dd>
+            </div>
+            {elapsed ? (
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Tiempo transcurrido</dt>
+                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{elapsed}</dd>
+              </div>
+            ) : null}
+            {hasProgress ? (
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
+                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+              </div>
+            ) : null}
+          </dl>
+          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
+        </div>
+        <ReportStructurePreview title="El reporte se está preparando" />
       </section>
     )
   }
 
   if (job.status === 'FAILED') {
     return (
-      <section className="space-y-7 border-y border-red-500/20 py-9">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Error de análisis</p>
-          <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold text-[#F4F5F7]">
-            No pudimos completar el reporte
-          </h2>
-          <p className="mt-4 max-w-2xl text-base text-[#A3ABBA]">
-            El video y sus clips siguen disponibles. Abrí el detalle para revisar el problema antes de intentarlo nuevamente.
-          </p>
+      <section className="space-y-9 py-3">
+        <div className="grid gap-8 border-b border-red-500/20 pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Reporte interrumpido</p>
+            <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              No se pudo analizar este partido
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
+              El video y sus clips siguen disponibles. Podés iniciar un análisis nuevo con el mismo material.
+            </p>
+            <p className="mt-2 max-w-2xl text-xs text-[#788397]">El detalle técnico de esta ejecución queda disponible como información secundaria para soporte.</p>
+          </div>
+          <div className="flex flex-wrap gap-3 lg:justify-end">
+            <Button asChild className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+              <Link to={matchAnalysisPath(video)}>
+                Reintentar análisis
+                <ArrowRight aria-hidden="true" className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
+              <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
+            </Button>
+          </div>
         </div>
-        <ReportAction job={job} />
+        <ReportStructurePreview title="El reporte todavía no está disponible" />
       </section>
     )
   }
 
   return (
-    <section className="grid gap-8 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Reporte listo</p>
-        <h2 className="scout-display mt-3 text-[clamp(2.8rem,7vw,4.8rem)] font-extrabold text-[#F4F5F7]">
-          El análisis está listo para revisar
-        </h2>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[#A3ABBA]">
-          Entrá al reporte completo para revisar el resumen, los tiros con evidencia, el movimiento y los partidos similares.
-        </p>
-      </div>
-      <ReportAction job={job} />
+    <section className="space-y-5">
+      <nav
+        className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Secciones del reporte"
+      >
+        {REPORT_SECTIONS.map((section, index) => {
+          const selected = activeSection === section.id
+          return (
+            <Link
+              key={section.id}
+              to={matchReportPath(video.id, section.id)}
+              aria-current={selected ? 'page' : undefined}
+              className={`scout-display relative inline-flex min-h-14 shrink-0 items-center px-3 text-xl font-bold tracking-[0.01em] transition-colors ${
+                selected ? 'text-[#F4F5F7]' : 'text-[#A3ABBA] hover:text-[#F4F5F7]'
+              }`}
+            >
+              <span className={`mr-2 tabular-nums ${selected ? 'text-[#FF6A1F]' : 'text-[#788397]'}`}>{String(index + 1).padStart(2, '0')}</span>
+              {section.label}
+              {selected ? <span className="absolute bottom-0 left-3 h-[3px] w-10 bg-[#FF6A1F]" /> : null}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <AnalysisJobResultsWorkspace
+        job={job}
+        video={video}
+        team={model.team}
+        activeSection={workspaceSectionFor(activeSection)}
+        onSectionChange={onSectionChange}
+        onJobUpdated={onJobUpdated}
+        showNavigation={false}
+        includeDetails={false}
+        presentation="match-report"
+      />
     </section>
   )
 }
@@ -425,7 +530,10 @@ function MatchClipsTab({ videoId }: { videoId: string }) {
 export function MatchDetailPage() {
   const { videoId = '' } = useParams<{ videoId: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const activeTab = resolveMatchDetailTab(searchParams)
+  const activeReportSection = resolveMatchReportSection(searchParams)
+  const isCompactReportHeader = activeTab === 'reporte'
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [model, setModel] = useState<MatchDetailModel | null>(null)
   const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
@@ -472,6 +580,17 @@ export function MatchDetailPage() {
   }, [latestJob])
 
   const displayState = useMemo(() => model ? displayStateFor(model) : null, [model])
+
+  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
+    setModel((current) => current?.latestJob?.id === updatedJob.id
+      ? { ...current, latestJob: updatedJob }
+      : current)
+  }, [])
+
+  const handleReportSectionChange = useCallback((section: AnalysisJobResultsSection) => {
+    if (!videoId) return
+    navigate(matchReportPath(videoId, reportSectionFor(section)))
+  }, [navigate, videoId])
 
   if (loadState === 'loading') {
     return (
@@ -521,7 +640,7 @@ export function MatchDetailPage() {
   }
 
   return (
-    <div className="pb-16 pt-8">
+    <div className={isCompactReportHeader ? 'pb-16 pt-4 sm:pt-5' : 'pb-16 pt-8'}>
       <Link
         to="/partidos"
         className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#F4F5F7]"
@@ -529,19 +648,23 @@ export function MatchDetailPage() {
         <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
       </Link>
 
-      <header className="mt-7 border-b border-[#252B38] pb-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="scout-display max-w-4xl text-balance text-[clamp(3.2rem,8vw,5rem)] font-extrabold text-[#F4F5F7]">
+      <header className={isCompactReportHeader ? 'mt-3 border-b border-[#252B38] pb-4' : 'mt-7 border-b border-[#252B38] pb-8'}>
+        <div className={isCompactReportHeader
+          ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'
+          : 'flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between'}>
+          <div className={isCompactReportHeader ? 'min-w-0 flex-1' : 'min-w-0'}>
+            <h1 className={isCompactReportHeader
+              ? 'scout-display text-[clamp(2rem,4vw,3rem)] font-extrabold leading-none text-[#F4F5F7] sm:truncate sm:whitespace-nowrap'
+              : 'scout-display max-w-4xl text-balance text-[clamp(3.2rem,8vw,5rem)] font-extrabold text-[#F4F5F7]'}>
               {model.video.title || 'Video sin título'}
             </h1>
-            <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#A3ABBA] sm:text-base">
+            <p className={`${isCompactReportHeader ? 'mt-1' : 'mt-4'} flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#A3ABBA] ${isCompactReportHeader ? '' : 'sm:text-base'}`}>
               <span>{model.team?.name ?? 'Equipo no disponible'}</span>
               <span aria-hidden="true" className="hidden sm:inline">·</span>
               <span>Fecha de carga · {formatUploadDate(model.video.uploadedAt)}</span>
             </p>
           </div>
-          <span className={`w-fit shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${stateTone(displayState)}`}>
+          <span className={`w-fit shrink-0 rounded-full border text-xs font-semibold uppercase tracking-[0.14em] ${isCompactReportHeader ? 'px-3 py-1.5' : 'px-4 py-2'} ${stateTone(displayState)}`}>
             {matchLibraryDisplayLabel(displayState)}
           </span>
         </div>
@@ -556,7 +679,7 @@ export function MatchDetailPage() {
               to={matchDetailPath(model.video.id, id)}
               role="tab"
               aria-selected={selected}
-              className={`relative inline-flex min-h-[58px] shrink-0 items-center gap-2 px-5 text-base font-semibold transition-colors ${
+              className={`relative inline-flex ${isCompactReportHeader ? 'min-h-12' : 'min-h-[58px]'} shrink-0 items-center gap-2 px-5 text-base font-semibold transition-colors ${
                 selected ? 'text-[#F4F5F7]' : 'text-[#A3ABBA] hover:text-[#F4F5F7]'
               }`}
             >
@@ -570,9 +693,17 @@ export function MatchDetailPage() {
 
       {isPollingDisconnected ? <div className="mt-6"><AnalysisPollingNotice /></div> : null}
 
-      <main className="pt-8">
+      <main className={isCompactReportHeader ? 'pt-4' : 'pt-8'}>
         {activeTab === 'video' ? <MatchVideoTab video={model.video} /> : null}
-        {activeTab === 'reporte' ? <MatchReportTab model={model} onRetry={() => void load()} /> : null}
+        {activeTab === 'reporte' ? (
+          <MatchReportTab
+            model={model}
+            onRetry={() => void load()}
+            activeSection={activeReportSection}
+            onSectionChange={handleReportSectionChange}
+            onJobUpdated={handleJobUpdated}
+          />
+        ) : null}
         {activeTab === 'clips' ? <MatchClipsTab videoId={model.video.id} /> : null}
       </main>
     </div>

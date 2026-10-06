@@ -12,6 +12,7 @@ import type {
 import { latestVideoAnalysisJob } from '../videos/video-library-filters.ts'
 
 export type MatchDetailTab = 'video' | 'reporte' | 'clips'
+export type MatchReportSection = 'resumen' | 'tiros' | 'movimiento' | 'similares'
 
 export interface MatchDetailModel {
   video: Video
@@ -46,9 +47,42 @@ export function resolveMatchDetailTab(searchParams: URLSearchParams): MatchDetai
   return requested === 'reporte' || requested === 'clips' ? requested : 'video'
 }
 
+export function matchReportPath(
+  videoId: string,
+  section: MatchReportSection = 'resumen',
+): string {
+  const searchParams = new URLSearchParams({ tab: 'reporte', seccion: section })
+  return `/partidos/${encodeURIComponent(videoId)}?${searchParams.toString()}`
+}
+
+export function resolveMatchReportSection(searchParams: URLSearchParams): MatchReportSection {
+  const requested = searchParams.get('seccion')
+  if (requested === 'tiros' || requested === 'movimiento' || requested === 'similares') {
+    return requested
+  }
+  return 'resumen'
+}
+
 export function matchAnalysisPath(video: Video): string {
   const searchParams = new URLSearchParams({ team_id: video.teamId, video_id: video.id })
   return `/analisis/nuevo?${searchParams.toString()}`
+}
+
+export function matchAnalysisElapsedLabel(
+  startedAt: string | null,
+  nowMs = Date.now(),
+): string | null {
+  if (!startedAt) return null
+  const startedMs = Date.parse(startedAt)
+  if (!Number.isFinite(startedMs) || !Number.isFinite(nowMs)) return null
+
+  const minutes = Math.floor(Math.max(0, nowMs - startedMs) / 60_000)
+  if (minutes < 1) return 'menos de un minuto'
+
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (hours === 0) return `${minutes} min`
+  return remainder === 0 ? `${hours} h` : `${hours} h ${remainder} min`
 }
 
 export async function loadMatchDetail(

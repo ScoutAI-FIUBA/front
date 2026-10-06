@@ -8,6 +8,7 @@ import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -40,6 +41,7 @@ import {
 interface AnalysisJobCourtPositionsProps {
   job: ProcessingJob
   onTechnicalSummaryChange?: (summary: AnalysisMovementTechnicalSummary | null) => void
+  presentation?: 'legacy' | 'match-report'
 }
 
 export interface AnalysisMovementTechnicalSummary {
@@ -54,7 +56,16 @@ function formatMetres(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 2 })} m`
 }
 
-export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }: AnalysisJobCourtPositionsProps) {
+function formatAveragePosition(player: AnalysisJobCourtPositionsPlayer): string {
+  const { xM, yM } = player.movement.averagePosition
+  return `x ${xM.toLocaleString('es-AR', { maximumFractionDigits: 1 })} · y ${yM.toLocaleString('es-AR', { maximumFractionDigits: 1 })} m`
+}
+
+export function AnalysisJobCourtPositionsView({
+  job,
+  onTechnicalSummaryChange,
+  presentation = 'legacy',
+}: AnalysisJobCourtPositionsProps) {
   const { id: jobId, status: jobStatus, teamId } = job
   const context = useMemo(
     () => analysisJobCourtPositionsContextForJob({ id: jobId, status: jobStatus, teamId }),
@@ -172,6 +183,135 @@ export function AnalysisJobCourtPositionsView({ job, onTechnicalSummaryChange }:
           title="No se produjeron posiciones utilizables"
           description="El procesamiento terminó, pero no generó posiciones proyectadas que puedan mostrarse en la cancha."
         />
+      </section>
+    )
+  }
+
+  if (presentation === 'match-report') {
+    return (
+      <section className="min-w-0 space-y-4" aria-labelledby="court-positions-title">
+        <header className="border-b border-[#252B38] pb-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(16rem,20rem)] lg:items-end lg:gap-5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Análisis espacial</p>
+            <h2 id="court-positions-title" className="scout-display mt-1 text-4xl font-extrabold text-[#F4F5F7]">Movimiento</h2>
+            <p className="mt-1 text-sm text-[#A3ABBA]">
+              {view === 'trajectories'
+                ? 'Recorrido ordenado de las muestras detectadas en cancha.'
+                : 'Frecuencia relativa de muestras para la selección actual.'}
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-1" role="group" aria-label="Vista de movimiento">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn(
+                'rounded-full border px-5',
+                view === 'trajectories'
+                  ? 'border-[#FF6A1F] bg-[#FF6A1F] text-white hover:bg-[#ff7b38]'
+                  : 'border-[#3A4254] bg-transparent text-[#A3ABBA] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#F4F5F7]',
+              )}
+              aria-pressed={view === 'trajectories'}
+              onClick={() => setView('trajectories')}
+            >
+              Recorrido
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn(
+                'rounded-full border px-5',
+                view === 'heatmap'
+                  ? 'border-[#FF6A1F] bg-[#FF6A1F] text-white hover:bg-[#ff7b38]'
+                  : 'border-[#3A4254] bg-transparent text-[#A3ABBA] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#F4F5F7]',
+              )}
+              aria-pressed={view === 'heatmap'}
+              onClick={() => setView('heatmap')}
+            >
+              Mapa de calor
+            </Button>
+          </div>
+
+          <div className="mt-4 w-full lg:mt-0">
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]" htmlFor="court-positions-filter">
+              Jugador o grupo
+            </label>
+            <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
+              <SelectTrigger id="court-positions-filter" className="w-full border-[#3A4254] bg-transparent text-[#F4F5F7]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {positions.players.map((player) => (
+                  <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
+                    {analysisJobPlayerLabelFromMap(player, playerLabels)}
+                  </SelectItem>
+                ))}
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="side-0">Lado 0</SelectItem>
+                <SelectItem value="side-1">Lado 1</SelectItem>
+                <SelectItem value="unassigned">Sin asignar</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </header>
+
+        {selectedPlayer ? (
+          <dl className="grid border-y border-[#252B38] sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#252B38]">
+            <div className="py-3 lg:pr-6">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Jugador</dt>
+              <dd className="mt-1 text-lg font-semibold text-[#F4F5F7]">{analysisJobPlayerLabelFromMap(selectedPlayer, playerLabels)}</dd>
+              <dd className="mt-0.5 text-xs text-[#A3ABBA]">{courtPositionSideLabel(selectedPlayer.teamSide)}</dd>
+            </div>
+            <div className="py-3 lg:px-6">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Distancia</dt>
+              <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{formatMetres(selectedPlayer.movement.distanceM)}</dd>
+            </div>
+            <div className="py-3 lg:px-6">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Muestras</dt>
+              <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{selectedPlayer.movement.samples}</dd>
+            </div>
+            <div className="py-3 lg:pl-6">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Posición promedio</dt>
+              <dd className="mt-2 font-semibold tabular-nums text-[#F4F5F7]">{formatAveragePosition(selectedPlayer)}</dd>
+            </div>
+          </dl>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#252B38] py-4">
+            <div>
+              <p className="font-semibold text-[#F4F5F7]">Vista comparativa</p>
+              <p className="mt-1 text-xs text-[#A3ABBA]">Se superponen los recorridos completos de la selección.</p>
+            </div>
+            <span className="text-sm tabular-nums text-[#A3ABBA]">{visiblePlayers.length} seguimientos</span>
+          </div>
+        )}
+
+        <div className="min-w-0">
+          {visiblePlayers.length === 0 ? (
+            <div className="border-y border-[#252B38] py-10 text-center text-sm text-[#A3ABBA]">No hay seguimientos que coincidan con esta selección.</div>
+          ) : view === 'heatmap' ? (
+            heatmap.totalSamples > 0
+              ? <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} presentation="match-report" />
+              : <div className="border-y border-[#252B38] py-10 text-center text-sm text-[#A3ABBA]">No hay posiciones válidas para construir el mapa de calor.</div>
+          ) : selectedPlayer ? (
+            <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} presentation="match-report" />
+          ) : (
+            <div className="space-y-3">
+              <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} presentation="match-report" />
+              <p className="text-xs text-[#A3ABBA]">Elegí un jugador para reproducir una secuencia individual de muestras.</p>
+            </div>
+          )}
+        </div>
+
+        {!selectedPlayer && visiblePlayers.length > 0 ? (
+          <div className="divide-y divide-[#252B38] border-y border-[#252B38]">
+            {visiblePlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
+              <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 py-3 text-sm">
+                <span className="font-medium text-[#F4F5F7]">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
+                <span className="tabular-nums text-[#A3ABBA]">{formatMetres(player.movement.distanceM)}</span>
+                <span className="tabular-nums text-[#A3ABBA]">{player.movement.samples} muestras</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </section>
     )
   }

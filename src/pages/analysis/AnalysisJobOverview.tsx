@@ -1,12 +1,17 @@
-import { ArrowRight, CircleAlert, Clock3, LoaderCircle, Target } from 'lucide-react'
+import { ArrowRight, CircleAlert, Clock3, LoaderCircle, MapPinned, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { ShotChartCourt } from '@/components/analysis/ShotChartCourt'
+import { shotChartPointToPercent } from '@/components/analysis/shot-chart-court'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import type { ProcessingJob } from '@/types'
 import { AnalysisJobTeamSideSelector } from './AnalysisJobTeamSide'
-import type { AnalysisShootingSummary } from './AnalysisJobShotsWorkspace'
+import type {
+  AnalysisJobShootingDataController,
+  AnalysisShootingSummary,
+} from './use-analysis-job-shooting-data'
 
 type WorkspaceModule = 'overview' | 'shots' | 'movement' | 'similar' | 'details'
 
@@ -15,6 +20,9 @@ interface AnalysisJobOverviewProps {
   shootingSummary: AnalysisShootingSummary | null
   onJobUpdated: (job: ProcessingJob) => void
   onNavigate: (module: WorkspaceModule) => void
+  showDetailsAction?: boolean
+  presentation?: 'legacy' | 'match-report'
+  shootingData?: AnalysisJobShootingDataController
 }
 
 function formatDate(value: string): string {
@@ -36,11 +44,134 @@ function elapsedLabel(startedAt: string | null): string | null {
   return hours > 0 ? `${hours} h ${remainder} min` : `${minutes} min`
 }
 
+const REPORT_ACCESS_ROWS: Array<{
+  id: Extract<WorkspaceModule, 'shots' | 'movement' | 'similar'>
+  label: string
+  description: string
+}> = [
+  { id: 'shots', label: 'Tiros', description: 'La cancha, el resultado y la jugada en video.' },
+  { id: 'movement', label: 'Movimiento', description: 'Recorrido y mapa de calor por jugador.' },
+  { id: 'similar', label: 'Similares', description: 'Otros análisis de tu equipo que se parecen a este.' },
+]
+
+function MatchReportAccessRows({
+  onNavigate,
+  teamConfirmed,
+}: {
+  onNavigate: (module: WorkspaceModule) => void
+  teamConfirmed: boolean
+}) {
+  return (
+    <div className="divide-y divide-[#252B38] border-y border-[#252B38]">
+      {REPORT_ACCESS_ROWS.map((row) => (
+        <button key={row.id} type="button" className="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-5 py-4 text-left" onClick={() => onNavigate(row.id)}>
+          <span>
+            <span className="scout-display block text-2xl font-bold text-[#F4F5F7]">{row.label}</span>
+            <span className="mt-1 block text-sm text-[#A3ABBA]">{row.id === 'shots' && !teamConfirmed ? 'Disponible al confirmar tu lado.' : row.description}</span>
+          </span>
+          <ArrowRight className="h-4 w-4 text-[#FF6A1F] transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden="true" />
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function MatchReportDoneOverview({
+  job,
+  shootingSummary,
+  shootingData,
+  onJobUpdated,
+  onNavigate,
+}: {
+  job: ProcessingJob
+  shootingSummary: AnalysisShootingSummary | null
+  shootingData?: AnalysisJobShootingDataController
+  onJobUpdated: (job: ProcessingJob) => void
+  onNavigate: (module: WorkspaceModule) => void
+}) {
+  const teamStats = shootingSummary?.team
+  const chart = shootingData?.chartState === 'success' ? shootingData.chart : null
+  const validShots = chart?.shots.filter((shot) => shotChartPointToPercent(chart.court, shot) != null) ?? []
+
+  return (
+    <section className="space-y-7" aria-labelledby="overview-title">
+      <AnalysisJobTeamSideSelector job={job} onJobUpdated={onJobUpdated} presentation="match-report" />
+
+      {job.ourTeamSide == null ? (
+        <MatchReportAccessRows onNavigate={onNavigate} teamConfirmed={false} />
+      ) : (
+        <>
+          {teamStats ? (
+            <h2 id="overview-title" className="scout-display max-w-6xl text-[clamp(2.2rem,3.4vw,3.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              {teamStats.fieldGoalsMade} de {teamStats.fieldGoalsAttempted} tiros de campo convertidos
+              {teamStats.fieldGoalPercentage != null ? (
+                <> · {(teamStats.fieldGoalPercentage * 100).toLocaleString('es-AR', { maximumFractionDigits: 1 })}% de efectividad</>
+              ) : null}
+            </h2>
+          ) : (
+            <div className="flex min-h-20 items-center gap-3 border-y border-[#252B38] text-sm text-[#A3ABBA]">
+              <LoaderCircle className="h-4 w-4 animate-spin text-[#FF6A1F] motion-reduce:animate-none" aria-hidden="true" />
+              Preparando las métricas reales del equipo…
+            </div>
+          )}
+
+          {shootingData?.chartState === 'loading' ? (
+            <div className="flex min-h-64 items-center justify-center gap-3 border-y border-[#252B38] text-sm text-[#A3ABBA]" aria-live="polite" aria-busy="true">
+              <LoaderCircle className="h-5 w-5 animate-spin text-[#FF6A1F] motion-reduce:animate-none" aria-hidden="true" />
+              Cargando ubicaciones de tiro…
+            </div>
+          ) : null}
+
+          {shootingData?.chartState === 'error' ? (
+            <Alert className="flex flex-col gap-4 border-destructive/25 bg-destructive/5 p-5 sm:flex-row sm:items-center">
+              <CircleAlert className="h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+              <div className="min-w-0 flex-1"><p className="font-semibold text-foreground">No pudimos cargar la cancha</p><p className="mt-1 text-sm text-muted-foreground">El resto del reporte sigue disponible.</p></div>
+              <Button type="button" variant="outline" size="sm" onClick={shootingData.retryChart}>Reintentar</Button>
+            </Alert>
+          ) : null}
+
+          {chart ? (
+            <div className="max-w-6xl">
+              {validShots.length > 0 ? (
+                <ShotChartCourt
+                  court={chart.court}
+                  shots={validShots}
+                  players={chart.players}
+                  presentation="match-report"
+                  onSelectShot={() => onNavigate('shots')}
+                />
+              ) : (
+                <div className="flex min-h-64 flex-col items-center justify-center border-y border-[#252B38] text-center">
+                  <MapPinned className="h-6 w-6 text-[#788397]" aria-hidden="true" />
+                  <p className="mt-3 font-semibold text-[#F4F5F7]">No hay tiros ubicados en cancha</p>
+                  <p className="mt-1 text-sm text-[#A3ABBA]">Los tiros detectados sin una posición válida siguen incluidos en la cobertura.</p>
+                </div>
+              )}
+              <p className="mt-4 flex flex-wrap gap-x-2 gap-y-1 text-xs text-[#A3ABBA]">
+                <span>{chart.coverage.shotsDetected} tiros detectados</span>
+                <span aria-hidden="true">·</span>
+                <span>{chart.coverage.shotsCharted} ubicados en cancha</span>
+                {chart.coverage.shotsWithoutCourtPosition > 0 ? <><span aria-hidden="true">·</span><span>{chart.coverage.shotsWithoutCourtPosition} sin posición válida</span></> : null}
+                {chart.coverage.shotsWithoutShooter > 0 ? <><span aria-hidden="true">·</span><span>{chart.coverage.shotsWithoutShooter} sin tirador identificado</span></> : null}
+              </p>
+            </div>
+          ) : null}
+
+          <MatchReportAccessRows onNavigate={onNavigate} teamConfirmed />
+        </>
+      )}
+    </section>
+  )
+}
+
 export function AnalysisJobOverview({
   job,
   shootingSummary,
   onJobUpdated,
   onNavigate,
+  showDetailsAction = true,
+  presentation = 'legacy',
+  shootingData,
 }: AnalysisJobOverviewProps) {
   if (job.status === 'QUEUED') {
     return (
@@ -113,9 +244,23 @@ export function AnalysisJobOverview({
         </Alert>
         <div className="flex flex-wrap gap-2">
           <Button asChild><Link to={`/videos?team_id=${encodeURIComponent(job.teamId)}`}>Volver a Videos</Link></Button>
-          <Button type="button" variant="outline" onClick={() => onNavigate('details')}>Ver detalles técnicos</Button>
+          {showDetailsAction ? (
+            <Button type="button" variant="outline" onClick={() => onNavigate('details')}>Ver detalles técnicos</Button>
+          ) : null}
         </div>
       </section>
+    )
+  }
+
+  if (presentation === 'match-report') {
+    return (
+      <MatchReportDoneOverview
+        job={job}
+        shootingSummary={shootingSummary}
+        shootingData={shootingData}
+        onJobUpdated={onJobUpdated}
+        onNavigate={onNavigate}
+      />
     )
   }
 

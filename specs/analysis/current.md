@@ -24,6 +24,8 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - `src/pages/analysis/ClipTimeline.tsx`
 - `src/pages/analysis/AnalysisDetailPage.tsx`
 - `src/pages/analysis/AnalysisJobDetailPage.tsx`
+- `src/pages/analysis/AnalysisJobResultsWorkspace.tsx`
+- `src/pages/analysis/use-analysis-job-shooting-data.ts`
 - `src/pages/analysis/analysis-job-detail.ts`
 - `src/pages/analysis/AnalysisJobTeamSide.tsx`
 - `src/pages/analysis/analysis-job-team-side.ts`
@@ -81,6 +83,8 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - A dedicated backend endpoint for the authenticated user's global analyses remains the correct long-term replacement for this client-side composition.
 
 - `/analisis/jobs/:jobId?team_id=...` is a dedicated dark analysis workspace organized around persistent source video, one active result surface, and evidence-oriented navigation.
+- The result workspace is a shared component used both by the legacy job route and by a completed Partido Reporte. The legacy route retains its existing header, loading/error/polling states, five-module navigation, and exact job identity.
+- Stats and Shot Chart loading live in one small controller owned by the shared result workspace. Overview and Shots consume the same server result; Overview never depends on a hidden mounted Shots surface.
 - The workspace header uses video title, team, status, analysis date, and optional duration as its primary identity. The job UUID is confined to Details.
 - The embedded source player resolves a fresh team-scoped playback URL, keeps loading/error/retry states local, exposes a stable seek capability, and preserves playback time when refreshing an expired or failed signed URL where the browser permits it.
 - The source player remains mounted while switching Overview, Shots, Movement, Similar, and Details. Result panels remain mounted but only the active panel is visible, preserving local filters and selections.
@@ -108,6 +112,8 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - Reduced-motion users receive the complete static selected-player trajectory and retain the player/view controls without automatic or spatial playback motion.
 - Movement trajectory and heatmap surfaces share a richer full basketball-court geometry with baselines, half court, centre circle, painted areas, backboards, hoops, and three-point geometry.
 - Similar analyses present unchanged backend scores as high-contrast comparison rows/bars, not nested score cards. Technical identifiers remain tertiary.
+- In the Partido `match-report` presentation, Movement uses compact exclusive Recorrido / Mapa de calor controls, the existing single player-or-group filter, flat real metrics, and a dominant dark court. Playback remains an ordered-sample animation with reduced-motion support and never becomes video or real-time synchronization.
+- In the Partido `match-report` presentation, Similar analyses use an editorial divided list: general similarity is the primary neutral figure, shot and movement similarity stay secondary, hydrated title/date remain conditional, and each row keeps the exact legacy job route. Scores are never described as probability, confidence, quality, or precision.
 - Model v2 player identity uses `stable_player_id` as the logical key whenever the backend provides it; v1 results continue to use `track_id` without changing their behavior.
 - Stats preserve v2 `observations` and `on_court`. The frontend treats `on_court` only as a backend ranking derived from total observations; it never presents the flag as a current lineup, a chronological state, or synchronized presence. Those players may be prioritized where a list is ordered, while every returned player remains available.
 - Shot filters, selected-shot fallback identity, court marker labels, Movement selection, trajectory grouping, playback reset identity, colours, and React keys prefer the stable identity and fall back to the legacy track identity.
@@ -238,6 +244,9 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - Each similar-analysis result links to `/analisis/jobs/{jobId}?team_id=...` with the current team id. The UI does not synthesize names, dates, opponents, thumbnails, recommendations, or qualitative similarity levels from the returned identifiers and scores.
 - Similar-analysis loading depends only on the completed job id and team id. It is independent from `our_team_side`, Shooting Stats, Shot Chart, Court Positions, and Heatmap.
 - The completed status is represented once in the detail header/status indicator rather than repeated in a separate completion card. Secondary execution information is collapsed by default.
+- The shared results workspace supports a match-report presentation without changing the legacy `/analisis/jobs/:jobId` presentation. The match presentation redesign is limited to the report index, team-side decision, Resumen, and Tiros; Movimiento and Similares retain their existing surfaces in R3-B1.
+- Match Resumen and Tiros consume the same Stats and Shot Chart controller. The editorial field-goal sentence, court markers, coverage, filters, and selected-shot detail are all derived from those existing responses without new calculations beyond the percentages already exposed by the frontend.
+- In the match presentation, selecting a shot synchronizes the court and list without opening video. `Ver jugada` remains gated by a real non-negative `timestampSeconds` and is the only action that reveals the persistent source player and performs the existing direct seek/play behavior.
 - Module failures keep their existing local retry boundary but render brief product-facing messages instead of raw backend responses such as `Not Found`.
 - Shooting totals are explicitly presented as detected metrics rather than an official box score; the qualification appears next to the section heading and coverage remains visible.
 

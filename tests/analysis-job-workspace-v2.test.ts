@@ -108,12 +108,12 @@ test('the embedded player has explicit loading, error, retry, and stable seek be
 })
 
 test('workspace module switching keeps one player mounted outside hidden result panels', () => {
-  const source = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
+  const source = readSource('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx')
   assert.equal(source.match(/<AnalysisWorkspaceVideo\s/g)?.length, 1)
-  assert.match(source, /hidden=\{activeModule !== 'overview'\}/)
-  assert.match(source, /hidden=\{activeModule !== 'shots'\}/)
-  assert.match(source, /hidden=\{activeModule !== 'movement'\}/)
-  assert.ok(source.indexOf('<AnalysisWorkspaceVideo') < source.indexOf("hidden={activeModule !== 'overview'}"))
+  assert.match(source, /hidden=\{activeSection !== 'overview'\}/)
+  assert.match(source, /hidden=\{activeSection !== 'shots'\}/)
+  assert.match(source, /hidden=\{activeSection !== 'movement'\}/)
+  assert.ok(source.indexOf('<AnalysisWorkspaceVideo') < source.indexOf("hidden={activeSection !== 'overview'}"))
 })
 
 test('Shots uses a master-detail layout and avoids nested vertical scroll on mobile', () => {
@@ -129,7 +129,7 @@ test('Shots uses a master-detail layout and avoids nested vertical scroll on mob
 })
 
 test('mobile analysis navigation is Spanish, keyboard-native, and horizontally discoverable', () => {
-  const source = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
+  const source = readSource('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx')
 
   for (const label of ['Resumen', 'Tiros', 'Movimiento', 'Similares', 'Detalles']) {
     assert.match(source, new RegExp(`label: '${label}'`))
@@ -145,7 +145,7 @@ test('mobile analysis navigation is Spanish, keyboard-native, and horizontally d
 
 test('video failure uses a compact panel and expands the analysis column', () => {
   const videoSource = readSource('../src/pages/analysis/AnalysisWorkspaceVideo.tsx')
-  const pageSource = readSource('../src/pages/analysis/AnalysisJobDetailPage.tsx')
+  const pageSource = readSource('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx')
 
   assert.match(videoSource, /min-h-44[^"\n]*sm:min-h-52/)
   assert.doesNotMatch(videoSource, /aspect-video[^\n]*No pudimos cargar el video fuente/)

@@ -18,6 +18,7 @@ import {
 interface AnalysisJobSimilarAnalysesProps {
   job: ProcessingJob
   teamName?: string
+  presentation?: 'legacy' | 'match-report'
 }
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
@@ -87,7 +88,83 @@ function SimilarAnalysisCard({
   )
 }
 
-export function AnalysisJobSimilarAnalysesView({ job, teamName }: AnalysisJobSimilarAnalysesProps) {
+function formatVideoDate(video: Video | null): string {
+  if (!video?.uploadedAt) return 'Fecha no disponible'
+  const date = new Date(video.uploadedAt)
+  if (Number.isNaN(date.getTime())) return 'Fecha no disponible'
+  return date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function SimilarAnalysisReportRow({
+  result,
+  teamId,
+  video,
+  teamName,
+}: {
+  result: AnalysisJobSimilarResult
+  teamId: string
+  video: Video | null
+  teamName?: string
+}) {
+  const title = video?.title?.trim() || 'Sin título disponible'
+  const comparisons = [
+    { label: 'Similitud de tiros', value: result.shotScore },
+    { label: 'Similitud de movimiento', value: result.movementScore },
+  ]
+
+  return (
+    <article>
+      <Link
+        to={analysisJobSimilarPath(result.jobId, teamId)}
+        className="group grid min-w-0 gap-6 py-6 outline-none transition-colors focus-visible:bg-white/[0.03] lg:grid-cols-[150px_minmax(0,1fr)_minmax(300px,0.75fr)_48px] lg:items-center"
+        aria-label={`Abrir análisis similar: ${title}`}
+      >
+        <div>
+          <p className="scout-display text-5xl font-extrabold tabular-nums text-[#F4F5F7]">
+            {formatSimilarityScore(result.score)}
+          </p>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Similitud general</p>
+        </div>
+
+        <div className="min-w-0">
+          <h3 className="scout-display truncate text-2xl font-bold text-[#F4F5F7] transition-colors group-hover:text-[#FF9A68] group-focus-visible:text-[#FF9A68]">
+            {title}
+          </h3>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-[#A3ABBA]">
+            {teamName ? <span>{teamName}</span> : null}
+            {teamName ? <span aria-hidden="true">·</span> : null}
+            <span>{formatVideoDate(video)}</span>
+          </p>
+        </div>
+
+        <dl className="grid gap-5 sm:grid-cols-2">
+          {comparisons.map((comparison) => {
+            const percentage = Math.min(100, Math.max(0, comparison.value * 100))
+            return (
+              <div key={comparison.label}>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#788397]">{comparison.label}</dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums text-[#F4F5F7]">{formatSimilarityScore(comparison.value)}</dd>
+                <dd className="mt-2 h-1 overflow-hidden bg-[#252B38]" aria-hidden="true">
+                  <span className="block h-full bg-[#A3ABBA]" style={{ width: `${percentage}%` }} />
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
+
+        <span className="flex h-11 w-11 items-center justify-center justify-self-start rounded-full border border-[#3A4254] text-[#FF6A1F] transition-colors group-hover:border-[#FF6A1F] group-focus-visible:border-[#FF6A1F] lg:justify-self-end" aria-hidden="true">
+          <ArrowRight className="h-5 w-5" />
+        </span>
+      </Link>
+    </article>
+  )
+}
+
+export function AnalysisJobSimilarAnalysesView({
+  job,
+  teamName,
+  presentation = 'legacy',
+}: AnalysisJobSimilarAnalysesProps) {
   const { id: jobId, status: jobStatus, teamId } = job
   const context = useMemo(
     () => analysisJobSimilarContextForJob({ id: jobId, status: jobStatus, teamId }),
@@ -183,6 +260,44 @@ export function AnalysisJobSimilarAnalysesView({ job, teamName }: AnalysisJobSim
   }
 
   const results = similarResultsForDisplay(similar.results)
+
+  if (presentation === 'match-report') {
+    return (
+      <section className="min-w-0 space-y-6" aria-labelledby="similar-analyses-title">
+        <header className="flex flex-col gap-3 border-b border-[#252B38] pb-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Comparación del equipo</p>
+            <h2 id="similar-analyses-title" className="scout-display mt-2 text-4xl font-extrabold text-[#F4F5F7]">Partidos similares</h2>
+            <p className="mt-2 max-w-2xl text-sm text-[#A3ABBA]">Similitud general, de tiros y de movimiento según el análisis disponible.</p>
+          </div>
+          <p className="text-xs text-[#788397]">{similar.candidatesCompared} análisis comparados</p>
+        </header>
+
+        {results.length === 0 ? (
+          <EmptyState
+            className="border-y border-[#252B38] py-10"
+            icon={<GitCompareArrows className="h-5 w-5" aria-hidden="true" />}
+            title="No encontramos otros análisis comparables para este equipo."
+            description="El sistema no encontró resultados similares para este análisis."
+          />
+        ) : (
+          <div className="divide-y divide-[#252B38] border-y border-[#252B38]">
+            {results.map((result) => (
+              <SimilarAnalysisReportRow
+                key={result.jobId}
+                result={result}
+                teamId={teamId}
+                video={videosById.get(result.videoId) ?? null}
+                teamName={teamName}
+              />
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-[#788397]">Los porcentajes son puntajes de similitud devueltos por el análisis.</p>
+      </section>
+    )
+  }
 
   return (
     <section className="min-w-0 space-y-5" aria-labelledby="similar-analyses-title">

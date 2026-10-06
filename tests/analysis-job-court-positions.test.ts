@@ -320,3 +320,36 @@ test('all analysis courts share recognisable basketball geometry', () => {
   assert.match(movementCourtSource, /<BasketballCourtLines/)
   assert.match(heatmapSource, /<BasketballCourtLines/)
 })
+
+test('R3-B2 gives Partido Movement a flat editorial presentation without changing its controls', () => {
+  const detailSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobCourtPositions.tsx', import.meta.url),
+    'utf8',
+  )
+  const playbackSource = readFileSync(
+    new URL('../src/components/analysis/CourtPositionsPlayback.tsx', import.meta.url),
+    'utf8',
+  )
+  const workspaceSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(detailSource, /presentation = 'legacy'/)
+  assert.match(detailSource, /presentation === 'match-report'/)
+  assert.match(detailSource, />\s*Recorrido\s*</)
+  assert.match(detailSource, />\s*Mapa de calor\s*</)
+  assert.match(detailSource, /<SelectItem value="all">Todos<\/SelectItem>/)
+  assert.match(detailSource, /<SelectItem value="side-0">Lado 0<\/SelectItem>/)
+  assert.match(detailSource, /<SelectItem value="side-1">Lado 1<\/SelectItem>/)
+  assert.match(detailSource, /<SelectItem value="unassigned">Sin asignar<\/SelectItem>/)
+  assert.match(detailSource, /Distancia/)
+  assert.match(detailSource, /Muestras/)
+  assert.match(detailSource, /Posición promedio/)
+  assert.match(detailSource, /presentation="match-report"/)
+  assert.match(playbackSource, /No representa tiempo de partido ni está sincronizado con el video/)
+  assert.doesNotMatch(detailSource, /Ver en video|onSeekToVideo/)
+  assert.match(workspaceSource, /AnalysisJobCourtPositionsView[^\n]+presentation=\{presentation\}/)
+  assert.match(workspaceSource, /activeSection === 'movement' \|\| activeSection === 'similar'/)
+  assert.match(workspaceSource, /reportContentOnlySection \? 'hidden'/)
+})
