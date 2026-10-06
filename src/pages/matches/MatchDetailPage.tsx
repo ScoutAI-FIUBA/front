@@ -10,12 +10,16 @@ import {
   Play,
   RefreshCw,
 } from 'lucide-react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
+import {
+  AnalysisJobResultsWorkspace,
+  type AnalysisJobResultsSection,
+} from '@/pages/analysis/AnalysisJobResultsWorkspace'
 import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
 import { createAnalysisJobDetailPoller } from '@/pages/analysis/analysis-job-detail-polling'
 import {
@@ -41,10 +45,13 @@ import {
   loadMatchDetail,
   matchAnalysisPath,
   matchDetailPath,
+  matchReportPath,
   resolveMatchDetailTab,
+  resolveMatchReportSection,
   type MatchClipsModel,
   type MatchDetailModel,
   type MatchDetailTab,
+  type MatchReportSection,
 } from './match-detail'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
@@ -58,6 +65,25 @@ const TABS: Array<{
   { id: 'reporte', label: 'Reporte', icon: BarChart3 },
   { id: 'clips', label: 'Clips', icon: Clapperboard },
 ]
+
+const REPORT_SECTIONS: Array<{
+  id: MatchReportSection
+  label: string
+  workspaceSection: Exclude<AnalysisJobResultsSection, 'details'>
+}> = [
+  { id: 'resumen', label: 'Resumen', workspaceSection: 'overview' },
+  { id: 'tiros', label: 'Tiros', workspaceSection: 'shots' },
+  { id: 'movimiento', label: 'Movimiento', workspaceSection: 'movement' },
+  { id: 'similares', label: 'Similares', workspaceSection: 'similar' },
+]
+
+function workspaceSectionFor(section: MatchReportSection): Exclude<AnalysisJobResultsSection, 'details'> {
+  return REPORT_SECTIONS.find((candidate) => candidate.id === section)?.workspaceSection ?? 'overview'
+}
+
+function reportSectionFor(section: AnalysisJobResultsSection): MatchReportSection {
+  return REPORT_SECTIONS.find((candidate) => candidate.workspaceSection === section)?.id ?? 'resumen'
+}
 
 function formatUploadDate(value: string): string {
   const date = new Date(value)
@@ -120,11 +146,7 @@ function MatchVideoTab({ video }: { video: Video }) {
 }
 
 function ReportAction({ job }: { job: ProcessingJob }) {
-  const label = job.status === 'DONE'
-    ? 'Abrir reporte completo'
-    : job.status === 'FAILED'
-      ? 'Ver problema'
-      : 'Abrir progreso'
+  const label = job.status === 'FAILED' ? 'Ver problema' : 'Abrir progreso'
 
   return (
     <Button
@@ -142,9 +164,15 @@ function ReportAction({ job }: { job: ProcessingJob }) {
 function MatchReportTab({
   model,
   onRetry,
+  activeSection,
+  onSectionChange,
+  onJobUpdated,
 }: {
   model: MatchDetailModel
   onRetry: () => void
+  activeSection: MatchReportSection
+  onSectionChange: (section: AnalysisJobResultsSection) => void
+  onJobUpdated: (job: ProcessingJob) => void
 }) {
   const { latestJob: job, video } = model
 
@@ -268,17 +296,41 @@ function MatchReportTab({
   }
 
   return (
-    <section className="grid gap-8 py-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">Reporte listo</p>
-        <h2 className="scout-display mt-3 text-[clamp(2.8rem,7vw,4.8rem)] font-extrabold text-[#F4F5F7]">
-          El análisis está listo para revisar
-        </h2>
-        <p className="mt-4 max-w-2xl text-lg leading-relaxed text-[#A3ABBA]">
-          Entrá al reporte completo para revisar el resumen, los tiros con evidencia, el movimiento y los partidos similares.
-        </p>
-      </div>
-      <ReportAction job={job} />
+    <section className="space-y-5">
+      <nav
+        className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label="Secciones del reporte"
+      >
+        {REPORT_SECTIONS.map((section, index) => {
+          const selected = activeSection === section.id
+          return (
+            <Link
+              key={section.id}
+              to={matchReportPath(video.id, section.id)}
+              aria-current={selected ? 'page' : undefined}
+              className={`scout-display relative inline-flex min-h-14 shrink-0 items-center px-3 text-xl font-bold tracking-[0.01em] transition-colors ${
+                selected ? 'text-[#F4F5F7]' : 'text-[#A3ABBA] hover:text-[#F4F5F7]'
+              }`}
+            >
+              <span className={`mr-2 tabular-nums ${selected ? 'text-[#FF6A1F]' : 'text-[#788397]'}`}>{String(index + 1).padStart(2, '0')}</span>
+              {section.label}
+              {selected ? <span className="absolute bottom-0 left-3 h-[3px] w-10 bg-[#FF6A1F]" /> : null}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <AnalysisJobResultsWorkspace
+        job={job}
+        video={video}
+        team={model.team}
+        activeSection={workspaceSectionFor(activeSection)}
+        onSectionChange={onSectionChange}
+        onJobUpdated={onJobUpdated}
+        showNavigation={false}
+        includeDetails={false}
+        presentation="match-report"
+      />
     </section>
   )
 }
@@ -425,7 +477,10 @@ function MatchClipsTab({ videoId }: { videoId: string }) {
 export function MatchDetailPage() {
   const { videoId = '' } = useParams<{ videoId: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const activeTab = resolveMatchDetailTab(searchParams)
+  const activeReportSection = resolveMatchReportSection(searchParams)
+  const isCompactReportHeader = activeTab === 'reporte'
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [model, setModel] = useState<MatchDetailModel | null>(null)
   const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
@@ -472,6 +527,17 @@ export function MatchDetailPage() {
   }, [latestJob])
 
   const displayState = useMemo(() => model ? displayStateFor(model) : null, [model])
+
+  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
+    setModel((current) => current?.latestJob?.id === updatedJob.id
+      ? { ...current, latestJob: updatedJob }
+      : current)
+  }, [])
+
+  const handleReportSectionChange = useCallback((section: AnalysisJobResultsSection) => {
+    if (!videoId) return
+    navigate(matchReportPath(videoId, reportSectionFor(section)))
+  }, [navigate, videoId])
 
   if (loadState === 'loading') {
     return (
@@ -521,7 +587,7 @@ export function MatchDetailPage() {
   }
 
   return (
-    <div className="pb-16 pt-8">
+    <div className={isCompactReportHeader ? 'pb-16 pt-4 sm:pt-5' : 'pb-16 pt-8'}>
       <Link
         to="/partidos"
         className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#F4F5F7]"
@@ -529,19 +595,23 @@ export function MatchDetailPage() {
         <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
       </Link>
 
-      <header className="mt-7 border-b border-[#252B38] pb-8">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <h1 className="scout-display max-w-4xl text-balance text-[clamp(3.2rem,8vw,5rem)] font-extrabold text-[#F4F5F7]">
+      <header className={isCompactReportHeader ? 'mt-3 border-b border-[#252B38] pb-4' : 'mt-7 border-b border-[#252B38] pb-8'}>
+        <div className={isCompactReportHeader
+          ? 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'
+          : 'flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between'}>
+          <div className={isCompactReportHeader ? 'min-w-0 flex-1' : 'min-w-0'}>
+            <h1 className={isCompactReportHeader
+              ? 'scout-display text-[clamp(2rem,4vw,3rem)] font-extrabold leading-none text-[#F4F5F7] sm:truncate sm:whitespace-nowrap'
+              : 'scout-display max-w-4xl text-balance text-[clamp(3.2rem,8vw,5rem)] font-extrabold text-[#F4F5F7]'}>
               {model.video.title || 'Video sin título'}
             </h1>
-            <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#A3ABBA] sm:text-base">
+            <p className={`${isCompactReportHeader ? 'mt-1' : 'mt-4'} flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#A3ABBA] ${isCompactReportHeader ? '' : 'sm:text-base'}`}>
               <span>{model.team?.name ?? 'Equipo no disponible'}</span>
               <span aria-hidden="true" className="hidden sm:inline">·</span>
               <span>Fecha de carga · {formatUploadDate(model.video.uploadedAt)}</span>
             </p>
           </div>
-          <span className={`w-fit shrink-0 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] ${stateTone(displayState)}`}>
+          <span className={`w-fit shrink-0 rounded-full border text-xs font-semibold uppercase tracking-[0.14em] ${isCompactReportHeader ? 'px-3 py-1.5' : 'px-4 py-2'} ${stateTone(displayState)}`}>
             {matchLibraryDisplayLabel(displayState)}
           </span>
         </div>
@@ -556,7 +626,7 @@ export function MatchDetailPage() {
               to={matchDetailPath(model.video.id, id)}
               role="tab"
               aria-selected={selected}
-              className={`relative inline-flex min-h-[58px] shrink-0 items-center gap-2 px-5 text-base font-semibold transition-colors ${
+              className={`relative inline-flex ${isCompactReportHeader ? 'min-h-12' : 'min-h-[58px]'} shrink-0 items-center gap-2 px-5 text-base font-semibold transition-colors ${
                 selected ? 'text-[#F4F5F7]' : 'text-[#A3ABBA] hover:text-[#F4F5F7]'
               }`}
             >
@@ -570,9 +640,17 @@ export function MatchDetailPage() {
 
       {isPollingDisconnected ? <div className="mt-6"><AnalysisPollingNotice /></div> : null}
 
-      <main className="pt-8">
+      <main className={isCompactReportHeader ? 'pt-4' : 'pt-8'}>
         {activeTab === 'video' ? <MatchVideoTab video={model.video} /> : null}
-        {activeTab === 'reporte' ? <MatchReportTab model={model} onRetry={() => void load()} /> : null}
+        {activeTab === 'reporte' ? (
+          <MatchReportTab
+            model={model}
+            onRetry={() => void load()}
+            activeSection={activeReportSection}
+            onSectionChange={handleReportSectionChange}
+            onJobUpdated={handleJobUpdated}
+          />
+        ) : null}
         {activeTab === 'clips' ? <MatchClipsTab videoId={model.video.id} /> : null}
       </main>
     </div>

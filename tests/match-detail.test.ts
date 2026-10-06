@@ -9,7 +9,9 @@ import {
   loadMatchDetail,
   matchAnalysisPath,
   matchDetailPath,
+  matchReportPath,
   resolveMatchDetailTab,
+  resolveMatchReportSection,
 } from '../src/pages/matches/match-detail.ts'
 import type {
   ClipCollection,
@@ -64,6 +66,11 @@ test('Partido detail paths and tabs are canonical, encoded and refresh-safe', ()
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=reporte')), 'reporte')
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=clips')), 'clips')
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=unknown')), 'video')
+  assert.equal(matchReportPath('video/1'), '/partidos/video%2F1?tab=reporte&seccion=resumen')
+  assert.equal(matchReportPath('video/1', 'tiros'), '/partidos/video%2F1?tab=reporte&seccion=tiros')
+  assert.equal(resolveMatchReportSection(new URLSearchParams()), 'resumen')
+  assert.equal(resolveMatchReportSection(new URLSearchParams('tab=reporte&seccion=movimiento')), 'movimiento')
+  assert.equal(resolveMatchReportSection(new URLSearchParams('tab=reporte&seccion=unknown')), 'resumen')
 })
 
 test('direct refresh loads the real video context and selects the newest ProcessingJob', async () => {
@@ -198,6 +205,8 @@ test('a partial clip failure preserves the real collection without inventing emp
 
 test('the detail shell covers Video, Reporte, Clips and every real job state', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+  const workspaceSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url), 'utf8')
+  const shootingControllerSource = readFileSync(new URL('../src/pages/analysis/use-analysis-job-shooting-data.ts', import.meta.url), 'utf8')
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
   const playerSource = readFileSync(new URL('../src/pages/analysis/AnalysisWorkspaceVideo.tsx', import.meta.url), 'utf8')
 
@@ -209,12 +218,63 @@ test('the detail shell covers Video, Reporte, Clips and every real job state', (
   assert.match(detailSource, /job\.status === 'QUEUED'/)
   assert.match(detailSource, /job\.status === 'RUNNING'/)
   assert.match(detailSource, /job\.status === 'FAILED'/)
-  assert.match(detailSource, /Abrir reporte completo/)
+  assert.doesNotMatch(detailSource, /Abrir reporte completo/)
+  assert.match(detailSource, /<AnalysisJobResultsWorkspace/)
+  assert.match(detailSource, /showNavigation={false}/)
+  assert.match(detailSource, /includeDetails={false}/)
+  assert.match(detailSource, /label: 'Resumen'/)
+  assert.match(detailSource, /label: 'Tiros'/)
+  assert.match(detailSource, /label: 'Movimiento'/)
+  assert.match(detailSource, /label: 'Similares'/)
+  assert.equal(workspaceSource.match(/<AnalysisWorkspaceVideo\s/g)?.length, 1)
+  assert.match(workspaceSource, /const shootingData = useAnalysisJobShootingData\(job\)/)
+  assert.match(workspaceSource, /shootingSummary=\{shootingSummary\}/)
+  assert.match(workspaceSource, /shootingData=\{shootingData\}/)
+  assert.match(shootingControllerSource, /loadAnalysisJobStats/)
+  assert.match(shootingControllerSource, /loadAnalysisJobShotChart/)
   assert.match(detailSource, /minimalChrome/)
   assert.match(playerSource, /getVideoByIdForTeam/)
   assert.match(playerSource, /poster=\{playbackVideo\.thumbnailUrl \|\| undefined\}/)
   assert.match(detailSource, /Gestionar clips/)
   assert.doesNotMatch(detailSource, /score|rival|competencia|64%|10\/2\/8\/14/i)
+})
+
+test('R3-B1 gives Partido an editorial report presentation without replacing the legacy workspace', () => {
+  const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+  const workspaceSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url), 'utf8')
+  const overviewSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobOverview.tsx', import.meta.url), 'utf8')
+  const shotsSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobShotsWorkspace.tsx', import.meta.url), 'utf8')
+  const teamSideSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobTeamSide.tsx', import.meta.url), 'utf8')
+  const courtSource = readFileSync(new URL('../src/components/analysis/ShotChartCourt.tsx', import.meta.url), 'utf8')
+
+  assert.match(detailSource, /presentation="match-report"/)
+  assert.match(detailSource, /scout-display[^\n]+text-xl[^\n]+font-bold/)
+  assert.match(detailSource, /bottom-0 left-3 h-\[3px\] w-10 bg-\[#FF6A1F\]/)
+  assert.match(workspaceSource, /presentation = 'legacy'/)
+  assert.match(workspaceSource, /showReportEvidence/)
+  assert.match(workspaceSource, /Evidencia de video/)
+  assert.match(overviewSource, /fieldGoalsMade[^\n]+fieldGoalsAttempted/)
+  assert.match(overviewSource, /<ShotChartCourt/)
+  assert.doesNotMatch(overviewSource, /tiros con evidencia/i)
+  assert.match(teamSideSource, /¿Cuál es tu equipo en este video\?/)
+  assert.match(teamSideSource, /Lado \{sideValue\}/)
+  assert.match(teamSideSource, /Sugerido · puede ser incompleto/)
+  assert.match(shotsSource, /function viewShotPlay|const viewShotPlay/)
+  assert.match(shotsSource, /shot\.shotType/)
+  assert.match(courtSource, /REPORT_RESULT_STYLES/)
+  assert.match(courtSource, /selected && presentation === 'match-report'/)
+})
+
+test('R3-B1.1 compacts only the Partido report header', () => {
+  const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+
+  assert.match(detailSource, /const isCompactReportHeader = activeTab === 'reporte'/)
+  assert.match(detailSource, /isCompactReportHeader \? 'pb-16 pt-4 sm:pt-5' : 'pb-16 pt-8'/)
+  assert.match(detailSource, /isCompactReportHeader \? 'min-w-0 flex-1' : 'min-w-0'/)
+  assert.match(detailSource, /text-\[clamp\(2rem,4vw,3rem\)\][^\n]+sm:truncate sm:whitespace-nowrap/)
+  assert.match(detailSource, /isCompactReportHeader \? 'min-h-12' : 'min-h-\[58px\]'/)
+  assert.match(detailSource, /isCompactReportHeader \? 'pt-4' : 'pt-8'/)
+  assert.match(detailSource, /text-\[clamp\(3\.2rem,8vw,5rem\)\]/)
 })
 
 test('legacy analysis, video and collection routes remain available', () => {

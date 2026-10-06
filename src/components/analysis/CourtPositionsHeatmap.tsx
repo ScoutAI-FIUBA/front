@@ -1,20 +1,28 @@
 import type { AnalysisJobCourtPositions } from '@/types'
+import { cn } from '@/lib/utils'
 import type { CourtPositionsHeatmapData } from './court-positions-heatmap'
 import { BasketballCourtLines } from './BasketballCourtLines'
 
 interface CourtPositionsHeatmapProps {
   court: AnalysisJobCourtPositions['court']
   heatmap: CourtPositionsHeatmapData
+  presentation?: 'legacy' | 'match-report'
 }
 
 export function CourtPositionsHeatmap({
   court,
   heatmap,
+  presentation = 'legacy',
 }: CourtPositionsHeatmapProps) {
   return (
     <div className="w-full max-w-full">
       <div
-        className="relative w-full max-w-full overflow-hidden rounded-lg border border-border-strong bg-[#d7b985]"
+        className={cn(
+          'relative w-full max-w-full overflow-hidden rounded-lg border',
+          presentation === 'match-report'
+            ? 'border-[#3A4254] bg-[#11151D]'
+            : 'border-border-strong bg-[#d7b985]',
+        )}
         style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
       >
         <svg
@@ -33,7 +41,7 @@ export function CourtPositionsHeatmap({
               y={cell.yM}
               width={cell.widthM}
               height={cell.heightM}
-              fill="#dc2626"
+              fill={presentation === 'match-report' ? '#b91c1c' : '#dc2626'}
               fillOpacity={0.18 + cell.intensity * 0.72}
             >
               <title>{cell.samples} {cell.samples === 1 ? 'muestra' : 'muestras'}</title>
@@ -49,7 +57,10 @@ export function CourtPositionsHeatmap({
         <div className="flex items-center gap-2" aria-label="Escala de concentración relativa">
           <span>Menor</span>
           <span
-            className="h-2.5 w-28 rounded-full bg-gradient-to-r from-red-100 to-red-700"
+            className={cn(
+              'h-2.5 w-28 rounded-full bg-gradient-to-r',
+              presentation === 'match-report' ? 'from-[#351A1A] to-[#B91C1C]' : 'from-red-100 to-red-700',
+            )}
             aria-hidden="true"
           />
           <span>Mayor concentración</span>

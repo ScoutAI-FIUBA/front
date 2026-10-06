@@ -3,6 +3,7 @@ import type {
   AnalysisJobCourtPositionsPlayer,
   AnalysisJobTeamSide,
 } from '@/types'
+import { cn } from '@/lib/utils'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
@@ -15,6 +16,7 @@ interface CourtPositionsCourtProps {
   court: AnalysisJobCourtPositions['court']
   players: AnalysisJobCourtPositionsPlayer[]
   ourTeamSide: AnalysisJobTeamSide | null
+  presentation?: 'legacy' | 'match-report'
 }
 
 function playerColor(player: AnalysisJobCourtPositionsPlayer): string {
@@ -34,13 +36,19 @@ export function CourtPositionsCourt({
   court,
   players,
   ourTeamSide,
+  presentation = 'legacy',
 }: CourtPositionsCourtProps) {
   const playerLabels = buildAnalysisJobPlayerLabels(players)
 
   return (
     <div className="w-full max-w-full">
       <div
-        className="relative w-full max-w-full overflow-hidden rounded-lg border border-border-strong bg-[#d7b985]"
+        className={cn(
+          'relative w-full max-w-full overflow-hidden rounded-lg border',
+          presentation === 'match-report'
+            ? 'border-[#3A4254] bg-[#11151D]'
+            : 'border-border-strong bg-[#d7b985]',
+        )}
         style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
       >
         <svg

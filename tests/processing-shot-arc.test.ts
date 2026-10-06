@@ -42,7 +42,7 @@ test('keeps the visual decorative, reduced-motion safe, and scoped to RUNNING jo
   const overviewSource = readSource('../src/pages/analysis/AnalysisJobOverview.tsx')
   const runningStart = overviewSource.indexOf("job.status === 'RUNNING'")
   const failedStart = overviewSource.indexOf("job.status === 'FAILED'")
-  const doneStart = overviewSource.indexOf('const teamStats')
+  const doneStart = overviewSource.lastIndexOf('const teamStats')
 
   assert.match(componentSource, /aria-hidden="true"/)
   assert.match(componentSource, /motion-reduce:transition-none/)

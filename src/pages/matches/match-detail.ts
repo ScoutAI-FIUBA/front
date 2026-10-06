@@ -12,6 +12,7 @@ import type {
 import { latestVideoAnalysisJob } from '../videos/video-library-filters.ts'
 
 export type MatchDetailTab = 'video' | 'reporte' | 'clips'
+export type MatchReportSection = 'resumen' | 'tiros' | 'movimiento' | 'similares'
 
 export interface MatchDetailModel {
   video: Video
@@ -44,6 +45,22 @@ export function matchDetailPath(videoId: string, tab: MatchDetailTab = 'video'):
 export function resolveMatchDetailTab(searchParams: URLSearchParams): MatchDetailTab {
   const requested = searchParams.get('tab')
   return requested === 'reporte' || requested === 'clips' ? requested : 'video'
+}
+
+export function matchReportPath(
+  videoId: string,
+  section: MatchReportSection = 'resumen',
+): string {
+  const searchParams = new URLSearchParams({ tab: 'reporte', seccion: section })
+  return `/partidos/${encodeURIComponent(videoId)}?${searchParams.toString()}`
+}
+
+export function resolveMatchReportSection(searchParams: URLSearchParams): MatchReportSection {
+  const requested = searchParams.get('seccion')
+  if (requested === 'tiros' || requested === 'movimiento' || requested === 'similares') {
+    return requested
+  }
+  return 'resumen'
 }
 
 export function matchAnalysisPath(video: Video): string {
