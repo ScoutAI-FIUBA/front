@@ -13,8 +13,8 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
+import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
 import {
   AnalysisJobResultsWorkspace,
@@ -208,7 +208,7 @@ function MatchReportTab({
     const ready = videoMaterialState(video) === 'ready'
     return (
       <section className="space-y-10 py-3">
-        <div className="grid gap-8 border-b border-[#252B38] pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte del partido</p>
             <h2 className="scout-display mt-3 max-w-4xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
@@ -217,12 +217,10 @@ function MatchReportTab({
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
               Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.
             </p>
-          </div>
-          <div className="lg:pb-1">
             {ready ? (
               <Button
                 asChild
-                className="h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
+                className="mt-6 h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
               >
                 <Link to={matchAnalysisPath(video)}>
                   Analizar partido
@@ -230,9 +228,13 @@ function MatchReportTab({
                 </Link>
               </Button>
             ) : (
-              <p className="max-w-xs text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
+              <p className="mt-6 max-w-sm text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
             )}
           </div>
+          <ProcessingShotArc
+            variant={ready ? 'waiting' : 'preparing'}
+            presentation="report"
+          />
         </div>
         <ReportStructurePreview title="Lo que vas a poder revisar" />
       </section>
@@ -243,29 +245,29 @@ function MatchReportTab({
     const hasProgress = job.progressPercent != null
     return (
       <section className="space-y-9 py-3" aria-live="polite">
-        <div className="border-b border-[#252B38] pb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
-          <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-            Tu partido está en cola
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-            La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
-          </p>
-        </div>
-        <div>
-          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Solicitud recibida</dt>
-              <dd className="mt-1 font-medium text-[#F4F5F7]">{formatUploadDate(job.createdAt)}</dd>
-            </div>
-            {hasProgress ? (
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
+            <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              Tu partido está en cola
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
+              La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
+            </p>
+            <dl className="mt-6 flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-4">
               <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
-                <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Solicitud recibida</dt>
+                <dd className="mt-1 font-medium text-[#F4F5F7]">{formatUploadDate(job.createdAt)}</dd>
               </div>
-            ) : null}
-          </dl>
-          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
+              {hasProgress ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
+                  <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          <ProcessingShotArc variant="queued" presentation="report" />
         </div>
         <ReportStructurePreview title="El reporte aparecerá acá" />
       </section>
@@ -277,40 +279,36 @@ function MatchReportTab({
     const hasProgress = job.progressPercent != null
     return (
       <section className="space-y-9 py-3" aria-live="polite">
-        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[#252B38] pb-8">
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis en curso</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
               Estamos analizando tu partido
             </h2>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán en este mismo espacio cuando el análisis termine.</p>
-          </div>
-          {hasProgress ? (
-            <span className="scout-display text-6xl font-extrabold tabular-nums text-[#F4F5F7]">
-              {job.progressPercent}%
-            </span>
-          ) : null}
-        </div>
-        <div>
-          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Estado</dt>
-              <dd className="mt-1 flex items-center gap-2 font-medium text-[#F4F5F7]"><span className="h-2 w-2 rounded-full bg-[#FF6A1F] animate-pulse motion-reduce:animate-none" aria-hidden="true" />Análisis en curso</dd>
-            </div>
-            {elapsed ? (
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Tiempo transcurrido</dt>
-                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{elapsed}</dd>
-              </div>
-            ) : null}
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán acá cuando termine.</p>
             {hasProgress ? (
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
-                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
-              </div>
+              <span className="scout-display mt-5 block text-6xl font-extrabold tabular-nums text-[#F4F5F7]">
+                {job.progressPercent}%
+              </span>
             ) : null}
-          </dl>
-          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
+            <dl className="mt-6 flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-4">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Estado</dt>
+                <dd className="mt-1 flex items-center gap-2 font-medium text-[#F4F5F7]"><span className="h-2 w-2 rounded-full bg-[#FF6A1F] animate-pulse motion-reduce:animate-none" aria-hidden="true" />Análisis en curso</dd>
+              </div>
+              {elapsed ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Tiempo transcurrido</dt>
+                  <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{elapsed}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          <ProcessingShotArc
+            variant="running"
+            progressPercent={job.progressPercent}
+            presentation="report"
+          />
         </div>
         <ReportStructurePreview title="El reporte se está preparando" />
       </section>
@@ -320,7 +318,7 @@ function MatchReportTab({
   if (job.status === 'FAILED') {
     return (
       <section className="space-y-9 py-3">
-        <div className="grid gap-8 border-b border-red-500/20 pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="grid gap-8 border-b border-red-500/20 pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Reporte interrumpido</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
@@ -330,18 +328,19 @@ function MatchReportTab({
               El video y sus clips siguen disponibles. Podés iniciar un análisis nuevo con el mismo material.
             </p>
             <p className="mt-2 max-w-2xl text-xs text-[#788397]">El detalle técnico de esta ejecución queda disponible como información secundaria para soporte.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+                <Link to={matchAnalysisPath(video)}>
+                  Reintentar análisis
+                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
+                <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            <Button asChild className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
-              <Link to={matchAnalysisPath(video)}>
-                Reintentar análisis
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
-              <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
-            </Button>
-          </div>
+          <ProcessingShotArc variant="failed" presentation="report" />
         </div>
         <ReportStructurePreview title="El reporte todavía no está disponible" />
       </section>

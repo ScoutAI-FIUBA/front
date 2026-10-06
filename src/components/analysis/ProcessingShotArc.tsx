@@ -1,15 +1,35 @@
-import { processingShotArcState } from './processing-shot-arc'
+import {
+  processingShotArcVisualState,
+  type ProcessingShotArcVariant,
+} from './processing-shot-arc'
+import { cn } from '@/lib/utils'
 
 interface ProcessingShotArcProps {
-  progressPercent: number
+  variant?: ProcessingShotArcVariant
+  progressPercent?: number | null
+  presentation?: 'report' | 'legacy'
 }
 
-export function ProcessingShotArc({ progressPercent }: ProcessingShotArcProps) {
-  const state = processingShotArcState(progressPercent)
+export function ProcessingShotArc({
+  variant = 'running',
+  progressPercent = null,
+  presentation = 'report',
+}: ProcessingShotArcProps) {
+  const state = processingShotArcVisualState(variant, progressPercent)
+  const hasIndeterminateActivity = variant === 'preparing'
+    || (variant === 'running' && !state.hasRealProgress)
+  const ballAtRest = variant === 'waiting' || variant === 'queued'
 
   return (
     <div
-      className="relative mx-auto mt-4 aspect-[18/7] w-full max-w-md overflow-hidden rounded-lg border bg-primary-subtle/35"
+      className={cn(
+        'relative w-full overflow-hidden',
+        presentation === 'legacy'
+          ? 'mx-auto mt-4 aspect-[18/7] max-w-md rounded-lg border bg-primary-subtle/35'
+          : 'aspect-[18/6] bg-transparent',
+      )}
+      data-state={variant}
+      data-presentation={presentation}
       aria-hidden="true"
     >
       <svg
@@ -19,11 +39,11 @@ export function ProcessingShotArc({ progressPercent }: ProcessingShotArcProps) {
         fill="none"
         focusable="false"
       >
-        <path d="M0 118 H360" stroke="currentColor" className="text-border-strong/70" strokeWidth="2" />
+        <path d="M0 118 H360" stroke="currentColor" className="text-[#3A4254]" strokeWidth="2" />
         <path
           d="M4 118 A78 78 0 0 1 106 118"
           stroke="currentColor"
-          className="text-border-strong/60"
+          className="text-[#3A4254]"
           strokeWidth="2"
         />
 
@@ -31,36 +51,65 @@ export function ProcessingShotArc({ progressPercent }: ProcessingShotArcProps) {
           d="M30 102 Q174 -28 314 58"
           pathLength="100"
           stroke="currentColor"
-          className="text-border-strong"
+          className={cn(
+            'transition-opacity motion-reduce:transition-none',
+            variant === 'waiting' && 'text-[#3A4254] opacity-35',
+            variant === 'queued' && 'text-[#A3ABBA] opacity-80',
+            variant === 'failed' && 'text-[#788397] opacity-55',
+            (variant === 'preparing' || variant === 'running') && 'text-[#788397] opacity-60',
+            hasIndeterminateActivity && 'motion-safe:animate-pulse',
+          )}
           strokeWidth="3"
           strokeDasharray="2 7"
           strokeLinecap="round"
         />
-        <path
-          d="M30 102 Q174 -28 314 58"
-          pathLength="100"
-          stroke="currentColor"
-          className="text-primary motion-safe:transition-all motion-safe:duration-700 motion-safe:ease-out motion-reduce:transition-none"
-          strokeWidth="4"
-          strokeDasharray="100"
-          strokeDashoffset={state.strokeDashoffset}
-          strokeLinecap="round"
-        />
+        {state.hasRealProgress ? (
+          <path
+            d="M30 102 Q174 -28 314 58"
+            pathLength="100"
+            stroke="currentColor"
+            className="text-[#FF6A1F] motion-safe:transition-all motion-safe:duration-700 motion-safe:ease-out motion-reduce:transition-none"
+            strokeWidth="4"
+            strokeDasharray="100"
+            strokeDashoffset={state.strokeDashoffset}
+            strokeLinecap="round"
+          />
+        ) : null}
+        {variant === 'failed' ? (
+          <path
+            d="M30 102 Q174 -28 314 58"
+            pathLength="100"
+            stroke="currentColor"
+            className="text-red-300/70"
+            strokeWidth="4"
+            strokeDasharray="58 42"
+            strokeLinecap="round"
+          />
+        ) : null}
 
-        <path d="M338 28 V76" stroke="currentColor" className="text-muted-foreground" strokeWidth="5" strokeLinecap="round" />
-        <ellipse cx="316" cy="62" rx="20" ry="5" stroke="currentColor" className="text-primary" strokeWidth="4" />
-        <path d="M299 66 L304 86 M308 67 L310 89 M317 67 V90 M326 67 L324 89 M334 66 L330 86 M303 78 H331" stroke="currentColor" className="text-border-strong" strokeWidth="1.5" />
+        <path d="M338 28 V76" stroke="currentColor" className="text-[#A3ABBA]" strokeWidth="5" strokeLinecap="round" />
+        <ellipse cx="316" cy="62" rx="20" ry="5" stroke="currentColor" className={variant === 'failed' ? 'text-[#A3ABBA]' : 'text-[#F4F5F7]'} strokeWidth="4" />
+        <path d="M299 66 L304 86 M308 67 L310 89 M317 67 V90 M326 67 L324 89 M334 66 L330 86 M303 78 H331" stroke="currentColor" className="text-[#788397]" strokeWidth="1.5" />
       </svg>
 
       <span
-        className="absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-foreground/70 bg-primary shadow-sm motion-safe:transition-all motion-safe:duration-700 motion-safe:ease-out motion-reduce:transition-none"
+        className={cn(
+          'absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 motion-safe:transition-[left,top] motion-safe:duration-700 motion-safe:ease-out motion-reduce:transition-none',
+          presentation === 'legacy' ? 'h-6 w-6' : 'h-7 w-7',
+          variant === 'failed'
+            ? 'border-red-200/70 bg-red-400/80'
+            : ballAtRest
+              ? 'border-[#A3ABBA] bg-[#F4F5F7]'
+              : 'border-[#FFD2BC] bg-[#FF6A1F] shadow-[0_0_24px_rgba(255,106,31,0.22)]',
+          hasIndeterminateActivity && 'motion-safe:animate-pulse',
+        )}
         style={{
           left: `${(state.ballX / 360) * 100}%`,
           top: `${(state.ballY / 140) * 100}%`,
         }}
       >
-        <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 rotate-[18deg] bg-foreground/65" />
-        <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 -rotate-[12deg] bg-foreground/65" />
+        <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 rotate-[18deg] bg-[#0B0D12]/55" />
+        <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 -rotate-[12deg] bg-[#0B0D12]/55" />
       </span>
     </div>
   )

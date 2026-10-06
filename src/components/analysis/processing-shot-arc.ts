@@ -5,6 +5,17 @@ export interface ProcessingShotArcState {
   strokeDashoffset: number
 }
 
+export type ProcessingShotArcVariant =
+  | 'waiting'
+  | 'preparing'
+  | 'queued'
+  | 'running'
+  | 'failed'
+
+export interface ProcessingShotArcVisualState extends ProcessingShotArcState {
+  hasRealProgress: boolean
+}
+
 const START = { x: 30, y: 102 }
 const CONTROL = { x: 174, y: -28 }
 const END = { x: 314, y: 58 }
@@ -26,4 +37,25 @@ export function processingShotArcState(progressPercent: number): ProcessingShotA
       + progress * progress * END.y,
     strokeDashoffset: 100 - percent,
   }
+}
+
+export function processingShotArcVisualState(
+  variant: ProcessingShotArcVariant,
+  progressPercent?: number | null,
+): ProcessingShotArcVisualState {
+  if (variant === 'running' && progressPercent != null && Number.isFinite(progressPercent)) {
+    return { ...processingShotArcState(progressPercent), hasRealProgress: true }
+  }
+
+  if (variant === 'failed') {
+    return {
+      percent: 0,
+      ballX: 286,
+      ballY: 88,
+      strokeDashoffset: 38,
+      hasRealProgress: false,
+    }
+  }
+
+  return { ...processingShotArcState(0), hasRealProgress: false }
 }
