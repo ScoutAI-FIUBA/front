@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, CircleAlert, LoaderCircle, RefreshCw, Upload } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
@@ -6,6 +6,7 @@ import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNoti
 import { Button } from '@/components/ui/button'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
+import { getVideoByIdForTeam } from '@/services/registry'
 import {
   buildMatchLibrary,
   filterMatchLibrary,
@@ -15,6 +16,11 @@ import {
   type MatchLibraryFilter,
   type MatchLibraryItem,
 } from './match-library'
+import {
+  cachedMatchPoster,
+  matchPosterCacheExpiry,
+  requestMatchPoster,
+} from './match-posters'
 
 const FILTERS: Array<{ value: MatchLibraryFilter; label: string }> = [
   { value: 'all', label: 'Todos' },
@@ -50,7 +56,7 @@ function unavailableActionCopy(item: MatchLibraryItem): string {
   return 'Disponible cuando el archivo esté listo'
 }
 
-function MatchCard({ item }: { item: MatchLibraryItem }) {
+function MatchCard({ item, posterUrl }: { item: MatchLibraryItem; posterUrl?: string }) {
   const titleId = `match-${item.video.id}-title`
   const displayState = matchLibraryDisplayState(item)
 
@@ -60,15 +66,25 @@ function MatchCard({ item }: { item: MatchLibraryItem }) {
       className="group flex min-h-[440px] flex-col overflow-hidden rounded-[22px] border border-[#252B38] bg-[#151922] transition-colors hover:border-[#3A4254]"
     >
       <div className="relative h-44 overflow-hidden border-b border-[#252B38] bg-[#11151D] px-6 py-5">
-        <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full border border-[#FF6A1F]/15" />
-        <svg
-          aria-hidden="true"
-          className="relative h-full w-full opacity-55"
-          viewBox="0 0 28 15"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <BasketballCourtLines lengthM={28} widthM={15} />
-        </svg>
+        {posterUrl ? (
+          <img
+            src={posterUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute -right-12 -top-16 h-40 w-40 rounded-full border border-[#FF6A1F]/15" />
+            <svg
+              aria-hidden="true"
+              className="relative h-full w-full opacity-55"
+              viewBox="0 0 28 15"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <BasketballCourtLines lengthM={28} widthM={15} />
+            </svg>
+          </>
+        )}
         <span
           className={`absolute left-5 top-5 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${matchStateTone(displayState)}`}
         >
@@ -130,12 +146,64 @@ export function MatchesPage() {
   const { catalog, loadState, isRefreshing, isPollingDisconnected, refresh } =
     useAnalysisJobCatalog()
   const [filter, setFilter] = useState<MatchLibraryFilter>('all')
+  const [posterUrls, setPosterUrls] = useState<Record<string, string>>({})
+  const [posterCacheVersion, setPosterCacheVersion] = useState(0)
 
   const items = useMemo(() => (catalog ? buildMatchLibrary(catalog) : []), [catalog])
   const filteredItems = useMemo(() => filterMatchLibrary(items, filter), [filter, items])
   const uploadPath = videoUploadPath({ returnTo: '/partidos' })
   const hasPartialFailure =
     catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
+
+  useEffect(() => {
+    let active = true
+    const refreshTimers: number[] = []
+
+    const schedulePosterRefresh = (videoId: string) => {
+      const expiresAt = matchPosterCacheExpiry(videoId)
+      if (!expiresAt) return
+      refreshTimers.push(window.setTimeout(() => {
+        if (!active) return
+        setPosterUrls((current) => {
+          if (!(videoId in current)) return current
+          const next = { ...current }
+          delete next[videoId]
+          return next
+        })
+        setPosterCacheVersion((current) => current + 1)
+      }, Math.max(0, expiresAt - Date.now() + 50)))
+    }
+
+    for (const { video } of items) {
+      const cached = cachedMatchPoster(video.id)
+      if (cached) {
+        setPosterUrls((current) => (
+          current[video.id] === cached ? current : { ...current, [video.id]: cached }
+        ))
+        schedulePosterRefresh(video.id)
+        continue
+      }
+      if (cached === null) {
+        schedulePosterRefresh(video.id)
+        continue
+      }
+
+      void requestMatchPoster(video, getVideoByIdForTeam).then((posterUrl) => {
+        if (!active) return
+        if (posterUrl) {
+          setPosterUrls((current) => (
+            current[video.id] === posterUrl ? current : { ...current, [video.id]: posterUrl }
+          ))
+        }
+        schedulePosterRefresh(video.id)
+      })
+    }
+
+    return () => {
+      active = false
+      refreshTimers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [items, posterCacheVersion])
 
   return (
     <div className="pb-16 pt-4 sm:pt-8">
@@ -293,7 +361,11 @@ export function MatchesPage() {
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map((item) => (
-                <MatchCard key={item.video.id} item={item} />
+                <MatchCard
+                  key={item.video.id}
+                  item={item}
+                  posterUrl={posterUrls[item.video.id]}
+                />
               ))}
             </div>
           )}

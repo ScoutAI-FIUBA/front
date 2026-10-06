@@ -1,6 +1,5 @@
 import type { ProcessingJob, Team, Video } from '../../types/index.ts'
 import type { AnalysisJobCatalog } from '../analysis/analysis-job-catalog.ts'
-import { analysisJobDetailPath } from '../analysis/analysis-job-detail.ts'
 import {
   latestVideoAnalysisJob,
   videoAnalysisState,
@@ -8,6 +7,7 @@ import {
   type VideoAnalysisState,
   type VideoMaterialState,
 } from '../videos/video-library-filters.ts'
+import { matchDetailPath } from './match-detail.ts'
 
 export type MatchLibraryFilter = 'all' | 'active' | 'done' | 'failed'
 
@@ -75,20 +75,15 @@ export function matchLibraryDisplayLabel(state: MatchLibraryDisplayState): strin
   }
 }
 
-function newAnalysisPath(video: Video): string {
-  const searchParams = new URLSearchParams({ team_id: video.teamId, video_id: video.id })
-  return `/analisis/nuevo?${searchParams.toString()}`
-}
-
-function jobAction(job: ProcessingJob): MatchLibraryAction {
+function jobAction(video: Video, job: ProcessingJob): MatchLibraryAction {
   switch (job.status) {
     case 'QUEUED':
     case 'RUNNING':
-      return { kind: 'job', label: 'Ver progreso', to: analysisJobDetailPath(job) }
+      return { kind: 'job', label: 'Ver progreso', to: matchDetailPath(video.id, 'reporte') }
     case 'DONE':
-      return { kind: 'job', label: 'Ver reporte', to: analysisJobDetailPath(job) }
+      return { kind: 'job', label: 'Ver reporte', to: matchDetailPath(video.id, 'reporte') }
     case 'FAILED':
-      return { kind: 'job', label: 'Ver problema', to: analysisJobDetailPath(job) }
+      return { kind: 'job', label: 'Ver problema', to: matchDetailPath(video.id, 'reporte') }
   }
 
   throw new Error(`Estado de análisis no soportado: ${String(job.status)}`)
@@ -103,12 +98,12 @@ export function buildMatchLibrary(catalog: AnalysisJobCatalog): MatchLibraryItem
     const materialState = videoMaterialState(video)
     const analysisState = videoAnalysisState(video.id, jobs, catalog.loadedJobVideoIds)
     const action = latestJob
-      ? jobAction(latestJob)
+      ? jobAction(video, latestJob)
       : materialState === 'ready' && analysisState === 'none'
         ? {
             kind: 'new-analysis' as const,
             label: 'Analizar' as const,
-            to: newAnalysisPath(video),
+            to: matchDetailPath(video.id, 'reporte'),
           }
         : null
 

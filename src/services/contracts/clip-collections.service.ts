@@ -12,6 +12,7 @@ export interface CreateClipCollectionDto {
 export interface AddClipDto {
   startMs: number
   endMs: number
+  description?: string
 }
 
 export interface IClipCollectionService {

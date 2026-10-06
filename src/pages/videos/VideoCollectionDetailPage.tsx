@@ -26,6 +26,14 @@ function formatSeconds(value: number): string {
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
+function clipRange(item: ClipCollectionItem): string {
+  return `${formatSeconds(item.startMs / 1000)}–${formatSeconds(item.endMs / 1000)}`
+}
+
+function clipTitle(item: ClipCollectionItem): string {
+  return item.description?.trim() || `Clip ${item.position} · ${clipRange(item)}`
+}
+
 export function VideoCollectionDetailPage() {
   const { videoId = '', collectionId = '' } = useParams()
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -37,6 +45,7 @@ export function VideoCollectionDetailPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [startSeconds, setStartSeconds] = useState('0')
   const [endSeconds, setEndSeconds] = useState('10')
+  const [clipDescription, setClipDescription] = useState('')
   const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState('')
@@ -74,6 +83,7 @@ export function VideoCollectionDetailPage() {
     if (!video) return
     setStartSeconds('0')
     setEndSeconds(String(Math.min(MAX_CLIP_DURATION_SECONDS, (video.durationMs ?? 10_000) / 1000)))
+    setClipDescription('')
     setActiveClipEnd(null)
   }, [video])
 
@@ -101,8 +111,10 @@ export function VideoCollectionDetailPage() {
       const item = await clipCollectionService.addClip(videoId, collectionId, {
         startMs: Math.round(start * 1000),
         endMs: Math.round(end * 1000),
+        description: clipDescription.trim() || undefined,
       })
       setAddOpen(false)
+      setClipDescription('')
       setSelectedItem(item)
       toast.success('Clip agregado')
       await load()
@@ -214,6 +226,17 @@ export function VideoCollectionDetailPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="clip-description">Etiqueta (opcional)</Label>
+                  <Input
+                    id="clip-description"
+                    className="mt-1"
+                    maxLength={200}
+                    placeholder="Ej. Pick and roll"
+                    value={clipDescription}
+                    onChange={(event) => setClipDescription(event.target.value)}
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="clip-start">Inicio (segundos)</Label>
@@ -276,7 +299,10 @@ export function VideoCollectionDetailPage() {
                 {selectedItem ? (
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium">Clip {selectedItem.position} · {formatSeconds(selectedItem.startMs / 1000)}–{formatSeconds(selectedItem.endMs / 1000)}</p>
+                      <p className="font-medium">{clipTitle(selectedItem)}</p>
+                      {selectedItem.description?.trim() ? (
+                        <p className="text-xs text-muted-foreground">Clip {selectedItem.position} · {clipRange(selectedItem)}</p>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">Guardado el {formatDate(selectedItem.createdAt)}</p>
                     </div>
                     <Button
@@ -331,8 +357,10 @@ export function VideoCollectionDetailPage() {
                     <Play className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">Clip {item.position} · {formatSeconds(item.startMs / 1000)}–{formatSeconds(item.endMs / 1000)}</span>
-                    <span className="block text-xs text-muted-foreground">Rango del video original</span>
+                    <span className="block truncate text-sm font-medium">{clipTitle(item)}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {item.description?.trim() ? `Clip ${item.position} · ${clipRange(item)}` : 'Rango del video original'}
+                    </span>
                   </span>
                 </button>
                 <Button

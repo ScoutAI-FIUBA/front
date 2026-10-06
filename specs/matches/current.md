@@ -9,6 +9,8 @@
 ## Route and navigation
 
 - Primary route: `/partidos`.
+- Canonical detail route: `/partidos/:videoId`.
+- Detail tabs are refresh-safe query states: `?tab=video`, `?tab=reporte`, and `?tab=clips`; an absent or invalid value falls back to Video.
 - Primary navigation: Inicio, Partidos, Equipos, Jugadores.
 - `/videos`, `/analisis`, and `/revision-manual` remain routable for compatibility but are not primary navigation items.
 
@@ -26,6 +28,18 @@
 - FAILED: `Ver problema`.
 - A video that is not ready cannot start a new job.
 - If job history could not be verified, the page preserves the video but does not offer `Analizar`.
+- Library CTAs enter the Partido detail first. Analysis-related states open its Reporte tab.
+
+## Partido detail
+
+- The header shows only the real video title, team, upload date, and composed Partido state.
+- Video reuses the existing signed-playback player and renewal behavior with reduced chrome.
+- Reporte explains the automatic output before analysis, shows real queued/running progress when supplied, and links to the existing Analysis Workspace for active, completed, and failed jobs.
+- Clips loads real `ClipCollection` records for the video and their persisted items only when the tab is opened.
+- Clip rows use a persisted backend `description` as their title when present. Legacy items without one keep the honest fallback `Clip N · mm:ss–mm:ss`; notes and player associations are not reconstructed.
+- The Video tab uses `presigned_thumbnail_url` from `GET /videos/{id}?team_id=...` as the native video poster when present and keeps the existing no-poster fallback when absent.
+- `GET /videos?team_id=...` does not expose the thumbnail, so the Partidos library progressively requests each visible catalog video's existing detail endpoint after the base catalog renders. A global pool limits detail requests to four at a time, an in-memory cache refreshes signed URLs before their 3600-second expiry, and null or failed posters keep the schematic court without affecting the catalog.
+- Existing collection and manual clip routes remain the editing workflow and remain routable.
 
 ## Navigation reuse
 
@@ -41,7 +55,7 @@
 ## Non-scope
 
 - No backend `/matches` integration.
-- No Partido detail screen, backend thumbnails, invented opponent/score/competition, or fabricated progress/statistics.
+- No deep Reporte redesign, invented opponent/score/competition, or fabricated progress/statistics.
 - No changes to backend contracts, authentication, or analysis result rendering.
 
 ## Verification

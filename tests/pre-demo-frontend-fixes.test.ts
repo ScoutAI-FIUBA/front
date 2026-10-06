@@ -53,12 +53,13 @@ test('birth dates use the local date and reject future values', () => {
 test('video description is not represented as a rival', () => {
   const typeSource = readSource('../src/types/index.ts')
   const apiSource = readSource('../src/services/api/videos.api.ts')
+  const mapperSource = readSource('../src/services/api/contract-mappers.ts')
   const mockSource = readSource('../src/services/mock/videos.mock.ts')
   const pageSource = readSource('../src/pages/videos/VideosPage.tsx')
 
   assert.match(typeSource, /description\?: string/)
   assert.doesNotMatch(typeSource, /rivalName/)
-  assert.match(apiSource, /description: video\.description \?\? undefined/)
+  assert.match(mapperSource, /description: video\.description \?\? undefined/)
   assert.match(mockSource, /description: dto\.description/)
   assert.doesNotMatch(apiSource, /rivalName/)
   assert.doesNotMatch(mockSource, /rivalName/)

@@ -278,6 +278,7 @@ export function AnalysisNewPage() {
         clips.map((clip) => ({
           startMs: Math.round(clip.startSecond * 1000),
           endMs: Math.round(clip.endSecond * 1000),
+          description: clip.label.trim() || undefined,
         })),
       )
 

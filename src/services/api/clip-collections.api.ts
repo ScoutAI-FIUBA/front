@@ -1,13 +1,16 @@
 import type {
   ClipCollection,
-  ClipCollectionItem,
 } from '@/types'
 import type {
-  AddClipDto,
   CreateClipCollectionDto,
   IClipCollectionService,
 } from '../contracts/clip-collections.service'
 import { apiJson } from './http-client'
+import {
+  mapApiClipCollectionItem,
+  toClipPayload,
+  type ApiClipCollectionItem,
+} from './contract-mappers'
 
 interface ApiClipCollection {
   id: string
@@ -18,15 +21,6 @@ interface ApiClipCollection {
   description: string | null
   created_at: string
   updated_at: string
-}
-
-interface ApiClipCollectionItem {
-  id: string
-  collection_id: string
-  start_ms: number
-  end_ms: number
-  position: number
-  created_at: string
 }
 
 function collectionPath(videoId: string, collectionId?: string): string {
@@ -47,24 +41,6 @@ function mapCollection(collection: ApiClipCollection): ClipCollection {
   }
 }
 
-function mapItem(item: ApiClipCollectionItem): ClipCollectionItem {
-  return {
-    id: item.id,
-    collectionId: item.collection_id,
-    startMs: item.start_ms,
-    endMs: item.end_ms,
-    position: item.position,
-    createdAt: item.created_at,
-  }
-}
-
-function toClipPayload(clip: AddClipDto) {
-  return {
-    start_ms: clip.startMs,
-    end_ms: clip.endMs,
-  }
-}
-
 export const apiClipCollectionService: IClipCollectionService = {
   async list(videoId) {
     const data = await apiJson<{ collections: ApiClipCollection[] }>(collectionPath(videoId))
@@ -78,7 +54,7 @@ export const apiClipCollectionService: IClipCollectionService = {
     }>(collectionPath(videoId, collectionId))
     return {
       collection: mapCollection(data.collection),
-      items: data.items.map(mapItem),
+      items: data.items.map(mapApiClipCollectionItem),
     }
   },
 
@@ -101,7 +77,7 @@ export const apiClipCollectionService: IClipCollectionService = {
         body: JSON.stringify(toClipPayload(dto)),
       },
     )
-    return mapItem(data.item)
+    return mapApiClipCollectionItem(data.item)
   },
 
   async addClips(videoId, collectionId, clips) {
@@ -112,7 +88,7 @@ export const apiClipCollectionService: IClipCollectionService = {
         body: JSON.stringify({ clips: clips.map(toClipPayload) }),
       },
     )
-    return data.items.map(mapItem)
+    return data.items.map(mapApiClipCollectionItem)
   },
 
   async exportClip(videoId, collectionId, itemId) {
