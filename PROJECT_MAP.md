@@ -58,6 +58,7 @@ src/
 - `/jugadores`: players list page.
 - `/jugadores/nuevo`: create player page.
 - `/partidos`: matches page.
+- `/partidos/:videoId?tab=video|reporte|clips`: canonical product detail over a video, its latest processing job, and clip collections.
 - `/videos`: videos list page.
 - `/videos/subir`: video upload page.
 - `/videos/:videoId/colecciones`: clip collections for a video.

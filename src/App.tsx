@@ -14,6 +14,7 @@ import { TeamsPage } from '@/pages/teams/TeamsPage'
 import { PlayersPage } from '@/pages/players/PlayersPage'
 import { PlayerNewPage } from '@/pages/players/PlayerNewPage'
 import { MatchesPage } from '@/pages/matches/MatchesPage'
+import { MatchDetailPage } from '@/pages/matches/MatchDetailPage'
 import { VideosPage } from '@/pages/videos/VideosPage'
 import { VideoUploadPage } from '@/pages/videos/VideoUploadPage'
 import { VideoCollectionsPage } from '@/pages/videos/VideoCollectionsPage'
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
             <Route path="/partidos" element={<MatchesPage />} />
+            <Route path="/partidos/:videoId" element={<MatchDetailPage />} />
             <Route path="/videos" element={<VideosPage />} />
             <Route path="/videos/subir" element={<VideoUploadPage />} />
             <Route path="/videos/:videoId/colecciones" element={<VideoCollectionsPage />} />

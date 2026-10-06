@@ -87,7 +87,7 @@ test('a READY video without jobs becomes a real Partido with one Analizar action
   assert.deepEqual(item.action, {
     kind: 'new-analysis',
     label: 'Analizar',
-    to: '/analisis/nuevo?team_id=team%2F1&video_id=video%2F1',
+    to: '/partidos/video%2F1?tab=reporte',
   })
 })
 
@@ -102,7 +102,7 @@ test('the newest ProcessingJob decides the Partido state and destination', () =>
   assert.deepEqual(item.action, {
     kind: 'job',
     label: 'Ver progreso',
-    to: '/analisis/jobs/new%2Fjob?team_id=team%2F1',
+    to: '/partidos/video-1?tab=reporte',
   })
 })
 
@@ -119,7 +119,7 @@ test('QUEUED, RUNNING, DONE and FAILED jobs use product-facing CTAs', () => {
     const [item] = buildMatchLibrary(catalog([sourceVideo], [job(`job-${status}`, sourceVideo.id, status)]))
     assert.equal(item.analysisState, status)
     assert.equal(item.action?.label, label)
-    assert.match(item.action?.to ?? '', /^\/analisis\/jobs\//)
+    assert.equal(item.action?.to, `/partidos/video-${status}?tab=reporte`)
   }
 })
 

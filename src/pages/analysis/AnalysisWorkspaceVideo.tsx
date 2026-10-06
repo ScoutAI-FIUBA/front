@@ -21,6 +21,7 @@ interface AnalysisWorkspaceVideoProps {
   videoId: string
   teamId: string
   title: string
+  minimalChrome?: boolean
   onStateChange?: (state: AnalysisWorkspaceVideoState) => void
 }
 
@@ -31,7 +32,14 @@ function usablePlayback(video: Video | null): video is Video {
 export const AnalysisWorkspaceVideo = forwardRef<
   AnalysisWorkspaceVideoHandle,
   AnalysisWorkspaceVideoProps
->(function AnalysisWorkspaceVideo({ video, videoId, teamId, title, onStateChange }, ref) {
+>(function AnalysisWorkspaceVideo({
+  video,
+  videoId,
+  teamId,
+  title,
+  minimalChrome = false,
+  onStateChange,
+}, ref) {
   const initialVideo = usablePlayback(video) ? video : null
   const [state, setState] = useState<AnalysisWorkspaceVideoState>(initialVideo ? 'ready' : 'loading')
   const [playbackVideo, setPlaybackVideo] = useState<Video | null>(initialVideo)
@@ -92,10 +100,10 @@ export const AnalysisWorkspaceVideo = forwardRef<
   return (
     <section
       id="analysis-source-video"
-      className="overflow-hidden rounded-xl border border-white/10 bg-black shadow-2xl shadow-black/20"
+      className="overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-2xl shadow-black/20"
       aria-label="Video fuente del análisis"
     >
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-[#11151d] px-4 py-3">
+      {!minimalChrome ? <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-[#11151d] px-4 py-3">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Video fuente</p>
           <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
@@ -112,7 +120,7 @@ export const AnalysisWorkspaceVideo = forwardRef<
             Renovar enlace
           </Button>
         )}
-      </div>
+      </div> : null}
 
       {state === 'loading' && (
         <div className="flex aspect-video items-center justify-center gap-3 bg-[#07090d] text-sm text-slate-400" aria-live="polite" aria-busy="true">
@@ -165,12 +173,29 @@ export const AnalysisWorkspaceVideo = forwardRef<
         />
       )}
 
-      <div className="flex items-start gap-2 border-t border-white/10 bg-[#11151d] px-4 py-2.5 text-xs text-slate-400">
-        <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        {state === 'error'
-          ? 'Sin video disponible no es posible verificar visualmente los momentos vinculados.'
-          : 'Los momentos vinculados usan los tiempos informados por el análisis. Verificá siempre la jugada en el video.'}
-      </div>
+      {minimalChrome && state === 'ready' ? (
+        <div className="flex justify-end border-t border-white/10 bg-[#11151d] px-3 py-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground"
+            onClick={refreshPlayback}
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+            Renovar enlace
+          </Button>
+        </div>
+      ) : null}
+
+      {!minimalChrome ? (
+        <div className="flex items-start gap-2 border-t border-white/10 bg-[#11151d] px-4 py-2.5 text-xs text-slate-400">
+          <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {state === 'error'
+            ? 'Sin video disponible no es posible verificar visualmente los momentos vinculados.'
+            : 'Los momentos vinculados usan los tiempos informados por el análisis. Verificá siempre la jugada en el video.'}
+        </div>
+      ) : null}
     </section>
   )
 })
