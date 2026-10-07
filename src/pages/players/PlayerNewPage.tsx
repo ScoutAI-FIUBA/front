@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import { Image, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -13,55 +14,33 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { playerService, teamService } from '@/services/registry'
-import type { PositionCode, Team } from '@/types'
-import { calcAge, toJerseyNumber } from '@/lib/utils'
-import { POSITIONS } from '@/lib/positions'
+import type { Team } from '@/types'
+import { calcAge } from '@/lib/utils'
 import { toast } from 'sonner'
-import { isFutureBirthDate, localDateInputValue } from './player-birth-date'
+import { PlayerFormFields } from './PlayerFormFields'
+import {
+  emptyPlayerFormValues,
+  playerFormSchema,
+  playerFormToCreateDto,
+  type PlayerFormValues,
+} from './player-form'
 
 export function PlayerNewPage() {
   const navigate = useNavigate()
   const [teams, setTeams] = useState<Team[]>([])
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [position, setPosition] = useState<PositionCode | ''>('')
-  const [jersey, setJersey] = useState('')
-  const [birthDate, setBirthDate] = useState('')
-  const [heightCm, setHeightCm] = useState('180')
-  const [weightKg, setWeightKg] = useState('75')
   const [teamId, setTeamId] = useState('')
-  const maximumBirthDate = localDateInputValue()
+  const form = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerFormSchema),
+    defaultValues: { ...emptyPlayerFormValues, heightCm: '180', weightKg: '75' },
+  })
 
   useEffect(() => {
     void teamService.list().then(setTeams)
   }, [])
 
-  const handleSave = async () => {
-    if (!firstName || !lastName || !position || !birthDate) {
-      toast.error('Completá los campos obligatorios')
-      return
-    }
-    if (isFutureBirthDate(birthDate, maximumBirthDate)) {
-      toast.error('La fecha de nacimiento no puede ser futura')
-      return
-    }
-    const height = Number(heightCm)
-    const weight = Number(weightKg)
-    if (!height || height <= 0 || !weight || weight <= 0) {
-      toast.error('Altura y peso deben ser números válidos')
-      return
-    }
+  const handleSave = async (values: PlayerFormValues) => {
     try {
-      await playerService.create({
-        firstName,
-        lastName,
-        birthDate,
-        primaryPosition: position,
-        heightCm: height,
-        weightKg: weight,
-        jerseyNumber: jersey || undefined,
-        teamId: teamId || undefined,
-      })
+      await playerService.create(playerFormToCreateDto(values, teamId || undefined))
       toast.success('Jugador guardado')
       navigate('/jugadores')
     } catch (err) {
@@ -69,6 +48,7 @@ export function PlayerNewPage() {
     }
   }
 
+  const birthDate = form.watch('birthDate')
   const age = birthDate ? calcAge(birthDate) : null
 
   return (
@@ -99,51 +79,9 @@ export function PlayerNewPage() {
           </Card>
         </div>
 
-        <div className="space-y-4 rounded-lg border bg-white p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Nombre</Label>
-              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ej. Javier" className="mt-1" />
-            </div>
-            <div>
-              <Label>Apellido</Label>
-              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ej. Hernández" className="mt-1" />
-            </div>
-          </div>
-          <div>
-            <Label>Posición</Label>
-            <Select value={position} onValueChange={(v) => setPosition(v as PositionCode)}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
-              <SelectContent>
-                {POSITIONS.map((p) => (
-                  <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Dorsal</Label>
-              <Input inputMode="numeric" maxLength={2} value={jersey} onChange={(e) => setJersey(toJerseyNumber(e.target.value))} placeholder="Ej. 10" className="mt-1" />
-            </div>
-            <div>
-              <Label>Fecha de nacimiento</Label>
-              <Input type="date" max={maximumBirthDate} value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mt-1" />
-              {age !== null && (
-                <p className="mt-1 text-xs text-muted-foreground">{age} años</p>
-              )}
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label>Altura (cm)</Label>
-              <Input type="number" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label>Peso (kg)</Label>
-              <Input type="number" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} className="mt-1" />
-            </div>
-          </div>
+        <form className="space-y-4 rounded-lg border bg-white p-6" onSubmit={form.handleSubmit(handleSave)}>
+          <PlayerFormFields form={form} />
+          {age !== null && <p className="text-xs text-muted-foreground">Edad actual: {age} años</p>}
           <div>
             <Label>Equipo asociado</Label>
             <Select value={teamId} onValueChange={setTeamId}>
@@ -154,10 +92,10 @@ export function PlayerNewPage() {
             </Select>
           </div>
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => navigate('/jugadores')}>Cancelar</Button>
-            <Button onClick={() => void handleSave()}>Guardar Jugador</Button>
+            <Button type="button" variant="outline" onClick={() => navigate('/jugadores')}>Cancelar</Button>
+            <Button type="submit">Guardar Jugador</Button>
           </div>
-        </div>
+        </form>
       </div>
 
       <div className="grid grid-cols-3 gap-4 rounded-lg border bg-white p-4 text-center text-xs">

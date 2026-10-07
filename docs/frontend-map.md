@@ -37,9 +37,12 @@
 - `src/pages/auth/LoginPage.tsx`: login form and redirect after authentication.
 - `src/pages/auth/RegisterPage.tsx`: registration form and password validation.
 - `src/pages/dashboard/DashboardPage.tsx`: state-aware Inicio with saved manual-analysis work.
-- `src/pages/teams/TeamsPage.tsx`: teams management and player linking.
+- `src/pages/teams/TeamsPage.tsx`: editorial team index and roster navigation.
+- `src/pages/teams/TeamDetailPage.tsx`: canonical team identity and roster management.
+- `src/pages/teams/TeamRosterPlayerSheet.tsx`: in-context player create, edit, and assignment.
 - `src/pages/players/PlayersPage.tsx`: players table, filters, edit/delete dialog flows.
-- `src/pages/players/PlayerNewPage.tsx`: create player form.
+- `src/pages/players/PlayerNewPage.tsx`: create player page using shared real player fields.
+- `src/pages/players/PlayerFormFields.tsx`: shared player fields and validation presentation.
 - `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.
 - `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.

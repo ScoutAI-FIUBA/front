@@ -55,7 +55,8 @@ src/
 - `/cuenta`: account profile and password.
 - `/`: protected canonical Inicio continuation surface.
 - `/dashboard`: compatibility alias that redirects to `/`.
-- `/equipos`: teams page.
+- `/equipos`: teams index.
+- `/equipos/:teamId`: canonical team identity and roster management.
 - `/jugadores`: players list page.
 - `/jugadores/nuevo`: create player page.
 - `/partidos`: matches page.

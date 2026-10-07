@@ -11,6 +11,7 @@ import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
 import { AccountPage } from '@/pages/auth/AccountPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { TeamsPage } from '@/pages/teams/TeamsPage'
+import { TeamDetailPage } from '@/pages/teams/TeamDetailPage'
 import { PlayersPage } from '@/pages/players/PlayersPage'
 import { PlayerNewPage } from '@/pages/players/PlayerNewPage'
 import { MatchesPage } from '@/pages/matches/MatchesPage'
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route path="/cuenta" element={<AccountPage />} />
             <Route path="/equipos" element={<TeamsPage />} />
+            <Route path="/equipos/:teamId" element={<TeamDetailPage />} />
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
             <Route path="/partidos" element={<MatchesPage />} />

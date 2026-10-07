@@ -21,6 +21,7 @@ Protected routes under `ProtectedRoute` and `AppShell`:
 
 - `/dashboard`
 - `/equipos`
+- `/equipos/:teamId`
 - `/jugadores`
 - `/jugadores/nuevo`
 - `/partidos`

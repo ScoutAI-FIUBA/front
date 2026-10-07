@@ -77,6 +77,12 @@ export const mockTeamService: ITeamService = {
       joinedAt: new Date().toISOString(),
     }
     updateStore((s) => {
+      const movedAt = new Date().toISOString()
+      s.memberships.forEach((existingMembership) => {
+        if (existingMembership.playerId === playerId && !existingMembership.leftAt) {
+          existingMembership.leftAt = movedAt
+        }
+      })
       s.memberships.push(membership)
       const player = s.players.find((p) => p.id === playerId)
       if (player) player.teamId = teamId

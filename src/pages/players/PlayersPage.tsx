@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useForm } from 'react-hook-form'
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,31 +23,34 @@ import {
 } from '@/components/ui/select'
 import { playerService, teamService } from '@/services/registry'
 import type { Player, Team } from '@/types'
-import { calcAge, getInitials, toJerseyNumber } from '@/lib/utils'
+import { calcAge, getInitials } from '@/lib/utils'
 import { toast } from 'sonner'
 
 interface PlayerRow extends Player {
   teamName: string | null
 }
 
-import { POSITIONS, positionLabel } from '@/lib/positions'
-import { isFutureBirthDate, localDateInputValue } from './player-birth-date'
+import { positionLabel } from '@/lib/positions'
+import { PlayerFormFields } from './PlayerFormFields'
+import {
+  emptyPlayerFormValues,
+  playerFormSchema,
+  playerFormToDto,
+  playerToFormValues,
+  type PlayerFormValues,
+} from './player-form'
 
 export function PlayersPage() {
-  const maximumBirthDate = localDateInputValue()
   const [rows, setRows] = useState<PlayerRow[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [search, setSearch] = useState('')
   const [teamFilter, setTeamFilter] = useState('all')
   const [editOpen, setEditOpen] = useState(false)
   const [editPlayerId, setEditPlayerId] = useState('')
-  const [editFirstName, setEditFirstName] = useState('')
-  const [editLastName, setEditLastName] = useState('')
-  const [editPosition, setEditPosition] = useState<Player['primaryPosition'] | ''>('')
-  const [editJersey, setEditJersey] = useState('')
-  const [editBirthDate, setEditBirthDate] = useState('')
-  const [editHeightCm, setEditHeightCm] = useState('')
-  const [editWeightKg, setEditWeightKg] = useState('')
+  const editForm = useForm<PlayerFormValues>({
+    resolver: zodResolver(playerFormSchema),
+    defaultValues: emptyPlayerFormValues,
+  })
 
   const load = async () => {
     const [players, teamList] = await Promise.all([playerService.list(), teamService.list()])
@@ -65,41 +70,14 @@ export function PlayersPage() {
 
   const openEdit = (player: PlayerRow) => {
     setEditPlayerId(player.id)
-    setEditFirstName(player.firstName)
-    setEditLastName(player.lastName)
-    setEditPosition(player.primaryPosition)
-    setEditJersey(player.jerseyNumber ?? '')
-    setEditBirthDate(player.birthDate)
-    setEditHeightCm(player.heightCm ? String(player.heightCm) : '')
-    setEditWeightKg(player.weightKg ? String(player.weightKg) : '')
+    editForm.reset(playerToFormValues(player))
     setEditOpen(true)
   }
 
-  const handleUpdate = async () => {
-    if (!editPlayerId || !editFirstName.trim() || !editLastName.trim() || !editPosition || !editBirthDate) {
-      toast.error('Completá los campos obligatorios')
-      return
-    }
-    if (isFutureBirthDate(editBirthDate, maximumBirthDate)) {
-      toast.error('La fecha de nacimiento no puede ser futura')
-      return
-    }
-    const height = Number(editHeightCm)
-    const weight = Number(editWeightKg)
-    if (!height || height <= 0 || !weight || weight <= 0) {
-      toast.error('Altura y peso deben ser números válidos')
-      return
-    }
+  const handleUpdate = async (values: PlayerFormValues) => {
+    if (!editPlayerId) return
     try {
-      await playerService.update(editPlayerId, {
-        firstName: editFirstName,
-        lastName: editLastName,
-        birthDate: editBirthDate,
-        primaryPosition: editPosition,
-        jerseyNumber: editJersey || undefined,
-        heightCm: height,
-        weightKg: weight,
-      })
+      await playerService.update(editPlayerId, playerFormToDto(values))
       toast.success('Jugador actualizado')
       setEditOpen(false)
       void load()
@@ -203,50 +181,10 @@ export function PlayersPage() {
             <DialogTitle>Editar jugador</DialogTitle>
             <DialogDescription>Actualizá los datos del perfil del jugador.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Nombre</label>
-                <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Apellido</label>
-                <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Posición</label>
-              <Select value={editPosition} onValueChange={(value) => setEditPosition(value as Player['primaryPosition'])}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
-                <SelectContent>
-                  {POSITIONS.map((position) => (
-                    <SelectItem key={position.code} value={position.code}>{position.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Dorsal</label>
-                <Input inputMode="numeric" maxLength={2} value={editJersey} onChange={(e) => setEditJersey(toJerseyNumber(e.target.value))} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Fecha de nacimiento</label>
-                <Input type="date" max={maximumBirthDate} value={editBirthDate} onChange={(e) => setEditBirthDate(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Altura (cm)</label>
-                <Input type="number" value={editHeightCm} onChange={(e) => setEditHeightCm(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Peso (kg)</label>
-                <Input type="number" value={editWeightKg} onChange={(e) => setEditWeightKg(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <Button onClick={() => void handleUpdate()} className="w-full">Guardar cambios</Button>
-          </div>
+          <form className="space-y-4" onSubmit={editForm.handleSubmit(handleUpdate)}>
+            <PlayerFormFields form={editForm} />
+            <Button type="submit" className="w-full">Guardar cambios</Button>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

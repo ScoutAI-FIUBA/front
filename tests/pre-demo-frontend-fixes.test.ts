@@ -40,14 +40,15 @@ test('birth dates use the local date and reject future values', () => {
   assert.equal(isFutureBirthDate('2026-09-24', localDate), false)
   assert.equal(isFutureBirthDate('2000-01-01', localDate), false)
 
-  for (const relativePath of [
-    '../src/pages/players/PlayerNewPage.tsx',
-    '../src/pages/players/PlayersPage.tsx',
-  ]) {
-    const source = readSource(relativePath)
-    assert.match(source, /max=\{maximumBirthDate\}/)
-    assert.match(source, /isFutureBirthDate\(/)
-  }
+  const fieldsSource = readSource('../src/pages/players/PlayerFormFields.tsx')
+  const schemaSource = readSource('../src/pages/players/player-form.ts')
+  const newPageSource = readSource('../src/pages/players/PlayerNewPage.tsx')
+  const listPageSource = readSource('../src/pages/players/PlayersPage.tsx')
+
+  assert.match(fieldsSource, /max=\{localDateInputValue\(\)\}/)
+  assert.match(schemaSource, /value <= localDateInputValue\(\)/)
+  assert.match(newPageSource, /playerFormSchema/)
+  assert.match(listPageSource, /playerFormSchema/)
 })
 
 test('video description is not represented as a rival', () => {

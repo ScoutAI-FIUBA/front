@@ -13,6 +13,8 @@ Current behavior documentation.
 
 - `src/pages/players/PlayersPage.tsx`
 - `src/pages/players/PlayerNewPage.tsx`
+- `src/pages/players/PlayerFormFields.tsx`
+- `src/pages/players/player-form.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/players.service.ts`
 - `src/services/api/players.api.ts`
@@ -34,6 +36,7 @@ Current behavior documentation.
 - Create player page loads teams for optional association.
 - Create player page calculates age from birth date for display.
 - Create player requires first name, last name, position, birth date, valid height, and valid weight.
+- Create and edit surfaces share the same player-field component and validation schema.
 - Create and edit forms set today's local date as the maximum birth date and
   reject a future value before calling the player service.
 - Create player navigates back to `/jugadores` after successful save.
@@ -47,16 +50,13 @@ Current behavior documentation.
 
 ## Positions
 
-Current position codes include:
+Current position codes are:
 
-- `DEL`
-- `MC`
-- `MCD`
-- `DFC`
-- `MED`
-- `DEF`
-- `EXT`
-- `POR`
+- `PG`
+- `SG`
+- `SF`
+- `PF`
+- `C`
 
 ## Non-Scope
 
