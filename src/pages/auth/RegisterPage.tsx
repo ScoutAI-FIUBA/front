@@ -33,7 +33,7 @@ export function RegisterPage() {
     setLoading(true)
     try {
       await register({ fullName, email, password })
-      navigate('/dashboard')
+      navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al registrarse')
     } finally {

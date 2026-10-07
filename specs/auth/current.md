@@ -14,7 +14,7 @@ Current behavior documentation.
 - `/cuenta`: authenticated profile, password change, and verification.
 - Protected routes redirect unauthenticated users to `/login`.
 - Authenticated users visiting `/login` return to a preserved internal deep
-  link when one exists, otherwise they are redirected to `/dashboard`.
+  link when one exists, otherwise they are redirected to the canonical Inicio route `/`.
 
 ## Files Involved
 
@@ -68,7 +68,7 @@ Current behavior documentation.
   a retry. A definitively unauthenticated user is redirected to `/login` with
   the original path, query, and hash in router state.
 - Successful credential or Google login returns to that internal deep link;
-  direct login without one continues to `/dashboard`.
+  direct login without one continues to `/`.
 - Access-token storage publishes changes to `AuthProvider`. When refresh fails
   after a protected request receives `401`, the client clears the token once,
   `AuthProvider` immediately clears its authenticated state, and protected

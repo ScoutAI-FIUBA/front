@@ -10,9 +10,9 @@ interface LoginLocationState {
 
 export function loginDestination(state: unknown): string {
   const from = (state as LoginLocationState | null)?.from
-  if (!from || typeof from.pathname !== 'string') return '/dashboard'
+  if (!from || typeof from.pathname !== 'string') return '/'
   if (!from.pathname.startsWith('/') || from.pathname.startsWith('//') || from.pathname === '/login') {
-    return '/dashboard'
+    return '/'
   }
 
   const search = typeof from.search === 'string' && from.search.startsWith('?') ? from.search : ''

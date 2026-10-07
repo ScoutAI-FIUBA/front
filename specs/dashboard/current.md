@@ -1,53 +1,56 @@
 # Inicio Current Spec
 
-## Status
+## Product role
 
-ScoutAI v2 Phase 2 automatic-analysis home.
+- `/` is the canonical protected Inicio surface. `/dashboard` remains a compatibility alias that redirects to `/`.
+- Inicio is a continuation point, not a metrics dashboard. Its reading order is `Seguí donde quedaste`, one priority Partido, up to three recent Partidos, and one primary `Nuevo partido` action.
+- It reuses the shared analysis catalogue and the composed `MatchLibraryItem` model already used by `/partidos`; it does not present Video or ProcessingJob as product entities.
 
-## Route
+## Priority Partido
 
-- `/dashboard`: protected Inicio surface.
+- Exactly one Partido may be promoted.
+- Active priority is: newest RUNNING, newest QUEUED, then newest file preparation.
+- When nothing is active, FAILED analysis, failed material, DONE, and READY-without-analysis compete by their latest real lifecycle timestamp. An old failure cannot outrank a newer completed report or newer ready Partido merely because it failed.
+- `Estado no disponible` is used only when no better verifiable candidate exists.
+- RUNNING/QUEUED use job timestamps, terminal jobs prefer `finishedAt` and fall back to `updatedAt`/`createdAt`, and material-only states use the upload timestamp.
+- The priority destination is the Partido Reporte at `/partidos/:videoId?tab=reporte`.
+- Contextual actions are `Ver progreso`, `Ver reporte`, `Resolver problema`, and `Analizar partido`; file preparation may continue to the same Reporte state without invented progress.
+- The hero shows only real title, team, upload date, composed product state, optional poster, and a real RUNNING percentage when non-null. Technical ids, pipeline details, and raw errors are absent.
 
-## Current Behavior
+## Recent Partidos
 
-- Desktop relies on the persistent sidebar for the global `Nuevo análisis` action; the page-level action remains visible below the desktop breakpoint and empty states keep their contextual actions.
-- The desktop reading order is deliberately vertical: active work first, recent completed results second, and recent source material third. Typography, spacing, and dividers establish priority without KPI cards.
+- At most three unique videos are shown after excluding the promoted Partido.
+- Each row uses title, team, upload date, composed product state, poster or court fallback, and links to `/partidos/:videoId`.
+- `Ver todos` opens `/partidos`. The full Partidos card grid is not duplicated.
 
-- Inicio answers “what is happening and what do I do next?” with real automatic-analysis activity.
-- The page consumes the shared ProcessingJob catalogue used by Analysis and Videos; it does not read mock `AnalysisSession` records.
-- Active jobs appear first with backend status and real progress only when `progress_percent` exists.
-- Recently completed jobs use the source video title and team as their human identity and link directly to the result workspace.
-- Recent videos stay secondary. Their primary action follows the latest known ProcessingJob using the same labels and workspace URLs as Videos; only material without a known job offers `Analizar`. The team-scoped Videos context remains available.
-- The primary CTA is `Nuevo análisis` and targets `/analisis/nuevo`.
-- No decorative KPIs, synthetic insights, manual-session codes, fake health states, or fabricated progress are shown.
+## Data and posters
+
+- `useAnalysisJobCatalog()` keeps its bounded catalogue load, 60-second cache, active-job polling, session handling, and partial-failure behavior.
+- `buildMatchLibrary()` provides the latest job and the same product-facing states as Partidos.
+- Inicio reuses the shared `match-posters.ts` cache, concurrency pool, signed thumbnail loading, and court fallback for the promoted Partido plus recent rows only.
+- The court fallback keeps its own measurable layout while a poster is pending, resolves without a URL, or fails, so the hero never becomes an empty black half.
 
 ## States
 
-- Initial loading uses layout-preserving skeletons.
-- Cached catalogue content remains visible while active jobs refresh.
-- Partial team/video/job failures preserve usable content and show a scoped warning.
-- A real network failure with no cached catalogue shows retry.
-- Authentication failure invalidates the shared token and ProtectedRoute returns to Login.
-- A new user with no videos sees `Subí tu primer video`.
-- A user with videos but no jobs sees a ready-to-analyse state instead of a false first-use state.
+- Initial loading preserves the hero and recent-row structure without fake results.
+- Total errors keep the Inicio heading and `Nuevo partido` action visible and offer inline retry.
+- Partial failures preserve real data and use `Estado no disponible` where a job history could not be verified.
+- Empty catalogue copy is `Tu primer partido empieza acá` with a single `Nuevo partido` action.
+- Polling failures preserve cached content and reuse the existing scoped notice.
 
-## Data And Performance
+## Navigation
 
-- Data comes from the frontend Phase 2 catalogue composition: teams → videos by team → jobs by video.
-- The catalogue uses bounded concurrency, a 60-second in-memory cache, partial results, and polling only for `QUEUED` or `RUNNING` jobs.
-- A dedicated authenticated global-jobs backend endpoint remains the long-term solution.
+- The primary and empty-state CTA is `/partidos/nuevo`.
+- Inicio contains no primary links to `/videos`, `/videos/subir`, `/analisis`, or `/analisis/nuevo`.
+- The shell Inicio link and ScoutAI logo point to `/`.
+- Direct login and registration finish at `/`; preserved internal deep links still return to their exact destination. Unauthenticated `/` visits pass through `ProtectedRoute` to `/login` and return to `/` without a redirect loop.
 
-## Files
+## Non-scope
 
-- `src/pages/dashboard/DashboardPage.tsx`
-- `src/pages/analysis/use-analysis-job-catalog.ts`
-- `src/pages/analysis/analysis-job-catalog-store.ts`
-- `src/pages/analysis/analysis-job-catalog.ts`
-- `src/components/layout/AppShell.tsx`
+- No backend, Reporte, Nuevo partido, Clips, Equipos/Jugadores, Auth visual, or mobile redesign changes.
+- No KPIs, charts, synthetic recent activity, invented progress, or report-read state.
 
 ## Verification
 
-- Focused Phase 2/2.1 tests and the full 170-test frontend suite pass.
-- `npm run build` passes with the known Vite chunk-size warning.
-- `npm run lint` reports 0 errors and the two pre-existing Fast Refresh warnings.
-- Phase 2.1 visual QA covers the prioritised activity state at 1440 × 900 and 390 × 844.
+- Cover priority ordering, terminal recency, deduplication, three-item limit, canonical routes, auth return paths, empty/error/partial source states, and legacy `/dashboard` compatibility.
+- Run focused tests, the complete suite, build, lint, and `git diff --check`.

@@ -53,7 +53,8 @@ src/
 - `/restablecer-password`: set a new password from email token.
 - `/verificar-email`: confirm email verification token.
 - `/cuenta`: account profile and password.
-- `/dashboard`: protected dashboard.
+- `/`: protected canonical Inicio continuation surface.
+- `/dashboard`: compatibility alias that redirects to `/`.
 - `/equipos`: teams page.
 - `/jugadores`: players list page.
 - `/jugadores/nuevo`: create player page.
@@ -66,8 +67,7 @@ src/
 - `/analisis`: analysis sessions page.
 - `/analisis/:id`: analysis detail page.
 - `/analisis/jobs/:jobId?team_id=...`: real processing-job detail without match/session assumptions.
-- `/`: redirects to `/login`.
-- `*`: redirects to `/dashboard`.
+- `*`: redirects to the canonical Inicio route `/`.
 
 ## Services
 

@@ -37,7 +37,8 @@ export default function App() {
         <Route path="/verificar-email" element={<VerifyEmailPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route path="/cuenta" element={<AccountPage />} />
             <Route path="/equipos" element={<TeamsPage />} />
             <Route path="/jugadores" element={<PlayersPage />} />
@@ -58,8 +59,7 @@ export default function App() {
             <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
           </Route>
         </Route>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster position="top-right" richColors />
     </AuthProvider>
