@@ -214,7 +214,7 @@ export function AnalysisJobOverview({
           </div>
           {job.progressPercent != null ? (
             <>
-              <ProcessingShotArc progressPercent={job.progressPercent} />
+              <ProcessingShotArc variant="running" progressPercent={job.progressPercent} presentation="legacy" />
               <Progress className="mt-4" value={job.progressPercent} aria-label={`Progreso del análisis: ${job.progressPercent}%`} />
             </>
           ) : (

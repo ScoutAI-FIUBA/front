@@ -1,45 +1,45 @@
-export function LoginCourtBackdrop() {
+import { cn } from '@/lib/utils'
+
+interface LoginCourtBackdropProps {
+  variant?: 'visual' | 'ambient'
+}
+
+export function LoginCourtBackdrop({ variant = 'visual' }: LoginCourtBackdropProps) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div
+        className={cn(
+          'absolute inset-0',
+          variant === 'visual'
+            ? 'bg-[radial-gradient(circle_at_25%_20%,rgba(255,106,31,0.17),transparent_34%),linear-gradient(145deg,rgba(255,106,31,0.06),transparent_58%)]'
+            : 'bg-[radial-gradient(circle_at_75%_20%,rgba(255,106,31,0.08),transparent_32%)]',
+        )}
+      />
       <svg
-        className="absolute inset-0 h-full w-full text-current opacity-[0.06] md:hidden"
-        viewBox="0 0 420 240"
-        preserveAspectRatio="xMidYMid slice"
+        className={cn(
+          'absolute text-[#F4F5F7]',
+          variant === 'visual'
+            ? '-bottom-[28%] -right-[22%] h-[150%] w-[145%] opacity-[0.13] sm:-bottom-[40%] sm:h-[175%] lg:-bottom-[12%] lg:-right-[36%] lg:h-[125%] lg:w-[145%] lg:opacity-[0.16]'
+            : '-bottom-[45%] -right-[25%] h-[150%] w-[115%] rotate-[-10deg] opacity-[0.035] sm:-right-[10%] sm:w-[80%]',
+        )}
+        viewBox="0 0 700 1080"
+        preserveAspectRatio="xMidYMid meet"
         fill="none"
         focusable="false"
       >
-        <path d="M178 220 A176 176 0 0 1 420 42" stroke="currentColor" strokeWidth="3" />
-        <path d="M420 78 H330 V202 H420" stroke="currentColor" strokeWidth="3" />
-        <path d="M330 92 A62 62 0 0 0 330 188" stroke="currentColor" strokeWidth="3" />
-        <path d="M382 116 V164" stroke="currentColor" strokeWidth="3" />
-        <path d="M382 140 H374" stroke="currentColor" strokeWidth="3" />
-        <circle cx="366" cy="140" r="8" stroke="currentColor" strokeWidth="3" />
-      </svg>
-
-      <svg
-        className="absolute inset-0 hidden h-full w-full text-current opacity-[0.07] md:block"
-        viewBox="0 0 420 600"
-        preserveAspectRatio="xMidYMid slice"
-        fill="none"
-        focusable="false"
-      >
-        <rect x="28" y="24" width="364" height="552" rx="5" stroke="currentColor" strokeWidth="3" />
-        <path d="M28 300 H392" stroke="currentColor" strokeWidth="3" />
-        <circle cx="210" cy="300" r="48" stroke="currentColor" strokeWidth="3" />
-
-        <path d="M150 24 V142 H270 V24" stroke="currentColor" strokeWidth="3" />
-        <circle cx="210" cy="142" r="48" stroke="currentColor" strokeWidth="3" />
-        <path d="M186 52 H234" stroke="currentColor" strokeWidth="3" />
-        <path d="M210 52 V60" stroke="currentColor" strokeWidth="3" />
-        <circle cx="210" cy="68" r="8" stroke="currentColor" strokeWidth="3" />
-        <path d="M72 24 V78 A154 154 0 0 0 348 78 V24" stroke="currentColor" strokeWidth="3" />
-
-        <path d="M150 576 V458 H270 V576" stroke="currentColor" strokeWidth="3" />
-        <circle cx="210" cy="458" r="48" stroke="currentColor" strokeWidth="3" />
-        <path d="M186 548 H234" stroke="currentColor" strokeWidth="3" />
-        <path d="M210 548 V540" stroke="currentColor" strokeWidth="3" />
-        <circle cx="210" cy="532" r="8" stroke="currentColor" strokeWidth="3" />
-        <path d="M72 576 V522 A154 154 0 0 1 348 522 V576" stroke="currentColor" strokeWidth="3" />
+        <rect x="36" y="32" width="628" height="1016" rx="8" stroke="currentColor" strokeWidth="4" />
+        <path d="M36 540 H664" stroke="currentColor" strokeWidth="4" />
+        <circle cx="350" cy="540" r="92" stroke="currentColor" strokeWidth="4" />
+        <path d="M238 32 V244 H462 V32" stroke="currentColor" strokeWidth="4" />
+        <circle cx="350" cy="244" r="92" stroke="currentColor" strokeWidth="4" />
+        <path d="M305 86 H395 M350 86 V104" stroke="currentColor" strokeWidth="4" />
+        <circle cx="350" cy="120" r="15" stroke="currentColor" strokeWidth="4" />
+        <path d="M112 32 V128 A258 258 0 0 0 588 128 V32" stroke="currentColor" strokeWidth="4" />
+        <path d="M238 1048 V836 H462 V1048" stroke="currentColor" strokeWidth="4" />
+        <circle cx="350" cy="836" r="92" stroke="currentColor" strokeWidth="4" />
+        <path d="M305 994 H395 M350 994 V976" stroke="currentColor" strokeWidth="4" />
+        <circle cx="350" cy="960" r="15" stroke="currentColor" strokeWidth="4" />
+        <path d="M112 1048 V952 A258 258 0 0 1 588 952 V1048" stroke="currentColor" strokeWidth="4" />
       </svg>
     </div>
   )

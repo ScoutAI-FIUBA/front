@@ -126,6 +126,7 @@ test('QUEUED, RUNNING, DONE and FAILED jobs use product-facing CTAs', () => {
 test('Partidos exposes one product-facing state instead of video and job states', () => {
   const cases: Array<[Video['status'], ProcessingJobStatus | null, string]> = [
     ['processing', null, 'Preparando archivo'],
+    ['failed', null, 'Archivo con error'],
     ['uploaded', null, 'Sin analizar'],
     ['uploaded', 'QUEUED', 'En cola'],
     ['uploaded', 'RUNNING', 'Analizando'],
@@ -216,4 +217,13 @@ test('Partidos renders loading, retry, empty, partial failure and responsive car
   assert.match(source, /posterUrl=\{posterUrls\[item\.video\.id\]\}/)
   assert.doesNotMatch(source, /Video ·|>\s*Reporte\s*</)
   assert.doesNotMatch(source, /score|rival|competencia|64%|10\/2\/8\/14/i)
+})
+
+test('Partidos uses the canonical Nuevo partido entry', () => {
+  const source = readFileSync(new URL('../src/pages/matches/MatchesPage.tsx', import.meta.url), 'utf8')
+  const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+
+  assert.match(source, /newMatchPath\(\)/)
+  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<VideoUploadPage \/>\}/)
+  assert.match(appSource, /path="\/videos\/subir" element=\{<VideoUploadPage \/>\}/)
 })

@@ -328,8 +328,11 @@ test('login errors use product copy without exposing backend messages', () => {
 
 test('login destination preserves an internal deep link and rejects unsafe targets', () => {
   assert.equal(loginDestination({ from: { pathname: '/analisis/jobs/job-1', search: '?team_id=team-1', hash: '#shots' } }), '/analisis/jobs/job-1?team_id=team-1#shots')
-  assert.equal(loginDestination({ from: { pathname: '//external.example/path' } }), '/dashboard')
-  assert.equal(loginDestination(undefined), '/dashboard')
+  assert.equal(loginDestination({ from: { pathname: '/', search: '', hash: '' } }), '/')
+  assert.equal(loginDestination({ from: { pathname: '/dashboard', search: '', hash: '' } }), '/dashboard')
+  assert.equal(loginDestination({ from: { pathname: '/login', search: '', hash: '' } }), '/')
+  assert.equal(loginDestination({ from: { pathname: '//external.example/path' } }), '/')
+  assert.equal(loginDestination(undefined), '/')
 })
 
 test('AuthContext subscribes to token invalidation and clears both user and token', () => {

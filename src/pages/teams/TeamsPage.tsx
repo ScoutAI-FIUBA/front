@@ -1,302 +1,217 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Link2, Plus, Shield, Users } from 'lucide-react'
+import { ArrowRight, MapPin, Pencil, Plus, Search, Shield, Trash2, Users } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Alert } from '@/components/ui/alert'
-import { teamService, playerService } from '@/services/registry'
-import type { Player, Team } from '@/types'
-import { toast } from 'sonner'
-import { teamVideosPath } from '@/pages/videos/video-team-navigation'
+import { playerService, teamService } from '@/services/registry'
+import type { CreateTeamDto } from '@/services/contracts/teams.service'
+import type { Team } from '@/types'
+import { TeamFormDialog } from './TeamFormDialog'
+
+type LoadState = 'loading' | 'ready' | 'error'
 
 export function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([])
-  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [counts, setCounts] = useState<Record<string, number> | null>(null)
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+  const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
-  const [players, setPlayers] = useState<Player[]>([])
-  const [linkPlayer, setLinkPlayer] = useState('')
-  const [linkTeam, setLinkTeam] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
-  const [editTeamId, setEditTeamId] = useState('')
-  const [editName, setEditName] = useState('')
-  const [editShortName, setEditShortName] = useState('')
-  const [editCity, setEditCity] = useState('')
-  const [editCountry, setEditCountry] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newCity, setNewCity] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const load = async () => {
-    const list = await teamService.list()
-    setTeams(list)
-    const c: Record<string, number> = {}
-    await Promise.all(list.map(async (t) => { c[t.id] = await teamService.getPlayerCount(t.id) }))
-    setCounts(c)
-  }
+  const load = useCallback(async () => {
+    setLoadState('loading')
+    setLoadError('')
+    setCounts(null)
+    const playersPromise = playerService.list().catch(() => null)
+    try {
+      const loadedTeams = await teamService.list()
+      setTeams(loadedTeams)
+      setLoadState('ready')
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'No se pudieron cargar los equipos')
+      setLoadState('error')
+      return
+    }
+
+    void playersPromise.then((players) => {
+      if (!players) return
+      const nextCounts: Record<string, number> = {}
+      players.forEach((player) => {
+        if (player.teamId) nextCounts[player.teamId] = (nextCounts[player.teamId] ?? 0) + 1
+      })
+      setCounts(nextCounts)
+    })
+  }, [])
 
   useEffect(() => {
     void load()
-    void playerService.list().then(setPlayers)
-  }, [])
+  }, [load])
 
-  const filtered = teams.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
-  const totalPlayers = Object.values(counts).reduce((a, b) => a + b, 0)
+  const filteredTeams = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase('es')
+    if (!query) return teams
+    return teams.filter((team) => (
+      `${team.name} ${team.shortName} ${team.city} ${team.country}`
+        .toLocaleLowerCase('es')
+        .includes(query)
+    ))
+  }, [search, teams])
 
-  const handleCreate = async () => {
-    const name = newName.trim()
-    const city = newCity.trim()
-    if (!name || !city) {
-      toast.error('Completá el nombre y la ciudad del equipo')
-      return
-    }
-    try {
-      await teamService.create({
-        name,
-        shortName: name.slice(0, 3).toUpperCase(),
-        city,
-        country: 'Argentina',
-      })
-      setNewName('')
-      setNewCity('')
-      setCreateOpen(false)
-      toast.success('Equipo creado')
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo crear el equipo')
-    }
+  const openCreate = () => {
+    setEditingTeam(null)
+    setFormOpen(true)
   }
 
   const openEdit = (team: Team) => {
-    setEditTeamId(team.id)
-    setEditName(team.name)
-    setEditShortName(team.shortName)
-    setEditCity(team.city)
-    setEditCountry(team.country)
-    setEditOpen(true)
+    setEditingTeam(team)
+    setFormOpen(true)
   }
 
-  const handleUpdate = async () => {
-    if (!editTeamId || !editName.trim() || !editShortName.trim() || !editCity.trim() || !editCountry.trim()) {
-      toast.error('Completá los campos del equipo')
-      return
-    }
+  const submitTeam = async (values: CreateTeamDto) => {
+    setSubmitting(true)
     try {
-      await teamService.update(editTeamId, {
-        name: editName,
-        shortName: editShortName,
-        city: editCity,
-        country: editCountry,
-      })
-      toast.success('Equipo actualizado')
-      setEditOpen(false)
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el equipo')
+      if (editingTeam) {
+        await teamService.update(editingTeam.id, values)
+        toast.success('Equipo actualizado')
+      } else {
+        await teamService.create(values)
+        toast.success('Equipo creado')
+      }
+      setFormOpen(false)
+      await load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo guardar el equipo')
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const handleDelete = async (team: Team) => {
-    const confirmed = window.confirm(`¿Eliminar el equipo ${team.name}?`)
-    if (!confirmed) return
+  const deleteTeam = async (team: Team) => {
+    if (!window.confirm(`¿Eliminar el equipo ${team.name}?`)) return
     try {
       await teamService.delete(team.id)
       toast.success('Equipo eliminado')
-      if (linkTeam === team.id) setLinkTeam('')
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el equipo')
+      await load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo eliminar el equipo')
     }
   }
 
-  const handleLink = async () => {
-    if (!linkPlayer || !linkTeam) {
-      toast.error('Seleccioná jugador y equipo')
-      return
-    }
-    try {
-      await teamService.addMember(linkTeam, linkPlayer)
-      toast.success('Jugador vinculado')
-      setLinkPlayer('')
-      setLinkTeam('')
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo vincular')
-    }
+  if (loadState === 'loading') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-14 w-56 animate-pulse rounded bg-surface-subtle" />
+          <div className="h-10 w-36 animate-pulse rounded bg-surface-subtle" />
+        </div>
+        {[0, 1, 2].map((item) => <div key={item} className="h-28 animate-pulse rounded-xl border bg-surface" />)}
+      </div>
+    )
+  }
+
+  if (loadState === 'error') {
+    return (
+      <EmptyState
+        title="No pudimos cargar tus equipos"
+        description={loadError}
+        icon={<Shield className="h-5 w-5" />}
+        action={<Button onClick={() => void load()}>Reintentar</Button>}
+      />
+    )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-7">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold">Mis equipos</h1>
-          <p className="text-sm text-muted-foreground">
-            Gestioná los equipos registrados y accedé a sus jugadores y videos asociados.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Equipos</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Tus planteles</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Entrá a un equipo para gestionar sus jugadores y dorsales.</p>
         </div>
-        <div className="flex items-center gap-6 text-sm">
-          <span><strong>TOTAL</strong> {teams.length}</span>
-          <span><strong>JUGADORES</strong> {totalPlayers}</span>
+        <Button onClick={openCreate}><Plus className="h-4 w-4" /> Nuevo equipo</Button>
+      </header>
+
+      {teams.length > 0 && (
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por equipo o ciudad" />
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <Input placeholder="Buscar equipo..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> Crear equipo</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Crear equipo</DialogTitle>
-              <DialogDescription>
-                Ingresá el nombre y la ciudad para identificar el equipo.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Nombre del equipo</Label>
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ej. Olympia FC" className="mt-1" />
-              </div>
-              <div>
-                <Label>Ciudad</Label>
-                <Input value={newCity} onChange={(e) => setNewCity(e.target.value)} placeholder="Ej. Buenos Aires" className="mt-1" />
-              </div>
-              <Button onClick={() => void handleCreate()} className="w-full">Guardar</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline"><Link2 className="h-4 w-4" /> Vincular jugador</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Vincular jugador con equipo</DialogTitle>
-              <DialogDescription>
-                Seleccioná un jugador y un equipo para crear la asociación.
-              </DialogDescription>
-            </DialogHeader>
-            <Alert className="border-accent bg-accent text-sm">Jugador listo para vincular</Alert>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-xs uppercase">Seleccionar jugador</Label>
-                <Select value={linkPlayer} onValueChange={setLinkPlayer}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Buscar jugador..." /></SelectTrigger>
-                  <SelectContent>
-                    {players.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs uppercase">Seleccionar equipo</Label>
-                <Select value={linkTeam} onValueChange={setLinkTeam}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccionar equipo..." /></SelectTrigger>
-                  <SelectContent>
-                    {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Alert className="border-red-200 bg-red-50 text-red-700 text-xs">
-                Atención: Verificá que hayas seleccionado un jugador y un equipo antes de continuar.
-              </Alert>
-              <Button onClick={() => void handleLink()} className="w-full"><Link2 className="h-4 w-4" /> Vincular</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {filtered.map((team) => (
-          <Card key={team.id}>
-            <CardContent className="p-5">
-              <div className="mb-4 flex items-start justify-between">
-                <div className="rounded-lg bg-accent p-2 text-primary"><Shield className="h-5 w-5" /></div>
-                {team.category && <Badge variant="outline">{team.category}</Badge>}
-              </div>
-              <h3 className="font-semibold">{team.name}</h3>
-              <p className="text-sm text-muted-foreground">{team.league}</p>
-              <p className="mt-4 text-xs font-medium text-muted-foreground">JUGADORES {counts[team.id] ?? 0}</p>
-              <div className="mt-4 flex gap-2">
-                <Button asChild size="sm" className="flex-1">
-                  <Link to={teamVideosPath(team.id)}>Ver videos</Link>
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => openEdit(team)}>Editar</Button>
-                <Button size="sm" variant="destructive" onClick={() => void handleDelete(team)}>Borrar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        <Card className="border-dashed border-primary/30 bg-accent/50">
-          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
-            <Plus className="mb-2 h-8 w-8 text-primary" />
-            <h3 className="font-semibold">Crear nuevo equipo</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Registrá un equipo para asociarle jugadores y videos.</p>
-            <Button variant="outline" className="mt-4" onClick={() => setCreateOpen(true)}>Crear equipo</Button>
-          </CardContent>
-        </Card>
-      </div>
+      )}
 
       {teams.length === 0 && (
-        <Card className="border-dashed bg-accent/30 p-12 text-center">
-          <Users className="mx-auto mb-4 h-12 w-12 text-primary/50" />
-          <h3 className="font-semibold">Todavía no cargaste equipos.</h3>
-          <p className="mt-2 text-sm text-muted-foreground">Creá tu primer equipo para empezar.</p>
-          <Button className="mt-4" onClick={() => setCreateOpen(true)}>+ Crear equipo</Button>
+        <Card className="border-dashed">
+          <CardContent>
+            <EmptyState
+              className="mx-auto text-center"
+              title="Todavía no cargaste equipos"
+              description="Creá tu primer equipo para empezar a construir su plantel."
+              icon={<Shield className="h-5 w-5" />}
+              action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Nuevo equipo</Button>}
+            />
+          </CardContent>
         </Card>
       )}
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar equipo</DialogTitle>
-            <DialogDescription>Actualizá los datos principales del equipo.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nombre del equipo</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label>Nombre corto</Label>
-              <Input value={editShortName} onChange={(e) => setEditShortName(e.target.value)} className="mt-1" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Ciudad</Label>
-                <Input value={editCity} onChange={(e) => setEditCity(e.target.value)} className="mt-1" />
+      {teams.length > 0 && filteredTeams.length === 0 && (
+        <EmptyState
+          title="No hay coincidencias"
+          description="Probá con otro nombre, nombre corto o ubicación."
+          icon={<Search className="h-5 w-5" />}
+          action={<Button variant="outline" onClick={() => setSearch('')}>Limpiar búsqueda</Button>}
+        />
+      )}
+
+      {filteredTeams.length > 0 && (
+        <div className="overflow-hidden rounded-xl border bg-surface">
+          {filteredTeams.map((team) => (
+            <article key={team.id} className="group relative flex flex-col gap-5 border-b p-5 transition-colors last:border-b-0 hover:bg-surface-subtle/50 sm:flex-row sm:items-center">
+              <Link
+                to={`/equipos/${team.id}`}
+                className="absolute inset-0 z-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+                aria-label={`Ver plantel de ${team.name}`}
+              />
+              <div className="pointer-events-none relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-sm font-black tracking-wide text-primary">
+                {team.shortName}
               </div>
-              <div>
-                <Label>País</Label>
-                <Input value={editCountry} onChange={(e) => setEditCountry(e.target.value)} className="mt-1" />
+              <div className="pointer-events-none relative z-10 min-w-0 flex-1">
+                <h2 className="truncate text-lg font-semibold">{team.name}</h2>
+                <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" /> {team.city}, {team.country}
+                </p>
               </div>
-            </div>
-            <Button onClick={() => void handleUpdate()} className="w-full">Guardar cambios</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              {counts && (
+                <p className="pointer-events-none relative z-10 flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="h-4 w-4" /> {counts[team.id] ?? 0} {(counts[team.id] ?? 0) === 1 ? 'jugador' : 'jugadores'}
+                </p>
+              )}
+              <div className="relative z-10 flex flex-wrap items-center gap-1">
+                <Button asChild size="sm" variant="ghost" className="text-muted-foreground group-hover:text-foreground">
+                  <Link to={`/equipos/${team.id}`}>Ver plantel <ArrowRight className="h-4 w-4" /></Link>
+                </Button>
+                <Button size="icon" variant="ghost" aria-label={`Editar ${team.name}`} onClick={() => openEdit(team)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive" aria-label={`Eliminar ${team.name}`} onClick={() => void deleteTeam(team)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      <TeamFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        team={editingTeam}
+        submitting={submitting}
+        onSubmit={submitTeam}
+      />
     </div>
   )
 }
-

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
+import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function ForgotPasswordPage() {
@@ -34,22 +35,25 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl">
-        <h1 className="text-2xl font-bold">Restablecer contraseña</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Te enviamos un enlace si el correo está registrado. Revisá también spam.
-        </p>
+    <AuthShell mode="compact">
+        <AuthPanelHeader
+          eyebrow="Acceso"
+          title="Recuperar contraseña"
+          description="Ingresá tu correo. Si está registrado, te enviaremos un enlace para crear una nueva contraseña."
+        />
 
         {error && (
-          <Alert className="mt-4 flex items-center gap-2 border-red-200 bg-red-50 text-red-600">
+          <Alert className="mt-5 flex items-center gap-2 border-destructive/40 bg-destructive/10 text-red-200">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </Alert>
         )}
 
         {sent ? (
-          <p className="mt-6 text-sm text-foreground">Si el correo existe, el enlace ya está en camino.</p>
+          <div className="mt-6 rounded-xl border border-primary/25 bg-primary/[0.07] p-4">
+            <p className="font-semibold text-foreground">Revisá tu correo</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">Si el correo existe, el enlace ya está en camino. Revisá también spam.</p>
+          </div>
         ) : (
           <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
             <div>
@@ -61,10 +65,10 @@ export function ForgotPasswordPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1"
+              className="mt-1.5"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? 'Enviando...' : 'Enviar enlace'}
             </Button>
           </form>
@@ -72,10 +76,9 @@ export function ForgotPasswordPage() {
 
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="font-medium text-primary hover:underline">
-            Volver a iniciar sesión
+            Volvé a iniciar sesión
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

@@ -10,7 +10,7 @@ import {
 
 const teams = [{ id: 'team-1' }, { id: 'team/2' }]
 
-test('Ver videos builds the team-scoped videos URL', () => {
+test('the compatibility helper still builds a team-scoped videos URL', () => {
   assert.equal(teamVideosPath('team-1'), '/videos?team_id=team-1')
   assert.equal(teamVideosPath('team/2'), '/videos?team_id=team%2F2')
 
@@ -18,7 +18,8 @@ test('Ver videos builds the team-scoped videos URL', () => {
     new URL('../src/pages/teams/TeamsPage.tsx', import.meta.url),
     'utf8',
   )
-  assert.match(source, /<Link to=\{teamVideosPath\(team\.id\)\}>Ver videos<\/Link>/)
+  assert.doesNotMatch(source, /Ver videos/)
+  assert.match(source, /Ver plantel/)
 })
 
 test('a valid team_id preselects that team', () => {

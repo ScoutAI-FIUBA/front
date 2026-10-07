@@ -11,6 +11,7 @@ import { VerifyEmailPage } from '@/pages/auth/VerifyEmailPage'
 import { AccountPage } from '@/pages/auth/AccountPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { TeamsPage } from '@/pages/teams/TeamsPage'
+import { TeamDetailPage } from '@/pages/teams/TeamDetailPage'
 import { PlayersPage } from '@/pages/players/PlayersPage'
 import { PlayerNewPage } from '@/pages/players/PlayerNewPage'
 import { MatchesPage } from '@/pages/matches/MatchesPage'
@@ -37,12 +38,15 @@ export default function App() {
         <Route path="/verificar-email" element={<VerifyEmailPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route index element={<DashboardPage />} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route path="/cuenta" element={<AccountPage />} />
             <Route path="/equipos" element={<TeamsPage />} />
+            <Route path="/equipos/:teamId" element={<TeamDetailPage />} />
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
             <Route path="/partidos" element={<MatchesPage />} />
+            <Route path="/partidos/nuevo" element={<VideoUploadPage />} />
             <Route path="/partidos/:videoId" element={<MatchDetailPage />} />
             <Route path="/videos" element={<VideosPage />} />
             <Route path="/videos/subir" element={<VideoUploadPage />} />
@@ -57,8 +61,7 @@ export default function App() {
             <Route path="/analisis/:id" element={<AnalysisDetailPage />} />
           </Route>
         </Route>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster position="top-right" richColors />
     </AuthProvider>

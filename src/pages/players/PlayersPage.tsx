@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { MapPinOff, Pencil, Plus, Search, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -19,237 +11,226 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { positionLabel } from '@/lib/positions'
 import { playerService, teamService } from '@/services/registry'
 import type { Player, Team } from '@/types'
-import { calcAge, getInitials, toJerseyNumber } from '@/lib/utils'
-import { toast } from 'sonner'
+import { GlobalPlayerSheet, type GlobalPlayerSheetIntent } from './GlobalPlayerSheet'
+import {
+  filterGlobalPlayers,
+  sortGlobalPlayers,
+  UNASSIGNED_TEAM_FILTER,
+} from './global-player-list'
 
-interface PlayerRow extends Player {
-  teamName: string | null
+type LoadState = 'loading' | 'ready' | 'error'
+
+interface PlayersPageProps {
+  openCreateOnMount?: boolean
 }
 
-import { POSITIONS, positionLabel } from '@/lib/positions'
-import { isFutureBirthDate, localDateInputValue } from './player-birth-date'
-
-export function PlayersPage() {
-  const maximumBirthDate = localDateInputValue()
-  const [rows, setRows] = useState<PlayerRow[]>([])
+export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
+  const navigate = useNavigate()
+  const [players, setPlayers] = useState<Player[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+  const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
   const [teamFilter, setTeamFilter] = useState('all')
-  const [editOpen, setEditOpen] = useState(false)
-  const [editPlayerId, setEditPlayerId] = useState('')
-  const [editFirstName, setEditFirstName] = useState('')
-  const [editLastName, setEditLastName] = useState('')
-  const [editPosition, setEditPosition] = useState<Player['primaryPosition'] | ''>('')
-  const [editJersey, setEditJersey] = useState('')
-  const [editBirthDate, setEditBirthDate] = useState('')
-  const [editHeightCm, setEditHeightCm] = useState('')
-  const [editWeightKg, setEditWeightKg] = useState('')
+  const [sheetOpen, setSheetOpen] = useState(openCreateOnMount)
+  const [sheetIntent, setSheetIntent] = useState<GlobalPlayerSheetIntent>({ kind: 'create' })
 
-  const load = async () => {
-    const [players, teamList] = await Promise.all([playerService.list(), teamService.list()])
-    setTeams(teamList)
-    const teamNames = new Map(teamList.map((t) => [t.id, t.name]))
-    setRows(
-      players.map((p) => ({
-        ...p,
-        teamName: p.teamId ? teamNames.get(p.teamId) ?? null : null,
-      })),
-    )
-  }
+  const refreshData = useCallback(async () => {
+    const [loadedPlayers, loadedTeams] = await Promise.all([
+      playerService.list(),
+      teamService.list(),
+    ])
+    setPlayers(sortGlobalPlayers(loadedPlayers))
+    setTeams(loadedTeams)
+  }, [])
+
+  const load = useCallback(async () => {
+    setLoadState('loading')
+    setLoadError('')
+    try {
+      await refreshData()
+      setLoadState('ready')
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'No se pudo cargar el registro de jugadores')
+      setLoadState('error')
+    }
+  }, [refreshData])
 
   useEffect(() => {
     void load()
-  }, [])
+  }, [load])
 
-  const openEdit = (player: PlayerRow) => {
-    setEditPlayerId(player.id)
-    setEditFirstName(player.firstName)
-    setEditLastName(player.lastName)
-    setEditPosition(player.primaryPosition)
-    setEditJersey(player.jerseyNumber ?? '')
-    setEditBirthDate(player.birthDate)
-    setEditHeightCm(player.heightCm ? String(player.heightCm) : '')
-    setEditWeightKg(player.weightKg ? String(player.weightKg) : '')
-    setEditOpen(true)
+  const teamNames = useMemo(
+    () => new Map(teams.map((team) => [team.id, team.name])),
+    [teams],
+  )
+  const filteredPlayers = useMemo(
+    () => filterGlobalPlayers(players, search, teamFilter),
+    [players, search, teamFilter],
+  )
+
+  const openCreate = () => {
+    setSheetIntent({ kind: 'create' })
+    setSheetOpen(true)
   }
 
-  const handleUpdate = async () => {
-    if (!editPlayerId || !editFirstName.trim() || !editLastName.trim() || !editPosition || !editBirthDate) {
-      toast.error('Completá los campos obligatorios')
-      return
-    }
-    if (isFutureBirthDate(editBirthDate, maximumBirthDate)) {
-      toast.error('La fecha de nacimiento no puede ser futura')
-      return
-    }
-    const height = Number(editHeightCm)
-    const weight = Number(editWeightKg)
-    if (!height || height <= 0 || !weight || weight <= 0) {
-      toast.error('Altura y peso deben ser números válidos')
-      return
-    }
-    try {
-      await playerService.update(editPlayerId, {
-        firstName: editFirstName,
-        lastName: editLastName,
-        birthDate: editBirthDate,
-        primaryPosition: editPosition,
-        jerseyNumber: editJersey || undefined,
-        heightCm: height,
-        weightKg: weight,
-      })
-      toast.success('Jugador actualizado')
-      setEditOpen(false)
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el jugador')
-    }
+  const openEdit = (player: Player) => {
+    setSheetIntent({ kind: 'edit', player })
+    setSheetOpen(true)
   }
 
-  const handleDelete = async (player: PlayerRow) => {
-    const confirmed = window.confirm(`¿Eliminar a ${player.firstName} ${player.lastName}?`)
-    if (!confirmed) return
-    try {
-      await playerService.delete(player.id)
-      toast.success('Jugador eliminado')
-      void load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el jugador')
-    }
+  const handleSheetOpenChange = (open: boolean) => {
+    setSheetOpen(open)
+    if (!open && openCreateOnMount) navigate('/jugadores', { replace: true })
   }
 
-  const filtered = rows.filter((p) => {
-    const name = `${p.firstName} ${p.lastName}`.toLowerCase()
-    const matchSearch = name.includes(search.toLowerCase())
-    const matchTeam = teamFilter === 'all' || p.teamId === teamFilter
-    return matchSearch && matchTeam
-  })
+  const clearFilters = () => {
+    setSearch('')
+    setTeamFilter('all')
+  }
+
+  if (loadState === 'loading') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-16 w-72 animate-pulse rounded bg-surface-subtle" />
+          <div className="h-10 w-36 animate-pulse rounded bg-surface-subtle" />
+        </div>
+        <div className="h-10 max-w-2xl animate-pulse rounded bg-surface-subtle" />
+        <div className="h-80 animate-pulse rounded-xl border bg-surface" />
+      </div>
+    )
+  }
+
+  if (loadState === 'error') {
+    return (
+      <EmptyState
+        title="No pudimos cargar los jugadores"
+        description={loadError}
+        icon={<Shield className="h-5 w-5" />}
+        action={<Button onClick={() => void load()}>Reintentar</Button>}
+      />
+    )
+  }
+
+  const noResultsTitle = teamFilter === UNASSIGNED_TEAM_FILTER && !search
+    ? 'No hay jugadores sin equipo'
+    : 'No hay coincidencias'
+  const noResultsDescription = teamFilter === UNASSIGNED_TEAM_FILTER && !search
+    ? 'Todos los jugadores del registro pertenecen actualmente a un equipo.'
+    : 'Probá con otro nombre, apellido, dorsal o equipo.'
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-7">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-bold">Mis jugadores</h1>
-          <p className="text-sm text-muted-foreground">Gestioná los jugadores registrados y su asociación con equipos.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Registro global</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight">Jugadores</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Buscá jugadores, consultá su equipo y corregí datos fuera del flujo de plantel.</p>
         </div>
-        <Button asChild>
-          <Link to="/jugadores/nuevo"><Plus className="h-4 w-4" /> Agregar jugador</Link>
-        </Button>
-      </div>
+        <Button onClick={openCreate}><Plus className="h-4 w-4" /> Nuevo jugador</Button>
+      </header>
 
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar jugador..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Filtrar por equipo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los equipos</SelectItem>
-            {teams.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-accent/50">
-            <tr className="text-left text-xs uppercase text-muted-foreground">
-              <th className="p-4 font-medium">Nombre</th>
-              <th className="p-4 font-medium">Posición</th>
-              <th className="p-4 font-medium">Edad</th>
-              <th className="p-4 font-medium">Dorsal</th>
-              <th className="p-4 font-medium">Equipo</th>
-              <th className="p-4 font-medium">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="border-t">
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback>{getInitials(p.firstName, p.lastName)}</AvatarFallback>
-                    </Avatar>
-                    {p.firstName} {p.lastName}
-                  </div>
-                </td>
-                <td className="p-4"><Badge variant="position">{positionLabel(p.primaryPosition)}</Badge></td>
-                <td className="p-4">{calcAge(p.birthDate)}</td>
-                <td className="p-4">#{p.jerseyNumber ?? '—'}</td>
-                <td className="p-4 text-muted-foreground">{p.teamName ?? '—'}</td>
-                <td className="p-4">
-                  <div className="flex flex-wrap gap-2 text-primary">
-                    <button type="button" className="flex items-center gap-1 text-xs hover:underline" onClick={() => openEdit(p)}>
-                      <Pencil className="h-3 w-3" /> Editar
-                    </button>
-                    <button type="button" className="flex items-center gap-1 text-xs text-red-700 hover:underline" onClick={() => void handleDelete(p)}>
-                      <Trash2 className="h-3 w-3" /> Borrar
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="border-t p-4 text-xs text-muted-foreground">Mostrando 1-{filtered.length} de {filtered.length} jugadores</p>
-      </div>
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar jugador</DialogTitle>
-            <DialogDescription>Actualizá los datos del perfil del jugador.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Nombre</label>
-                <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Apellido</label>
-                <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Posición</label>
-              <Select value={editPosition} onValueChange={(value) => setEditPosition(value as Player['primaryPosition'])}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccione una posición" /></SelectTrigger>
-                <SelectContent>
-                  {POSITIONS.map((position) => (
-                    <SelectItem key={position.code} value={position.code}>{position.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Dorsal</label>
-                <Input inputMode="numeric" maxLength={2} value={editJersey} onChange={(e) => setEditJersey(toJerseyNumber(e.target.value))} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Fecha de nacimiento</label>
-                <Input type="date" max={maximumBirthDate} value={editBirthDate} onChange={(e) => setEditBirthDate(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium">Altura (cm)</label>
-                <Input type="number" value={editHeightCm} onChange={(e) => setEditHeightCm(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Peso (kg)</label>
-                <Input type="number" value={editWeightKg} onChange={(e) => setEditWeightKg(e.target.value)} className="mt-1" />
-              </div>
-            </div>
-            <Button onClick={() => void handleUpdate()} className="w-full">Guardar cambios</Button>
+      {players.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative min-w-0 flex-1 sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Buscar por nombre, apellido o dorsal"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
           </div>
-        </DialogContent>
-      </Dialog>
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Filtrar por equipo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value={UNASSIGNED_TEAM_FILTER}>Sin equipo</SelectItem>
+              {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {players.length === 0 && (
+        <EmptyState
+          title="Todavía no hay jugadores"
+          description="Creá el primer registro o agregalo desde el plantel de un equipo."
+          icon={<Shield className="h-5 w-5" />}
+          action={<Button onClick={openCreate}><Plus className="h-4 w-4" /> Nuevo jugador</Button>}
+        />
+      )}
+
+      {players.length > 0 && filteredPlayers.length === 0 && (
+        <EmptyState
+          title={noResultsTitle}
+          description={noResultsDescription}
+          icon={teamFilter === UNASSIGNED_TEAM_FILTER ? <MapPinOff className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          action={<Button variant="outline" onClick={clearFilters}>Limpiar filtros</Button>}
+        />
+      )}
+
+      {filteredPlayers.length > 0 && (
+        <div className="overflow-hidden rounded-xl border bg-surface">
+          <div className="hidden items-center gap-4 px-4 pb-1 pt-2.5 sm:flex" aria-hidden="true">
+            <div className="h-11 w-11 shrink-0" />
+            <div className="min-w-0 flex-1" />
+            <span className="min-w-48 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+              Equipo
+            </span>
+            <div className="hidden min-w-36 lg:block" />
+            <div className="h-8 w-8 shrink-0" />
+          </div>
+          {filteredPlayers.map((player) => {
+            const teamName = player.teamId ? teamNames.get(player.teamId) : null
+            return (
+              <article key={player.id} className="group flex items-center gap-4 border-b px-4 py-2.5 last:border-b-0 hover:bg-surface-subtle/40">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm font-bold text-foreground">
+                  {player.jerseyNumber || '—'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-sm font-semibold">{player.firstName} {player.lastName}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{positionLabel(player.primaryPosition)}</p>
+                </div>
+                <div className="hidden min-w-48 text-sm sm:block">
+                  {player.teamId && teamName ? (
+                    <Link className="text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:text-primary focus-visible:underline" to={`/equipos/${player.teamId}`}>{teamName}</Link>
+                  ) : (
+                    <span className="text-muted-foreground">Sin equipo</span>
+                  )}
+                </div>
+                <div className="hidden min-w-36 text-xs text-muted-foreground lg:block">
+                  {[player.heightCm ? `${player.heightCm} cm` : null, player.weightKg ? `${player.weightKg} kg` : null]
+                    .filter(Boolean)
+                    .join(' · ') || '—'}
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground opacity-70 group-hover:opacity-100 focus-visible:opacity-100"
+                  aria-label={`Editar a ${player.firstName} ${player.lastName}`}
+                  onClick={() => openEdit(player)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </article>
+            )
+          })}
+        </div>
+      )}
+
+      <GlobalPlayerSheet
+        open={sheetOpen}
+        onOpenChange={handleSheetOpenChange}
+        intent={sheetIntent}
+        players={players}
+        teams={teams}
+        onDataChanged={refreshData}
+      />
     </div>
   )
 }
-

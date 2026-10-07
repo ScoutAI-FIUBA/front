@@ -5,7 +5,7 @@ import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
-import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
+import { newMatchPath } from '@/pages/videos/video-upload-navigation'
 import { getVideoByIdForTeam } from '@/services/registry'
 import {
   buildMatchLibrary,
@@ -42,7 +42,7 @@ function formatUploadDate(value: string): string {
 
 function matchStateTone(state: MatchLibraryDisplayState): string {
   if (state === 'report-ready') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-  if (state === 'analysis-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
+  if (state === 'analysis-error' || state === 'material-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
   if (state === 'queued' || state === 'analyzing') {
     return 'border-[#FF6A1F]/40 bg-[#FF6A1F]/10 text-[#FF9A68]'
   }
@@ -151,7 +151,7 @@ export function MatchesPage() {
 
   const items = useMemo(() => (catalog ? buildMatchLibrary(catalog) : []), [catalog])
   const filteredItems = useMemo(() => filterMatchLibrary(items, filter), [filter, items])
-  const uploadPath = videoUploadPath({ returnTo: '/partidos' })
+  const uploadPath = newMatchPath()
   const hasPartialFailure =
     catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
 

@@ -6,13 +6,17 @@ Current behavior documentation.
 
 ## Routes
 
-- `/jugadores`: players list and management.
-- `/jugadores/nuevo`: create player form.
+- `/jugadores`: secondary global player registry.
+- `/jugadores/nuevo`: compatibility entry that opens the global create-player sheet.
 
 ## Files Involved
 
 - `src/pages/players/PlayersPage.tsx`
 - `src/pages/players/PlayerNewPage.tsx`
+- `src/pages/players/PlayerFormFields.tsx`
+- `src/pages/players/GlobalPlayerSheet.tsx`
+- `src/pages/players/global-player-list.ts`
+- `src/pages/players/player-form.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/players.service.ts`
 - `src/services/api/players.api.ts`
@@ -23,20 +27,24 @@ Current behavior documentation.
 
 ## Current Behavior
 
-- Players list loads players and teams in parallel.
-- Each player row derives a display team name from `teamId` when possible.
-- List can be filtered by player name and team.
-- The page displays player name, position, age, jersey number, team name, and actions.
-- Edit dialog allows updating first name, last name, birth date, position, jersey number, height, and weight.
+- Players list loads players and teams in parallel without per-row requests.
+- Players are ordered by surname and first name, independently from API order.
+- Search covers first name, last name, and jersey number.
+- Team filtering supports all players, unassigned players, and each real team.
+- Compact rows prioritize jersey, name, position, team, and available measurements.
+- Team names link to the canonical team roster when the player is assigned.
+- Create and edit use one right-side global player sheet.
+- Create supports a real team or no team through the optional `teamId` contract.
+- Edit can keep the current team, assign an unassigned player, or move an assigned player with `teamService.addMember`.
+- Assigned players cannot be unassigned because no backend operation exists.
+- Profile updates and team moves execute only when needed; partial success remains visible and retryable without frontend rollback.
 - Jersey number is optional text of one or two digits: inputs strip non-digits, and `0` and `00` are distinct values.
-- Delete action uses browser confirmation before calling the service.
-- Player rows expose only functional actions: edit and delete.
-- Create player page loads teams for optional association.
-- Create player page calculates age from birth date for display.
+- Delete exists only as a secondary action inside edit and uses browser confirmation.
 - Create player requires first name, last name, position, birth date, valid height, and valid weight.
+- Create and edit surfaces share the same player-field component and validation schema.
 - Create and edit forms set today's local date as the maximum birth date and
   reject a future value before calling the player service.
-- Create player navigates back to `/jugadores` after successful save.
+- Closing the `/jugadores/nuevo` compatibility sheet returns to `/jugadores`.
 - Toasts provide success and error feedback.
 
 ## Service Selection
@@ -47,22 +55,19 @@ Current behavior documentation.
 
 ## Positions
 
-Current position codes include:
+Current position codes are:
 
-- `DEL`
-- `MC`
-- `MCD`
-- `DFC`
-- `MED`
-- `DEF`
-- `EXT`
-- `POR`
+- `PG`
+- `SG`
+- `SF`
+- `PF`
+- `C`
 
 ## Non-Scope
 
 - Player detail remains out of scope; no inert detail action is displayed.
-- Photo upload UI is displayed as optional placeholder in create flow.
-- No new player feature is requested here.
+- Team roster management remains canonical under `/equipos/:teamId`.
+- The global registry does not display photos, age, status, stats, creator, or synthetic metadata.
 
 ## Verification
 

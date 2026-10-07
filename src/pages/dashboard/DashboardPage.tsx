@@ -1,93 +1,299 @@
-import { ArrowRight, CircleAlert, LoaderCircle, Play, Plus, Video as VideoIcon } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowRight, CircleAlert, LoaderCircle, Plus, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Alert } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/empty-state'
-import { PageHeader } from '@/components/ui/page-header'
-import { AnalysisCatalogRow } from '@/pages/analysis/AnalysisCatalogRow'
-import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
-import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
-import { latestVideoAnalysisJob, videoMaterialLabel, videoMaterialState, videoPrimaryAnalysisAction } from '@/pages/videos/video-library-filters'
-import { formatDate } from '@/lib/utils'
+import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
+import { Button } from '@/components/ui/button'
+import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
+import {
+  buildMatchLibrary,
+  matchLibraryDisplayLabel,
+  matchLibraryDisplayState,
+  type MatchLibraryDisplayState,
+  type MatchLibraryItem,
+} from '@/pages/matches/match-library'
+import { matchDetailPath } from '@/pages/matches/match-detail'
+import {
+  cachedMatchPoster,
+  requestMatchPoster,
+} from '@/pages/matches/match-posters'
+import { newMatchPath } from '@/pages/videos/video-upload-navigation'
+import { getVideoByIdForTeam } from '@/services/registry'
+import { selectHomePriorityMatch, selectRecentHomeMatches } from './home-priority'
+
+function formatUploadDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Fecha no disponible'
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+}
+
+function stateTone(state: MatchLibraryDisplayState): string {
+  if (state === 'report-ready') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+  if (state === 'analysis-error' || state === 'material-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
+  if (state === 'queued' || state === 'analyzing') return 'border-[#FF6A1F]/40 bg-[#FF6A1F]/10 text-[#FF9A68]'
+  if (state === 'preparing-file') return 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+  return 'border-white/10 bg-white/[0.04] text-[#A3ABBA]'
+}
+
+function priorityActionLabel(state: MatchLibraryDisplayState): string {
+  if (state === 'report-ready') return 'Ver reporte'
+  if (state === 'analysis-error' || state === 'material-error') return 'Resolver problema'
+  if (state === 'unanalyzed') return 'Analizar partido'
+  if (state === 'unavailable') return 'Ver partido'
+  return 'Ver progreso'
+}
+
+function CourtFallback({ className = '' }: { className?: string }) {
+  return (
+    <div className={`overflow-hidden bg-[#11151D] ${className}`}>
+      <div className="relative h-full w-full">
+        <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full border border-[#FF6A1F]/15" />
+        <svg
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full p-7 text-[#657089] opacity-60"
+          viewBox="0 0 28 15"
+          preserveAspectRatio="xMidYMid meet"
+        >
+          <BasketballCourtLines lengthM={28} widthM={15} />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
+function PriorityMatch({
+  item,
+  posterUrl,
+}: {
+  item: MatchLibraryItem
+  posterUrl?: string
+}) {
+  const displayState = matchLibraryDisplayState(item)
+  const progress = item.analysisState === 'RUNNING' ? item.latestJob?.progressPercent : null
+
+  return (
+    <section aria-labelledby="priority-match-title" className="grid overflow-hidden border-y border-[#252B38] lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]">
+      <div className="relative min-h-[330px] border-b border-[#252B38] lg:min-h-[390px] lg:border-b-0 lg:border-r">
+        {posterUrl ? (
+          <img src={posterUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <CourtFallback className="absolute inset-0" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0B0D12]/75 via-transparent to-[#0B0D12]/10" />
+        <span className={`absolute left-6 top-6 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] ${stateTone(displayState)}`}>
+          {matchLibraryDisplayLabel(displayState)}
+        </span>
+      </div>
+
+      <div className="flex flex-col justify-center px-7 py-9 lg:px-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Continuar</p>
+        <h2 id="priority-match-title" className="scout-display mt-4 text-balance text-[clamp(2.7rem,5vw,4.5rem)] font-extrabold text-[#F4F5F7]">
+          {item.video.title || 'Partido sin título'}
+        </h2>
+        <p className="mt-4 text-sm text-[#A3ABBA]">
+          {item.team?.name ?? 'Equipo no disponible'} · Fecha de carga {formatUploadDate(item.video.uploadedAt)}
+        </p>
+
+        {progress != null ? (
+          <div className="mt-7 border-l-2 border-[#FF6A1F] pl-4" role="status" aria-label={`Análisis del partido: ${progress}%`}>
+            <p className="scout-display text-4xl font-bold text-[#F4F5F7]">{progress}%</p>
+            <p className="mt-1 text-sm text-[#A3ABBA]">Análisis en curso</p>
+          </div>
+        ) : null}
+
+        <Button asChild className="mt-8 h-[52px] self-start rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+          <Link to={matchDetailPath(item.video.id, 'reporte')}>
+            {priorityActionLabel(displayState)}
+            <ArrowRight aria-hidden="true" className="h-5 w-5" />
+          </Link>
+        </Button>
+      </div>
+    </section>
+  )
+}
+
+function RecentMatchRow({
+  item,
+  posterUrl,
+}: {
+  item: MatchLibraryItem
+  posterUrl?: string
+}) {
+  const displayState = matchLibraryDisplayState(item)
+
+  return (
+    <Link
+      to={matchDetailPath(item.video.id)}
+      className="group grid min-h-[132px] gap-5 border-b border-[#252B38] py-5 transition-colors last:border-b-0 hover:bg-white/[0.02] sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-center"
+    >
+      <div className="relative h-24 overflow-hidden border border-[#252B38] bg-[#11151D]">
+        {posterUrl ? (
+          <img src={posterUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <CourtFallback className="h-full w-full" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] ${stateTone(displayState)}`}>
+          {matchLibraryDisplayLabel(displayState)}
+        </span>
+        <h3 className="scout-display mt-3 truncate text-2xl font-bold text-[#F4F5F7]">{item.video.title || 'Partido sin título'}</h3>
+        <p className="mt-1 text-sm text-[#A3ABBA]">
+          {item.team?.name ?? 'Equipo no disponible'} · {formatUploadDate(item.video.uploadedAt)}
+        </p>
+      </div>
+      <ArrowRight aria-hidden="true" className="hidden h-5 w-5 text-[#6F788A] transition-colors group-hover:text-[#FF6A1F] sm:block" />
+    </Link>
+  )
+}
+
+function HomeLoading() {
+  return (
+    <div aria-label="Cargando Inicio" className="space-y-12" aria-busy="true">
+      <div className="grid overflow-hidden border-y border-[#252B38] lg:grid-cols-2">
+        <div className="h-[390px] animate-pulse bg-[#151922] motion-reduce:animate-none" />
+        <div className="space-y-5 px-10 py-12">
+          <div className="h-3 w-24 animate-pulse bg-[#252B38] motion-reduce:animate-none" />
+          <div className="h-16 max-w-md animate-pulse bg-[#151922] motion-reduce:animate-none" />
+          <div className="h-4 w-64 animate-pulse bg-[#252B38] motion-reduce:animate-none" />
+          <div className="h-12 w-40 animate-pulse rounded-full bg-[#252B38] motion-reduce:animate-none" />
+        </div>
+      </div>
+      <div className="space-y-4 border-y border-[#252B38] py-5">
+        {Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-24 animate-pulse bg-[#151922] motion-reduce:animate-none" />)}
+      </div>
+    </div>
+  )
+}
 
 export function DashboardPage() {
   const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
-  const active = catalog?.items.filter(({ job }) => job.status === 'QUEUED' || job.status === 'RUNNING') ?? []
-  const completed = catalog?.items.filter(({ job }) => job.status === 'DONE').slice(0, 3) ?? []
-  const recentVideos = catalog?.videos.slice(0, 3) ?? []
-  const jobs = catalog?.items.map((item) => item.job) ?? []
-  const hasWork = active.length > 0 || completed.length > 0 || recentVideos.length > 0
+  const items = useMemo(() => catalog ? buildMatchLibrary(catalog) : [], [catalog])
+  const priority = useMemo(() => selectHomePriorityMatch(items), [items])
+  const recent = useMemo(
+    () => selectRecentHomeMatches(items, priority?.video.id, 3),
+    [items, priority?.video.id],
+  )
+  const visibleMatches = useMemo(
+    () => [priority, ...recent].filter((item): item is MatchLibraryItem => Boolean(item)),
+    [priority, recent],
+  )
+  const [posterUrls, setPosterUrls] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let active = true
+    for (const { video } of visibleMatches) {
+      const cached = cachedMatchPoster(video.id)
+      if (cached) {
+        setPosterUrls((current) => current[video.id] === cached ? current : { ...current, [video.id]: cached })
+        continue
+      }
+
+      void requestMatchPoster(video, getVideoByIdForTeam).then((posterUrl) => {
+        if (!active || !posterUrl) return
+        setPosterUrls((current) => current[video.id] === posterUrl ? current : { ...current, [video.id]: posterUrl })
+      })
+    }
+    return () => { active = false }
+  }, [visibleMatches])
+
+  const hasPartialFailure = catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-8">
-      <PageHeader
-        title="Inicio"
-        description="Seguí lo que está en proceso y retomá resultados recientes."
-        action={<div className="lg:hidden"><Button asChild className="w-full sm:w-auto"><Link to="/analisis/nuevo"><Plus className="h-4 w-4" />Nuevo análisis</Link></Button></div>}
-      />
+    <div className="pb-16 pt-6 sm:pt-10">
+      <header className="flex flex-col gap-7 border-b border-[#252B38] pb-9 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-3xl">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6A1F]">Inicio</p>
+          <h1 className="scout-display text-[clamp(3.5rem,8vw,5.4rem)] font-extrabold text-[#F4F5F7]">Seguí donde quedaste</h1>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-[#A3ABBA] sm:text-lg">
+            Retomá el partido que necesita tu atención o abrí uno de los últimos reportes.
+          </p>
+        </div>
+        <Button asChild className="h-[54px] shrink-0 rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+          <Link to={newMatchPath()}>
+            <Plus aria-hidden="true" className="h-5 w-5" />
+            Nuevo partido
+          </Link>
+        </Button>
+      </header>
 
-      {loadState === 'loading' && !catalog && (
-        <section className="space-y-5 border-y py-8" aria-busy="true" aria-live="polite">
-          <div className="h-5 w-48 animate-pulse rounded bg-accent" />
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.7fr)]"><div className="h-44 animate-pulse rounded-lg bg-accent/60" /><div className="h-44 animate-pulse rounded-lg bg-accent/40" /></div>
-          <span className="sr-only">Cargando actividad…</span>
-        </section>
-      )}
+      <div className="pt-8">
+        {loadState === 'loading' && !catalog ? <HomeLoading /> : null}
 
-      {loadState === 'session-expired' && <div className="flex min-h-32 items-center gap-3 border-y py-8 text-sm text-muted-foreground"><LoaderCircle className="h-5 w-5 animate-spin text-primary" />Tu sesión terminó. Redirigiendo al ingreso…</div>}
-
-      {loadState === 'error' && !catalog && (
-        <Alert className="flex max-w-2xl flex-col gap-4 border-destructive/25 bg-destructive/5 p-5 sm:flex-row sm:items-center"><CircleAlert className="h-5 w-5 shrink-0 text-destructive" /><div className="min-w-0 flex-1"><p className="font-semibold">No pudimos cargar tu actividad</p><p className="mt-1 text-sm text-muted-foreground">No hubo respuesta de los servicios. Revisá la conexión y reintentá.</p></div><Button variant="outline" size="sm" onClick={() => void refresh()}>Reintentar</Button></Alert>
-      )}
-
-      {isPollingDisconnected && <AnalysisPollingNotice />}
-
-      {catalog && !hasWork && (
-        <EmptyState
-          icon={<VideoIcon className="h-5 w-5" />}
-          title="Subí tu primer video"
-          description="El análisis automático empieza con material listo. Después vas a poder seguir su procesamiento y revisar la evidencia desde acá."
-          action={<Button asChild className="w-full sm:w-auto"><Link to="/videos/subir">Subir video<ArrowRight className="h-4 w-4" /></Link></Button>}
-        />
-      )}
-
-      {catalog && hasWork && (
-        <>
-          {catalog.partialFailures.some((failure) => failure.scope !== 'active-job') && <Alert className="flex items-start gap-3 border-amber-500/30 bg-amber-500/5 p-4"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /><div><p className="text-sm font-semibold">Actividad parcialmente actualizada</p><p className="mt-1 text-sm text-muted-foreground">Conservamos los análisis y videos disponibles mientras algunos historiales vuelven a responder.</p></div></Alert>}
-
-          {active.length > 0 && (
-            <section aria-labelledby="active-analysis-title">
-              <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Ahora</p><h2 id="active-analysis-title" className="mt-1 text-xl font-semibold">Análisis en curso</h2></div><Link className="text-sm font-medium text-primary hover:underline" to="/analisis">Ver todos</Link></div>
-              <div className="mt-4 divide-y border-y">{active.map((item) => <AnalysisCatalogRow key={item.job.id} item={item} compact />)}</div>
-            </section>
-          )}
-
-          <div className="space-y-10">
-            <section className={active.length > 0 ? 'border-t pt-8' : undefined} aria-labelledby="recent-results-title">
-              <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Resultados</p><h2 id="recent-results-title" className="mt-1 text-xl font-semibold">Análisis recientes</h2></div>{completed.length > 0 && <Link className="text-sm font-medium text-primary hover:underline" to="/analisis">Ver todos</Link>}</div>
-              {completed.length > 0 ? <div className="mt-4 divide-y border-y">{completed.map((item) => <AnalysisCatalogRow key={item.job.id} item={item} compact />)}</div> : <div className="mt-4 border-y py-8"><p className="font-medium">Todavía no hay resultados terminados</p><p className="mt-1 text-sm text-muted-foreground">Podés iniciar un análisis con uno de tus videos listos.</p><Button asChild size="sm" className="mt-4"><Link to="/analisis/nuevo">Nuevo análisis</Link></Button></div>}
-            </section>
-
-            <section className="border-t pt-8" aria-labelledby="recent-videos-title">
-              <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Material</p><h2 id="recent-videos-title" className="mt-1 text-xl font-semibold">Videos recientes</h2></div><Link className="text-sm font-medium text-primary hover:underline" to="/videos">Biblioteca</Link></div>
-              <div className="mt-4 divide-y border-y">
-                {recentVideos.map((video) => {
-                  const team = catalog.teams.find((candidate) => candidate.id === video.teamId)
-                  const materialState = videoMaterialState(video)
-                  const latestJob = latestVideoAnalysisJob(video.id, jobs)
-                  const analysisAction = videoPrimaryAnalysisAction(video, latestJob, 'Analizar')
-                  const analysisPath = analysisAction?.type === 'analysis-job'
-                    ? analysisJobDetailPath(analysisAction.job)
-                    : `/analisis/nuevo?team_id=${encodeURIComponent(video.teamId)}&video_id=${encodeURIComponent(video.id)}`
-                  return <article key={video.id} className="py-4 sm:flex sm:items-center sm:justify-between sm:gap-6"><div className="flex min-w-0 flex-1 items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-semibold">{video.title}</h3><p className="mt-1 text-sm text-muted-foreground">{team?.name ?? 'Equipo'} · {formatDate(video.uploadedAt)}</p></div><Badge variant={materialState === 'failed' ? 'failed' : materialState === 'preparing' ? 'processing' : 'uploaded'}>{videoMaterialLabel(materialState)}</Badge></div><div className="mt-3 flex shrink-0 flex-wrap gap-2 sm:mt-0">{analysisAction && <Button asChild variant="outline" size="sm"><Link to={analysisPath}>{analysisAction.type === 'new-analysis' ? <Play className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}{analysisAction.label}</Link></Button>}<Button asChild variant="ghost" size="sm"><Link to={`/videos?team_id=${encodeURIComponent(video.teamId)}`}>Ver en Videos</Link></Button></div></article>
-                })}
-              </div>
-            </section>
+        {loadState === 'session-expired' ? (
+          <div className="flex min-h-40 items-center gap-3 border-y border-[#252B38] py-8 text-sm text-[#A3ABBA]">
+            <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin text-[#FF6A1F]" />
+            Tu sesión terminó. Redirigiendo al ingreso…
           </div>
-        </>
-      )}
+        ) : null}
+
+        {loadState === 'error' && !catalog ? (
+          <section role="alert" className="flex min-h-52 flex-col items-start justify-center border-y border-[#252B38] py-10">
+            <div className="flex items-center gap-3 text-red-300">
+              <CircleAlert aria-hidden="true" className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">No pudimos cargar tus partidos</h2>
+            </div>
+            <p className="mt-3 text-sm text-[#A3ABBA]">Revisá tu conexión e intentá nuevamente.</p>
+            <Button type="button" variant="outline" onClick={() => void refresh()} className="mt-6 h-11 rounded-full border-[#3A4254] bg-transparent px-5 text-[#F4F5F7] hover:bg-white/5 hover:text-white">
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+              Reintentar
+            </Button>
+          </section>
+        ) : null}
+
+        {isPollingDisconnected ? <div className="mb-6"><AnalysisPollingNotice /></div> : null}
+
+        {catalog && hasPartialFailure ? (
+          <section role="status" className="mb-7 flex items-start gap-3 border-y border-amber-500/25 bg-amber-500/[0.04] px-1 py-4 text-amber-100">
+            <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold">Algunos estados no se pudieron verificar</p>
+              <p className="mt-1 text-sm text-[#A3ABBA]">Conservamos los partidos disponibles mientras vuelve la conexión.</p>
+            </div>
+          </section>
+        ) : null}
+
+        {catalog && items.length === 0 ? (
+          <section className="flex min-h-[430px] flex-col items-center justify-center border-y border-[#252B38] py-16 text-center">
+            <div className="mb-7 w-56 text-[#657089] opacity-60">
+              <svg aria-hidden="true" viewBox="0 0 28 15"><BasketballCourtLines lengthM={28} widthM={15} /></svg>
+            </div>
+            <h2 className="scout-display text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Tu primer partido empieza acá</h2>
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-[#A3ABBA]">Subí un partido para preparar el archivo y obtener su Reporte.</p>
+            <Button asChild className="mt-7 h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white hover:bg-[#ff7b38]">
+              <Link to={newMatchPath()}>Nuevo partido<ArrowRight aria-hidden="true" className="h-5 w-5" /></Link>
+            </Button>
+          </section>
+        ) : null}
+
+        {catalog && priority ? (
+          <>
+            <PriorityMatch item={priority} posterUrl={posterUrls[priority.video.id]} />
+
+            {recent.length > 0 ? (
+              <section className="mt-14" aria-labelledby="recent-matches-title">
+                <div className="flex items-end justify-between gap-4 border-b border-[#252B38] pb-5">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Tu biblioteca</p>
+                    <h2 id="recent-matches-title" className="scout-display mt-2 text-4xl font-bold text-[#F4F5F7]">Partidos recientes</h2>
+                  </div>
+                  <Link to="/partidos" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#FF6A1F]">
+                    Ver todos
+                    <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                </div>
+                <div>
+                  {recent.map((item) => <RecentMatchRow key={item.video.id} item={item} posterUrl={posterUrls[item.video.id]} />)}
+                </div>
+              </section>
+            ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   )
 }

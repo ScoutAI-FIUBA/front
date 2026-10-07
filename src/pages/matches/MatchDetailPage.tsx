@@ -13,8 +13,8 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
+import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
 import {
   AnalysisJobResultsWorkspace,
@@ -23,8 +23,15 @@ import {
 import { analysisJobDetailPath } from '@/pages/analysis/analysis-job-detail'
 import { createAnalysisJobDetailPoller } from '@/pages/analysis/analysis-job-detail-polling'
 import {
+  addCreatedJobToAnalysisCatalog,
+  upsertVideoInAnalysisCatalog,
+} from '@/pages/analysis/analysis-job-catalog-store'
+import { createAnalysisJobSubmission } from '@/pages/videos/analysis-job-creation'
+import { isApiAuthenticationError } from '@/services/api/errors'
+import {
   analysisJobService,
   clipCollectionService,
+  getVideoByIdForTeam,
   teamService,
   videoService,
 } from '@/services/registry'
@@ -44,7 +51,6 @@ import {
   loadMatchClips,
   loadMatchDetail,
   matchAnalysisElapsedLabel,
-  matchAnalysisPath,
   matchDetailPath,
   matchReportPath,
   resolveMatchDetailTab,
@@ -54,6 +60,7 @@ import {
   type MatchDetailTab,
   type MatchReportSection,
 } from './match-detail'
+import { createMatchVideoPreparationPoller } from './match-video-preparation-polling'
 
 type LoadState = 'loading' | 'success' | 'error' | 'not-found'
 
@@ -107,7 +114,7 @@ function displayStateFor(model: MatchDetailModel): MatchLibraryDisplayState {
 
 function stateTone(state: MatchLibraryDisplayState): string {
   if (state === 'report-ready') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-  if (state === 'analysis-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
+  if (state === 'analysis-error' || state === 'material-error') return 'border-red-500/30 bg-red-500/10 text-red-300'
   if (state === 'queued' || state === 'analyzing') {
     return 'border-[#FF6A1F]/40 bg-[#FF6A1F]/10 text-[#FF9A68]'
   }
@@ -178,12 +185,18 @@ function MatchReportTab({
   activeSection,
   onSectionChange,
   onJobUpdated,
+  onStartAnalysis,
+  isCreatingAnalysis,
+  creationError,
 }: {
   model: MatchDetailModel
   onRetry: () => void
   activeSection: MatchReportSection
   onSectionChange: (section: AnalysisJobResultsSection) => void
   onJobUpdated: (job: ProcessingJob) => void
+  onStartAnalysis: () => void
+  isCreatingAnalysis: boolean
+  creationError: string | null
 }) {
   const { latestJob: job, video } = model
 
@@ -205,34 +218,41 @@ function MatchReportTab({
   }
 
   if (!job) {
-    const ready = videoMaterialState(video) === 'ready'
+    const materialState = videoMaterialState(video)
+    const ready = materialState === 'ready'
+    const failed = materialState === 'failed'
     return (
       <section className="space-y-10 py-3">
-        <div className="grid gap-8 border-b border-[#252B38] pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte del partido</p>
             <h2 className="scout-display mt-3 max-w-4xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              Este partido todavía no tiene reporte
+              {failed ? 'No se pudo preparar este archivo' : 'Este partido todavía no tiene reporte'}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-              Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.
+              {failed
+                ? 'El material no quedó disponible para reproducirlo o analizarlo.'
+                : 'Analizá el video para organizar los resultados detectados y la evidencia disponible en un mismo lugar.'}
             </p>
-          </div>
-          <div className="lg:pb-1">
             {ready ? (
               <Button
-                asChild
-                className="h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
+                type="button"
+                disabled={isCreatingAnalysis}
+                onClick={onStartAnalysis}
+                className="mt-6 h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
               >
-                <Link to={matchAnalysisPath(video)}>
-                  Analizar partido
-                  <ArrowRight aria-hidden="true" className="h-4 w-4" />
-                </Link>
+                {isCreatingAnalysis ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowRight aria-hidden="true" className="h-4 w-4" />}
+                {isCreatingAnalysis ? 'Iniciando…' : 'Analizar partido'}
               </Button>
-            ) : (
-              <p className="max-w-xs text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
+            ) : failed ? null : (
+              <p className="mt-6 max-w-sm text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
             )}
+            {creationError ? <p className="mt-3 text-sm text-red-300" role="alert">{creationError}</p> : null}
           </div>
+          <ProcessingShotArc
+            variant={failed ? 'failed' : ready ? 'waiting' : 'preparing'}
+            presentation="report"
+          />
         </div>
         <ReportStructurePreview title="Lo que vas a poder revisar" />
       </section>
@@ -243,29 +263,29 @@ function MatchReportTab({
     const hasProgress = job.progressPercent != null
     return (
       <section className="space-y-9 py-3" aria-live="polite">
-        <div className="border-b border-[#252B38] pb-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
-          <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-            Tu partido está en cola
-          </h2>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-            La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
-          </p>
-        </div>
-        <div>
-          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Solicitud recibida</dt>
-              <dd className="mt-1 font-medium text-[#F4F5F7]">{formatUploadDate(job.createdAt)}</dd>
-            </div>
-            {hasProgress ? (
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
+            <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
+              Tu partido está en cola
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
+              La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
+            </p>
+            <dl className="mt-6 flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-4">
               <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
-                <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Solicitud recibida</dt>
+                <dd className="mt-1 font-medium text-[#F4F5F7]">{formatUploadDate(job.createdAt)}</dd>
               </div>
-            ) : null}
-          </dl>
-          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
+              {hasProgress ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
+                  <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          <ProcessingShotArc variant="queued" presentation="report" />
         </div>
         <ReportStructurePreview title="El reporte aparecerá acá" />
       </section>
@@ -277,40 +297,36 @@ function MatchReportTab({
     const hasProgress = job.progressPercent != null
     return (
       <section className="space-y-9 py-3" aria-live="polite">
-        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-[#252B38] pb-8">
+        <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis en curso</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
               Estamos analizando tu partido
             </h2>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán en este mismo espacio cuando el análisis termine.</p>
-          </div>
-          {hasProgress ? (
-            <span className="scout-display text-6xl font-extrabold tabular-nums text-[#F4F5F7]">
-              {job.progressPercent}%
-            </span>
-          ) : null}
-        </div>
-        <div>
-          <dl className="flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-5">
-            <div>
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Estado</dt>
-              <dd className="mt-1 flex items-center gap-2 font-medium text-[#F4F5F7]"><span className="h-2 w-2 rounded-full bg-[#FF6A1F] animate-pulse motion-reduce:animate-none" aria-hidden="true" />Análisis en curso</dd>
-            </div>
-            {elapsed ? (
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Tiempo transcurrido</dt>
-                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{elapsed}</dd>
-              </div>
-            ) : null}
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán acá cuando termine.</p>
             {hasProgress ? (
-              <div>
-                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Progreso informado</dt>
-                <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{job.progressPercent}%</dd>
-              </div>
+              <span className="scout-display mt-5 block text-6xl font-extrabold tabular-nums text-[#F4F5F7]">
+                {job.progressPercent}%
+              </span>
             ) : null}
-          </dl>
-          {hasProgress ? <Progress className="mt-4" value={job.progressPercent as number} aria-label={`Progreso del análisis: ${job.progressPercent}%`} /> : null}
+            <dl className="mt-6 flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-4">
+              <div>
+                <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Estado</dt>
+                <dd className="mt-1 flex items-center gap-2 font-medium text-[#F4F5F7]"><span className="h-2 w-2 rounded-full bg-[#FF6A1F] animate-pulse motion-reduce:animate-none" aria-hidden="true" />Análisis en curso</dd>
+              </div>
+              {elapsed ? (
+                <div>
+                  <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Tiempo transcurrido</dt>
+                  <dd className="mt-1 font-medium tabular-nums text-[#F4F5F7]">{elapsed}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+          <ProcessingShotArc
+            variant="running"
+            progressPercent={job.progressPercent}
+            presentation="report"
+          />
         </div>
         <ReportStructurePreview title="El reporte se está preparando" />
       </section>
@@ -320,7 +336,7 @@ function MatchReportTab({
   if (job.status === 'FAILED') {
     return (
       <section className="space-y-9 py-3">
-        <div className="grid gap-8 border-b border-red-500/20 pb-9 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="grid gap-8 border-b border-red-500/20 pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Reporte interrumpido</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
@@ -330,18 +346,18 @@ function MatchReportTab({
               El video y sus clips siguen disponibles. Podés iniciar un análisis nuevo con el mismo material.
             </p>
             <p className="mt-2 max-w-2xl text-xs text-[#788397]">El detalle técnico de esta ejecución queda disponible como información secundaria para soporte.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button type="button" disabled={isCreatingAnalysis} onClick={onStartAnalysis} className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
+                {isCreatingAnalysis ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowRight aria-hidden="true" className="h-4 w-4" />}
+                {isCreatingAnalysis ? 'Iniciando…' : 'Reintentar análisis'}
+              </Button>
+              <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
+                <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
+              </Button>
+            </div>
+            {creationError ? <p className="mt-3 text-sm text-red-300" role="alert">{creationError}</p> : null}
           </div>
-          <div className="flex flex-wrap gap-3 lg:justify-end">
-            <Button asChild className="h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
-              <Link to={matchAnalysisPath(video)}>
-                Reintentar análisis
-                <ArrowRight aria-hidden="true" className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-[52px] rounded-full border-[#3A4254] bg-transparent px-6 text-[#F4F5F7] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#FF9A68]">
-              <Link to={analysisJobDetailPath(job)}>Ver detalles técnicos</Link>
-            </Button>
-          </div>
+          <ProcessingShotArc variant="failed" presentation="report" />
         </div>
         <ReportStructurePreview title="El reporte todavía no está disponible" />
       </section>
@@ -537,6 +553,9 @@ export function MatchDetailPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [model, setModel] = useState<MatchDetailModel | null>(null)
   const [isPollingDisconnected, setIsPollingDisconnected] = useState(false)
+  const [isPreparationPollingStopped, setIsPreparationPollingStopped] = useState(false)
+  const [isCreatingAnalysis, setIsCreatingAnalysis] = useState(false)
+  const [creationError, setCreationError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!videoId) {
@@ -554,6 +573,7 @@ export function MatchDetailPage() {
       setModel(next)
       setLoadState(next ? 'success' : 'not-found')
       setIsPollingDisconnected(false)
+      setIsPreparationPollingStopped(false)
     } catch {
       setLoadState('error')
     }
@@ -563,6 +583,39 @@ export function MatchDetailPage() {
     void load()
   }, [load])
 
+  const preparationVideoId = model?.video.id ?? null
+  const preparationTeamId = model?.video.teamId ?? null
+  const preparationStatus = model?.video.status ?? null
+  useEffect(() => {
+    if (loadState !== 'success' || !preparationVideoId || !preparationTeamId || preparationStatus !== 'processing') return
+
+    const poller = createMatchVideoPreparationPoller({
+      load: () => getVideoByIdForTeam(preparationVideoId, preparationTeamId),
+      onVideo: (video) => {
+        setIsPollingDisconnected(false)
+        setIsPreparationPollingStopped(false)
+        upsertVideoInAnalysisCatalog(video)
+        setModel((current) => current?.video.id === video.id
+          ? { ...current, video }
+          : current)
+      },
+      onError: () => setIsPollingDisconnected(true),
+      onExhausted: () => {
+        setIsPollingDisconnected(false)
+        setIsPreparationPollingStopped(true)
+      },
+    })
+    poller.start(preparationStatus)
+    return () => poller.stop()
+  }, [loadState, preparationStatus, preparationTeamId, preparationVideoId])
+
+  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
+    addCreatedJobToAnalysisCatalog(updatedJob)
+    setModel((current) => current?.latestJob?.id === updatedJob.id
+      ? { ...current, latestJob: updatedJob }
+      : current)
+  }, [])
+
   const latestJob = model?.latestJob
   useEffect(() => {
     if (!latestJob || (latestJob.status !== 'QUEUED' && latestJob.status !== 'RUNNING')) return
@@ -571,21 +624,44 @@ export function MatchDetailPage() {
       load: () => analysisJobService.get(latestJob.id, latestJob.teamId),
       onJob: (job) => {
         setIsPollingDisconnected(false)
-        setModel((current) => current ? { ...current, latestJob: job } : current)
+        handleJobUpdated(job)
       },
       onError: () => setIsPollingDisconnected(true),
     })
     poller.start(latestJob.status)
     return () => poller.stop()
-  }, [latestJob])
+  }, [handleJobUpdated, latestJob])
+
+  const analysisVideoId = model?.video.id ?? null
+  const analysisTeamId = model?.video.teamId ?? null
+  const analysisSubmission = useMemo(() => {
+    if (!analysisVideoId || !analysisTeamId) return null
+
+    return createAnalysisJobSubmission({
+      create: () => analysisJobService.create(analysisVideoId, { teamId: analysisTeamId }),
+      onCreated: (job) => {
+        addCreatedJobToAnalysisCatalog(job)
+        setCreationError(null)
+        setModel((current) => current?.video.id === job.videoId
+          ? { ...current, latestJob: job, jobsUnavailable: false }
+          : current)
+      },
+      onError: (error) => {
+        if (!isApiAuthenticationError(error)) {
+          setCreationError('No pudimos iniciar el análisis. El partido sigue disponible para reintentar.')
+        }
+      },
+      onSubmittingChange: setIsCreatingAnalysis,
+    })
+  }, [analysisTeamId, analysisVideoId])
+
+  const handleStartAnalysis = useCallback(() => {
+    if (!analysisSubmission || !model || videoMaterialState(model.video) !== 'ready') return
+    setCreationError(null)
+    void analysisSubmission.submit()
+  }, [analysisSubmission, model])
 
   const displayState = useMemo(() => model ? displayStateFor(model) : null, [model])
-
-  const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
-    setModel((current) => current?.latestJob?.id === updatedJob.id
-      ? { ...current, latestJob: updatedJob }
-      : current)
-  }, [])
 
   const handleReportSectionChange = useCallback((section: AnalysisJobResultsSection) => {
     if (!videoId) return
@@ -691,7 +767,21 @@ export function MatchDetailPage() {
         })}
       </nav>
 
-      {isPollingDisconnected ? <div className="mt-6"><AnalysisPollingNotice /></div> : null}
+      {isPreparationPollingStopped ? (
+        <section className="mt-6 flex flex-col items-start gap-4 border-y border-amber-500/25 py-4 sm:flex-row sm:items-center sm:justify-between" role="status">
+          <p className="text-sm text-amber-100">La preparación sigue pendiente. Actualizá el estado para continuar verificándola.</p>
+          <Button type="button" variant="outline" className="rounded-full" onClick={() => void load()}>
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            Actualizar estado
+          </Button>
+        </section>
+      ) : isPollingDisconnected ? (
+        model.video.status === 'processing' ? (
+          <section className="mt-6 border-y border-amber-500/25 py-4 text-sm text-amber-100" role="status">
+            No pudimos actualizar la preparación del archivo. Mostramos el último estado conocido y seguimos intentando.
+          </section>
+        ) : <div className="mt-6"><AnalysisPollingNotice /></div>
+      ) : null}
 
       <main className={isCompactReportHeader ? 'pt-4' : 'pt-8'}>
         {activeTab === 'video' ? <MatchVideoTab video={model.video} /> : null}
@@ -702,6 +792,9 @@ export function MatchDetailPage() {
             activeSection={activeReportSection}
             onSectionChange={handleReportSectionChange}
             onJobUpdated={handleJobUpdated}
+            onStartAnalysis={handleStartAnalysis}
+            isCreatingAnalysis={isCreatingAnalysis}
+            creationError={creationError}
           />
         ) : null}
         {activeTab === 'clips' ? <MatchClipsTab videoId={model.video.id} /> : null}

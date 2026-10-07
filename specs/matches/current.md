@@ -9,6 +9,7 @@
 ## Route and navigation
 
 - Primary route: `/partidos`.
+- Canonical new-match route: `/partidos/nuevo`. It presents the existing upload contract as a product flow named `Nuevo partido`, with the desktop sequence `01 Equipo`, `02 Archivo`, and `03 Confirmar`.
 - Canonical detail route: `/partidos/:videoId`.
 - Detail tabs are refresh-safe query states: `?tab=video`, `?tab=reporte`, and `?tab=clips`; an absent or invalid value falls back to Video.
 - The completed Reporte has refresh-safe subsections in the same URL: `?tab=reporte&seccion=resumen`, `tiros`, `movimiento`, or `similares`. An absent or invalid `seccion` falls back to `resumen`, and subsection links use normal browser history.
@@ -38,6 +39,8 @@
 - Video reuses the existing signed-playback player and renewal behavior with reduced chrome.
 - Reporte keeps its compact Partido header and editorial report space before results exist. A ready video without a job explains that no report exists yet, previews only the four future sections by name and purpose, and exposes one primary `Analizar partido` action through the existing new-analysis route without fake result data.
 - QUEUED and RUNNING remain inside Partido and reuse the existing team-scoped polling loop. QUEUED states that the party is in the real queue; RUNNING states that analysis is in progress. A real `progressPercent` is rendered only when non-null, and elapsed time is shown only from a valid real `startedAt`. Neither state invents stages, ETA, frames, or intermediate findings, and neither routes the user to the legacy job workspace.
+- The non-DONE Reporte states share one transparent basketball visual built with React and inline SVG: a ball, shot trajectory, and hoop. Waiting, file preparation, queue, running, and failure are variants of the same component rather than separate illustrations. Only RUNNING with a non-null real `progressPercent` maps the ball and revealed trajectory to progress; indeterminate activity is non-positional, and reduced-motion users receive an equivalent static frame.
+- RUNNING treats that visual as the primary progress expression. The real percentage remains visible as accessible text when present and the elapsed time remains secondary; no redundant primary progress bar is rendered. The legacy analysis workspace keeps its existing framed presentation.
 - Polling replaces the latest job snapshot in place. A transition from QUEUED or RUNNING to DONE reveals the completed Reporte in the same Partido route without automatic external navigation.
 - FAILED uses the product statement `No se pudo analizar este partido`. The primary recovery action opens the existing new-analysis flow for the same team and video; the exact legacy job detail remains a secondary technical-support action. Raw backend errors are not promoted as user-facing reasons because the current contract does not mark them as safe copy.
 - A completed Reporte embeds the real result workspace for the latest job directly inside the Partido detail. It does not render a second Partido header or a second source player and does not require an `Abrir reporte completo` gateway.
@@ -58,7 +61,11 @@
 
 ## Navigation reuse
 
-- Upload uses the existing video upload route and returns to `/partidos`.
+- Partidos upload CTAs open `/partidos/nuevo`. The flow reuses `teamService.list()` and the existing video upload boundary without adding analysis creation or new backend fields. Team loading, inline retry, empty teams, selection, file picking/drop, current video-type validation, filename-derived title, and single-flight submission remain explicit.
+- The confirmation step exposes the selected team and file, editable title, optional description, and clarifies that the date shown later is the upload date rather than the sporting date. Its Reporte preview describes only conditional real capabilities: detected shots and court location, video evidence when a shot has a recorded moment, player movement/heatmaps, and comparable team analyses when they exist.
+- Upload keeps the existing `/videos/subir` compatibility route through the same implementation, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
+- A Partido whose material is still `PENDING_UPLOAD` stays on that route and polls the existing video detail boundary at a bounded interval until the real material status becomes `READY` or `FAILED`. It does not invent upload progress or navigate away.
+- Once the material is ready, `Analizar partido` creates the ProcessingJob inline through the existing endpoint and single-flight guard. The returned job becomes `latestJob` and is added to the shared catalogue immediately, so the existing QUEUED/RUNNING polling reveals DONE in the same Reporte. FAILED retry uses the same inline flow. Legacy upload and analysis routes remain available as compatibility entry points.
 - New analysis uses `/analisis/nuevo` with the real team and video ids.
 - Active report progress remains inline in Partido. A failed job may open its exact legacy `/analisis/jobs/:jobId?team_id=...` route only as a secondary technical-detail action, while recovery reuses `/analisis/nuevo` with the same team and video. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy job route.
 
@@ -72,6 +79,7 @@
 - No backend `/matches` integration.
 - No invented opponent/score/competition, fabricated progress/statistics, analysis stages, ETA, or processed-frame counts. R3-C changes only the desktop no-job, QUEUED, RUNNING, and FAILED Partido Reporte states; completed Reporte, mobile, backend contracts, Auth, Clips, and upload remain unchanged.
 - No changes to backend contracts, authentication, or analysis result rendering.
+- R4-B does not add upload progress, multipart cancellation, inline team creation, automatic analysis, or mobile-specific redesign.
 
 ## Verification
 

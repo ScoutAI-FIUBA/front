@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 
 const navItems = [
-  { to: '/dashboard', label: 'Inicio' },
+  { to: '/', label: 'Inicio' },
   { to: '/partidos', label: 'Partidos' },
   { to: '/equipos', label: 'Equipos' },
   { to: '/jugadores', label: 'Jugadores' },
@@ -44,7 +44,7 @@ export function AppShell() {
       <header className="sticky top-0 z-40 border-b border-[#252B38] bg-[#0B0D12]/95 backdrop-blur">
         <div className="mx-auto flex h-[76px] w-full max-w-[1120px] items-center justify-between px-4 sm:px-6">
           <Link
-            to="/dashboard"
+            to="/"
             className="scout-display text-[28px] font-extrabold tracking-[-0.03em] text-[#F4F5F7]"
             onClick={() => setMenuOpen(false)}
             aria-label="ScoutAI · Inicio"
@@ -54,7 +54,7 @@ export function AppShell() {
 
           <nav aria-label="Navegación principal" className="hidden items-center gap-1 md:flex">
             {navItems.map(({ to, label }) => {
-              const active = pathname === to || (to !== '/dashboard' && pathname.startsWith(`${to}/`))
+              const active = pathname === to || (to !== '/' && pathname.startsWith(`${to}/`))
               return (
                 <Link
                   key={to}
@@ -111,7 +111,7 @@ export function AppShell() {
           <div className="border-t border-[#252B38] bg-[#11151D] px-4 py-4 md:hidden">
             <nav aria-label="Navegación móvil" className="mx-auto grid max-w-[1120px] gap-1">
               {navItems.map(({ to, label }) => {
-                const active = pathname === to || (to !== '/dashboard' && pathname.startsWith(`${to}/`))
+                const active = pathname === to || (to !== '/' && pathname.startsWith(`${to}/`))
                 return (
                   <Link
                     key={to}

@@ -26,6 +26,10 @@
 
 - `src/components/layout/AppShell.tsx`: responsive protected app shell, desktop sidebar/mobile drawer, scoped workspace focus mode, user summary, and logout.
 - `src/components/layout/ProtectedRoute.tsx`: protected route gate.
+- `src/components/auth/AuthShell.tsx`: shared dark sports shell for public authentication routes and session restoration.
+- `src/components/auth/AuthPasswordField.tsx`: shared accessible password field with local visibility control.
+- `src/components/auth/LoginCourtBackdrop.tsx`: responsive basketball-court language for split and compact Auth layouts.
+- `src/components/auth/GoogleSignInButton.tsx`: Google Identity Services button with configured and disabled fallback states.
 - `src/components/ui/*.tsx`: local UI primitives such as button, card, input, dialog, select, badge, avatar, alert, progress, label, separator.
 
 ## Contexts
@@ -36,10 +40,18 @@
 
 - `src/pages/auth/LoginPage.tsx`: login form and redirect after authentication.
 - `src/pages/auth/RegisterPage.tsx`: registration form and password validation.
+- `src/pages/auth/ForgotPasswordPage.tsx`: neutral password-recovery request flow.
+- `src/pages/auth/ResetPasswordPage.tsx`: token-based new-password flow.
+- `src/pages/auth/VerifyEmailPage.tsx`: guarded email-verification states.
 - `src/pages/dashboard/DashboardPage.tsx`: state-aware Inicio with saved manual-analysis work.
-- `src/pages/teams/TeamsPage.tsx`: teams management and player linking.
-- `src/pages/players/PlayersPage.tsx`: players table, filters, edit/delete dialog flows.
-- `src/pages/players/PlayerNewPage.tsx`: create player form.
+- `src/pages/teams/TeamsPage.tsx`: editorial team index and roster navigation.
+- `src/pages/teams/TeamDetailPage.tsx`: canonical team identity and roster management.
+- `src/pages/teams/TeamRosterPlayerSheet.tsx`: in-context player create, edit, and assignment.
+- `src/pages/players/PlayersPage.tsx`: compact global player registry with search and team filters.
+- `src/pages/players/PlayerNewPage.tsx`: compatibility entry for the global create-player sheet.
+- `src/pages/players/GlobalPlayerSheet.tsx`: shared global create/edit, assignment, partial mutation, and deletion flow.
+- `src/pages/players/global-player-list.ts`: stable global ordering and local registry filtering.
+- `src/pages/players/PlayerFormFields.tsx`: shared player fields and validation presentation.
 - `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.
 - `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.

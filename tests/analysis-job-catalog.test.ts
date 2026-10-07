@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   composeAnalysisJobCatalog,
   refreshActiveCatalogJobs,
+  upsertAnalysisCatalogVideo,
 } from '../src/pages/analysis/analysis-job-catalog.ts'
 import type { ProcessingJob, Team, Video } from '../src/types/index.ts'
 
@@ -112,4 +113,31 @@ test('catalog polling requests only active jobs and preserves failures', async (
   assert.deepEqual(requested, ['job-2'])
   assert.equal(refreshed.items.find((item) => item.job.id === 'job-2')?.job.status, 'DONE')
   assert.equal(refreshed.updatedAt, 2)
+})
+
+test('a freshly uploaded video replaces stale catalogue data immediately', () => {
+  const staleVideo = { ...video('video-1', 'team-1'), status: 'processing' as const }
+  const existingJob = job('job-1', staleVideo.id, staleVideo.teamId)
+  const catalog = {
+    items: [{ job: existingJob, video: staleVideo, team: teams[0] }],
+    teams: [teams[0]],
+    videos: [staleVideo],
+    loadedJobVideoIds: [],
+    partialFailures: [
+      { scope: 'jobs' as const, teamId: staleVideo.teamId, videoId: staleVideo.id },
+      { scope: 'active-job' as const, teamId: staleVideo.teamId, videoId: staleVideo.id },
+    ],
+    updatedAt: 1,
+  }
+  const readyVideo = { ...staleVideo, status: 'uploaded' as const, title: 'Partido recién subido' }
+
+  const updated = upsertAnalysisCatalogVideo(catalog, readyVideo, () => 2)
+
+  assert.equal(updated.videos[0], readyVideo)
+  assert.equal(updated.items[0]?.video, readyVideo)
+  assert.deepEqual(updated.loadedJobVideoIds, [readyVideo.id])
+  assert.deepEqual(updated.partialFailures, [
+    { scope: 'active-job', teamId: staleVideo.teamId, videoId: staleVideo.id },
+  ])
+  assert.equal(updated.updatedAt, 2)
 })
