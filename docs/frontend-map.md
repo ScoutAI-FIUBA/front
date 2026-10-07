@@ -40,8 +40,10 @@
 - `src/pages/teams/TeamsPage.tsx`: editorial team index and roster navigation.
 - `src/pages/teams/TeamDetailPage.tsx`: canonical team identity and roster management.
 - `src/pages/teams/TeamRosterPlayerSheet.tsx`: in-context player create, edit, and assignment.
-- `src/pages/players/PlayersPage.tsx`: players table, filters, edit/delete dialog flows.
-- `src/pages/players/PlayerNewPage.tsx`: create player page using shared real player fields.
+- `src/pages/players/PlayersPage.tsx`: compact global player registry with search and team filters.
+- `src/pages/players/PlayerNewPage.tsx`: compatibility entry for the global create-player sheet.
+- `src/pages/players/GlobalPlayerSheet.tsx`: shared global create/edit, assignment, partial mutation, and deletion flow.
+- `src/pages/players/global-player-list.ts`: stable global ordering and local registry filtering.
 - `src/pages/players/PlayerFormFields.tsx`: shared player fields and validation presentation.
 - `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.

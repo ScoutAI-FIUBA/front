@@ -57,8 +57,8 @@ src/
 - `/dashboard`: compatibility alias that redirects to `/`.
 - `/equipos`: teams index.
 - `/equipos/:teamId`: canonical team identity and roster management.
-- `/jugadores`: players list page.
-- `/jugadores/nuevo`: create player page.
+- `/jugadores`: secondary global player registry with team and unassigned filters.
+- `/jugadores/nuevo`: compatibility entry that opens the same global create-player sheet.
 - `/partidos`: matches page.
 - `/partidos/:videoId?tab=video|reporte|clips`: canonical product detail over a video, its latest processing job, and clip collections.
 - `/videos`: videos list page.

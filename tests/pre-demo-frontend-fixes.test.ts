@@ -43,12 +43,12 @@ test('birth dates use the local date and reject future values', () => {
   const fieldsSource = readSource('../src/pages/players/PlayerFormFields.tsx')
   const schemaSource = readSource('../src/pages/players/player-form.ts')
   const newPageSource = readSource('../src/pages/players/PlayerNewPage.tsx')
-  const listPageSource = readSource('../src/pages/players/PlayersPage.tsx')
+  const sheetSource = readSource('../src/pages/players/GlobalPlayerSheet.tsx')
 
   assert.match(fieldsSource, /max=\{localDateInputValue\(\)\}/)
   assert.match(schemaSource, /value <= localDateInputValue\(\)/)
-  assert.match(newPageSource, /playerFormSchema/)
-  assert.match(listPageSource, /playerFormSchema/)
+  assert.match(newPageSource, /PlayersPage openCreateOnMount/)
+  assert.match(sheetSource, /playerFormSchema/)
 })
 
 test('video description is not represented as a rival', () => {

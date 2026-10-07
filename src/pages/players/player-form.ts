@@ -70,3 +70,17 @@ export function playerFormToCreateDto(
 ): CreatePlayerDto {
   return { ...playerFormToDto(values), teamId }
 }
+
+export function playerFormHasChanges(values: PlayerFormValues, player: Player): boolean {
+  const next = playerFormToDto(values)
+  const current = playerFormToDto(playerToFormValues(player))
+  return (
+    next.firstName !== current.firstName
+    || next.lastName !== current.lastName
+    || next.birthDate !== current.birthDate
+    || next.primaryPosition !== current.primaryPosition
+    || next.jerseyNumber !== current.jerseyNumber
+    || next.heightCm !== current.heightCm
+    || next.weightKg !== current.weightKg
+  )
+}
