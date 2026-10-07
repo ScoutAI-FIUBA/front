@@ -1,12 +1,13 @@
 import { type FormEvent, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Alert } from '@/components/ui/alert'
-import { LoginCourtBackdrop } from '@/components/auth/LoginCourtBackdrop'
+import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
+import { AuthPasswordField } from '@/components/auth/AuthPasswordField'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { SessionRestoreStatus } from '@/components/auth/SessionRestoreStatus'
 import { useAuth } from '@/contexts/AuthContext'
@@ -34,7 +35,7 @@ export function LoginPage() {
     const submittedPassword = String(formData.get('password') ?? '')
 
     if (!submittedEmail || !submittedPassword) {
-      setError('Completa correo y contraseña')
+      setError('Completá correo y contraseña')
       return
     }
 
@@ -51,64 +52,37 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl md:grid-cols-2">
-        <div className="relative flex flex-col overflow-hidden bg-primary p-10 text-primary-foreground">
-          <LoginCourtBackdrop />
-          <p className="relative text-lg font-bold">ScoutAI</p>
-          <div className="relative flex flex-1 flex-col justify-center">
-            <h1 className="text-3xl font-bold leading-tight">Gestión de scouting deportivo.</h1>
-            <p className="mt-4 text-primary-foreground">
-              Gestiona equipos, jugadores y videos de partido desde un mismo lugar.
-            </p>
-          </div>
-        </div>
-
-        <div className="p-10">
-          <h2 className="text-2xl font-bold">Iniciar sesión</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Plataforma de scouting y análisis deportivo</p>
+    <AuthShell visualTitle="Partidos, planteles y análisis.">
+          <AuthPanelHeader
+            eyebrow="Acceso"
+            title="Iniciar sesión"
+            description="Ingresá para continuar en ScoutAI."
+          />
 
           {error && (
-            <Alert className="mt-4 flex items-center gap-2 border-red-200 bg-red-50 text-red-600">
+            <Alert className="mt-5 flex items-center gap-2 border-destructive/40 bg-destructive/10 text-red-200">
               <AlertCircle className="h-4 w-4 shrink-0" />
               {error}
             </Alert>
           )}
 
-          <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-4">
+          <form onSubmit={(e) => void handleSubmit(e)} className="mt-6 space-y-5">
             <div>
               <Label htmlFor="email">Correo electrónico</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@scoutai.com" className="mt-1" />
+              <Input id="email" name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@dominio.com" className="mt-1.5" />
             </div>
-            <div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Contraseña</Label>
-                <Link to="/recuperar-password" className="text-xs text-primary hover:underline">¿Olvidó su contraseña?</Link>
-              </div>
-              <div className="relative mt-1">
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  aria-pressed={showPassword}
-                  onClick={() => setShowPassword((visible) => !visible)}
-                >
-                  {showPassword
-                    ? <EyeOff className="h-4 w-4" aria-hidden="true" />
-                    : <Eye className="h-4 w-4" aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <AuthPasswordField
+              id="password"
+              name="password"
+              label="Contraseña"
+              value={password}
+              visible={showPassword}
+              autoComplete="current-password"
+              onChange={setPassword}
+              onToggle={() => setShowPassword((visible) => !visible)}
+              labelAction={<Link to="/recuperar-password" className="text-xs text-foreground/75 underline-offset-4 hover:text-primary hover:underline focus-visible:text-primary focus-visible:underline">¿Olvidaste tu contraseña?</Link>}
+            />
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? 'Ingresando...' : 'Iniciar sesión'}
             </Button>
           </form>
@@ -136,14 +110,12 @@ export function LoginPage() {
           />
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            ¿No tiene una cuenta?{' '}
+            ¿No tenés una cuenta?{' '}
             <Link to="/register" className="font-medium text-primary hover:underline">
               Crear cuenta
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthShell>
   )
 }
 

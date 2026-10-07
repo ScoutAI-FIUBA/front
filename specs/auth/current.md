@@ -22,6 +22,8 @@ Current behavior documentation.
 - `src/contexts/AuthContext.tsx`
 - `src/components/layout/ProtectedRoute.tsx`
 - `src/components/auth/LoginCourtBackdrop.tsx`
+- `src/components/auth/AuthShell.tsx`
+- `src/components/auth/AuthPasswordField.tsx`
 - `src/pages/auth/LoginPage.tsx`
 - `src/pages/auth/RegisterPage.tsx`
 - `src/pages/auth/ForgotPasswordPage.tsx`
@@ -55,10 +57,17 @@ Current behavior documentation.
 - Login calls `authService.login`, then stores user and token in context state.
 - Login and Register allow each password field to toggle between masked and
   visible text locally without changing the submitted password value.
-- Login keeps its existing form and promotional panel hierarchy while a local, decorative court SVG adds low-contrast basketball identity behind only the promotional content. The SVG is hidden from assistive technology and uses a simpler crop on narrow viewports.
-- Login's promotional panel uses the global burnt-orange `primary` identity tokens;
-  it does not retain the previous hard-coded pink/burgundy background, and its
-  text keeps the full tokenized foreground contrast over that primary surface.
+- Login, Register, password recovery, password reset, email verification, and
+  session restoration share the dark ScoutAI auth shell and existing product
+  tokens. Login and Register use its two-zone desktop composition; transactional
+  recovery states use a compact centered panel.
+- The court SVG is the main sports language in the visual zone and a quiet
+  ambient texture in compact flows. It is decorative and hidden from assistive
+  technology.
+- Auth headings use the existing Barlow Condensed display treatment, while form
+  controls reuse the product primitives and dark surfaces.
+- Login and Register contain no promotional metrics, feature lists, fictional
+  organizations, or unsupported claims. Register has no synthetic legal footer.
 - Login keeps React hooks in a stable order while auth state restores, and submits the browser form values so password-manager autofill is honored even when React state has not received change events yet.
 - Register calls `authService.register`, then stores user and token in context state.
 - Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.

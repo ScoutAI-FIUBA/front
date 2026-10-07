@@ -61,7 +61,7 @@ export function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButto
   if (!GOOGLE_CLIENT_ID) {
     return (
       <Button type="button" variant="outline" className="w-full" disabled>
-        Google
+        Continuar con Google
       </Button>
     )
   }
@@ -71,10 +71,10 @@ export function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButto
       <div ref={containerRef} className="flex min-h-10 w-full justify-center" />
       {!ready && !error && (
         <Button type="button" variant="outline" className="w-full" disabled>
-          Google
+          Continuar con Google
         </Button>
       )}
-      {error && <p className="text-center text-xs text-red-600">{error}</p>}
+      {error && <p className="text-center text-xs text-red-300">{error}</p>}
     </div>
   )
 }

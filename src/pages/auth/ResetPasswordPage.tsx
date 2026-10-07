@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
+import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function ResetPasswordPage() {
@@ -44,13 +45,15 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl">
-        <h1 className="text-2xl font-bold">Nueva contraseña</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Elegí una contraseña de al menos 8 caracteres.</p>
+    <AuthShell mode="compact">
+        <AuthPanelHeader
+          eyebrow="Seguridad"
+          title="Nueva contraseña"
+          description="Elegí una contraseña de al menos 8 caracteres."
+        />
 
         {error && (
-          <Alert className="mt-4 flex items-center gap-2 border-red-200 bg-red-50 text-red-600">
+          <Alert className="mt-5 flex items-center gap-2 border-destructive/40 bg-destructive/10 text-red-200">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </Alert>
@@ -65,7 +68,7 @@ export function ResetPasswordPage() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1"
+              className="mt-1.5"
             />
           </div>
           <div>
@@ -76,20 +79,19 @@ export function ResetPasswordPage() {
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="mt-1"
+              className="mt-1.5"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading || !token}>
+          <Button type="submit" className="w-full" size="lg" disabled={loading || !token}>
             {loading ? 'Guardando...' : 'Guardar contraseña'}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="font-medium text-primary hover:underline">
-            Volver a iniciar sesión
+            Volvé a iniciar sesión
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

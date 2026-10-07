@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
+import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function VerifyEmailPage() {
@@ -27,23 +28,31 @@ export function VerifyEmailPage() {
   }, [confirmEmailVerification, token])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f3f4] p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-10 shadow-xl">
-        <h1 className="text-2xl font-bold">Verificar correo</h1>
+    <AuthShell mode="compact">
+        <AuthPanelHeader eyebrow="Cuenta" title="Verificar correo" />
         {error && (
-          <Alert className="mt-4 flex items-center gap-2 border-red-200 bg-red-50 text-red-600">
+          <Alert className="mt-5 flex items-center gap-2 border-destructive/40 bg-destructive/10 text-red-200">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
           </Alert>
         )}
-        {done && <p className="mt-4 text-sm">Tu correo quedó verificado.</p>}
-        {!done && !error && <p className="mt-4 text-sm text-muted-foreground">Confirmando el enlace...</p>}
+        {done && (
+          <div className="mt-6 flex gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] p-4 text-sm">
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+            <div><p className="font-semibold text-foreground">Correo verificado</p><p className="mt-1 text-muted-foreground">Tu correo quedó verificado.</p></div>
+          </div>
+        )}
+        {!done && !error && (
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 text-sm text-muted-foreground" role="status">
+            <LoaderCircle className="h-5 w-5 animate-spin text-primary motion-reduce:animate-none" aria-hidden="true" />
+            Confirmando el enlace...
+          </div>
+        )}
         <p className="mt-6 text-center text-sm">
           <Link to="/login" className="font-medium text-primary hover:underline">
-            Ir a iniciar sesión
+            Volvé a iniciar sesión
           </Link>
         </p>
-      </div>
-    </div>
+    </AuthShell>
   )
 }

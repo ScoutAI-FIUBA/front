@@ -14,22 +14,28 @@ const readSource = (relativePath: string) => readFileSync(
 test('auth password visibility is local and does not change submitted values', () => {
   const loginSource = readSource('../src/pages/auth/LoginPage.tsx')
   const registerSource = readSource('../src/pages/auth/RegisterPage.tsx')
+  const passwordFieldSource = readSource('../src/components/auth/AuthPasswordField.tsx')
 
-  assert.match(loginSource, /type=\{showPassword \? 'text' : 'password'\}/)
-  assert.match(loginSource, /aria-label=\{showPassword \? 'Ocultar contraseña' : 'Mostrar contraseña'\}/)
+  assert.match(loginSource, /visible=\{showPassword\}/)
   assert.match(loginSource, /password: submittedPassword/)
 
   assert.match(registerSource, /const \[showPassword, setShowPassword\] = useState\(false\)/)
   assert.match(registerSource, /const \[showConfirm, setShowConfirm\] = useState\(false\)/)
-  assert.match(registerSource, /type=\{visible \? 'text' : 'password'\}/)
+  assert.match(registerSource, /AuthPasswordField id="password"/)
   assert.match(registerSource, /await register\(\{ fullName, email, password \}\)/)
+  assert.match(passwordFieldSource, /type=\{visible \? 'text' : 'password'\}/)
+  assert.match(passwordFieldSource, /aria-label=\{visible \? `Ocultar/)
 })
 
-test('login promotional panel uses the existing primary identity token', () => {
-  const source = readSource('../src/pages/auth/LoginPage.tsx')
+test('login uses the shared dark product auth shell', () => {
+  const login = readSource('../src/pages/auth/LoginPage.tsx')
+  const shell = readSource('../src/components/auth/AuthShell.tsx')
 
-  assert.match(source, /overflow-hidden bg-primary p-10 text-primary-foreground/)
-  assert.doesNotMatch(source, /#7a4a58/i)
+  assert.match(login, /<AuthShell/)
+  assert.match(shell, /scout-product-theme/)
+  assert.match(shell, /#0B0D12/)
+  assert.match(shell, /#151922/)
+  assert.doesNotMatch(login, /#7a4a58/i)
 })
 
 test('birth dates use the local date and reject future values', () => {

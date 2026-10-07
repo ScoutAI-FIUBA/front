@@ -26,6 +26,10 @@
 
 - `src/components/layout/AppShell.tsx`: responsive protected app shell, desktop sidebar/mobile drawer, scoped workspace focus mode, user summary, and logout.
 - `src/components/layout/ProtectedRoute.tsx`: protected route gate.
+- `src/components/auth/AuthShell.tsx`: shared dark sports shell for public authentication routes and session restoration.
+- `src/components/auth/AuthPasswordField.tsx`: shared accessible password field with local visibility control.
+- `src/components/auth/LoginCourtBackdrop.tsx`: responsive basketball-court language for split and compact Auth layouts.
+- `src/components/auth/GoogleSignInButton.tsx`: Google Identity Services button with configured and disabled fallback states.
 - `src/components/ui/*.tsx`: local UI primitives such as button, card, input, dialog, select, badge, avatar, alert, progress, label, separator.
 
 ## Contexts
@@ -36,6 +40,9 @@
 
 - `src/pages/auth/LoginPage.tsx`: login form and redirect after authentication.
 - `src/pages/auth/RegisterPage.tsx`: registration form and password validation.
+- `src/pages/auth/ForgotPasswordPage.tsx`: neutral password-recovery request flow.
+- `src/pages/auth/ResetPasswordPage.tsx`: token-based new-password flow.
+- `src/pages/auth/VerifyEmailPage.tsx`: guarded email-verification states.
 - `src/pages/dashboard/DashboardPage.tsx`: state-aware Inicio with saved manual-analysis work.
 - `src/pages/teams/TeamsPage.tsx`: editorial team index and roster navigation.
 - `src/pages/teams/TeamDetailPage.tsx`: canonical team identity and roster management.
