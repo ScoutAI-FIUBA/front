@@ -43,6 +43,7 @@
 - `src/pages/auth/ForgotPasswordPage.tsx`: neutral password-recovery request flow.
 - `src/pages/auth/ResetPasswordPage.tsx`: token-based new-password flow.
 - `src/pages/auth/VerifyEmailPage.tsx`: guarded email-verification states.
+- `src/pages/auth/AccountPage.tsx`: quiet dark account utility for profile, password, and email verification.
 - `src/pages/dashboard/DashboardPage.tsx`: state-aware Inicio with saved manual-analysis work.
 - `src/pages/teams/TeamsPage.tsx`: editorial team index and roster navigation.
 - `src/pages/teams/TeamDetailPage.tsx`: canonical team identity and roster management.

@@ -23,6 +23,18 @@ test('account recovery and verification routes remain integrated in the redesign
   assert.match(shellSource, /aria-label=\{`Cuenta de/)
 })
 
+test('account uses the dark product hierarchy without changing its real actions', () => {
+  const accountSource = readSource('../src/pages/auth/AccountPage.tsx')
+
+  assert.doesNotMatch(accountSource, /bg-white|bg-red-50|border-red-200/)
+  assert.match(accountSource, /scout-display[^"]*">Cuenta</)
+  assert.match(accountSource, /bg-\[#11151D\]/)
+  assert.match(accountSource, /border-\[#66333A\] bg-\[#1D1115\]/)
+  assert.match(accountSource, /updateProfile\(fullName\)/)
+  assert.match(accountSource, /changePassword\(currentPassword, newPassword\)/)
+  assert.match(accountSource, /sendEmailVerification\(\)/)
+})
+
 test('Google Sign-In remains disabled when no client id is configured', () => {
   const googleSource = readSource('../src/components/auth/GoogleSignInButton.tsx')
 

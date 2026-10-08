@@ -110,7 +110,10 @@ Current behavior documentation.
 - Password recovery is implemented: login links to `/recuperar-password`, which
   always reports success, and `/restablecer-password` redeems the emailed token.
 - `/cuenta` edits the display name, changes the password, and can resend the
-  verification email. Login is still allowed when the email is unverified.
+  verification email. It uses the same dark ScoutAI product surfaces as the
+  protected shell, with a quiet utility hierarchy for Profile and Security;
+  success and error feedback remain local, dark, and readable. Login is still
+  allowed when the email is unverified.
 - Email verification guards the single-use token against React StrictMode's
   repeated development effect before calling the backend.
 - Google login uses Google Identity Services when `VITE_GOOGLE_CLIENT_ID` is set
