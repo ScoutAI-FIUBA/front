@@ -55,8 +55,9 @@
 - `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.
 - `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.
-- `src/pages/videos/VideoCollectionsPage.tsx`: collections list and create flow for one video.
-- `src/pages/videos/VideoCollectionDetailPage.tsx`: clip playback, metadata creation, and deletion.
+- `src/pages/videos/VideoCollectionsPage.tsx`: dense match-context collection index with isolated metadata loading and a compact create flow.
+- `src/pages/videos/VideoCollectionDetailPage.tsx`: two-zone video-review workspace with active ranges, repeated clip capture, export, and deletion.
+- `src/pages/videos/clip-collections.ts`: deterministic collection and clip ordering plus shared range formatting.
 - `src/pages/analysis/AnalysisSetup.tsx`: progressive material selection, validation, upload, inline team creation, and ready state.
 - `src/pages/analysis/AnalysisNewPage.tsx`: Setup/workspace orchestration, range state, staged clips, and save-state transitions.
 - `src/pages/analysis/AnalysisWorkspace.tsx`: focused dark video workspace with contextual range action, lightweight clip metadata, compact clip library, and analysis context.
