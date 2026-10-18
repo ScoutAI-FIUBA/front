@@ -15,8 +15,10 @@ import { addCreatedJobToAnalysisCatalog } from './analysis-job-catalog-store'
 import { useAnalysisJobCatalog } from './use-analysis-job-catalog'
 import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function AnalysisJobNewPage() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
@@ -64,7 +66,7 @@ export function AnalysisJobNewPage() {
     setCreationError(null)
     try {
       const job = await analysisJobService.create(selectedVideo.id, { teamId: selectedVideo.teamId })
-      addCreatedJobToAnalysisCatalog(job)
+      if (!user || !addCreatedJobToAnalysisCatalog(user.id, job)) return
       navigate(analysisJobDetailPath(job))
     } catch (error) {
       if (!isApiAuthenticationError(error)) setCreationError('No pudimos iniciar el análisis. El video sigue disponible para reintentar.')

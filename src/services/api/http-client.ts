@@ -4,7 +4,14 @@ import {
   ApiTimeoutError,
   parseApiError,
 } from './errors.ts'
-import { clearStoredToken, getStoredToken, setStoredToken } from './token.ts'
+import {
+  clearStoredSessionIfCurrent,
+  commitRefreshedSession,
+  getStoredSessionSnapshot,
+  isStoredSessionCurrent,
+  type StoredSessionSnapshot,
+} from './token.ts'
+import { mapApiUser, type ApiUser } from './mappers.ts'
 
 export const API_BASE_URL =
   import.meta.env?.VITE_API_BASE_URL ??
@@ -46,19 +53,32 @@ interface LoginResponse {
   access_token: string
   token_type: string
   expires_in: number
-  user: {
-    id: string
-    email: string
-    role: string
-    email_verified: boolean
-  }
+  user: ApiUser
 }
 
-let refreshPromise: Promise<string | null> | null = null
+export interface RefreshedSession {
+  token: string
+  userId: string
+}
 
-export async function refreshAccessToken(): Promise<string | null> {
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
+interface RefreshInFlight {
+  generation: number
+  promise: Promise<RefreshedSession | null>
+}
+
+let refreshInFlight: RefreshInFlight | null = null
+
+export async function refreshAccessToken(
+  expectedSession: StoredSessionSnapshot = getStoredSessionSnapshot(),
+): Promise<RefreshedSession | null> {
+  if (!isStoredSessionCurrent(expectedSession)) return null
+
+  if (!refreshInFlight || refreshInFlight.generation !== expectedSession.generation) {
+    const inFlight: RefreshInFlight = {
+      generation: expectedSession.generation,
+      promise: Promise.resolve(null),
+    }
+    inFlight.promise = (async () => {
       let res: Response
       try {
         res = await fetchWithTimeout(
@@ -77,7 +97,7 @@ export async function refreshAccessToken(): Promise<string | null> {
       }
 
       if (res.status === 401 || res.status === 403) {
-        clearStoredToken()
+        clearStoredSessionIfCurrent(expectedSession, 'expired')
         return null
       }
       if (!res.ok) {
@@ -85,13 +105,17 @@ export async function refreshAccessToken(): Promise<string | null> {
       }
 
       const data = (await res.json()) as LoginResponse
-      setStoredToken(data.access_token)
-      return data.access_token
+      const user = mapApiUser(data.user)
+      if (!commitRefreshedSession(expectedSession, data.access_token, user.id, user)) {
+        return null
+      }
+      return { token: data.access_token, userId: data.user.id }
     })().finally(() => {
-      refreshPromise = null
+      if (refreshInFlight === inFlight) refreshInFlight = null
     })
+    refreshInFlight = inFlight
   }
-  return refreshPromise
+  return refreshInFlight.promise
 }
 
 export async function apiFetch(
@@ -105,7 +129,8 @@ export async function apiFetch(
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     timeoutMessage,
   } = options
-  const token = auth ? getStoredToken() : null
+  const requestSession = auth ? getStoredSessionSnapshot() : null
+  const token = requestSession?.token ?? null
 
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type') && init?.body) {
@@ -136,10 +161,10 @@ export async function apiFetch(
   }
 
   if (res.status === 401 && auth && skipRefresh) {
-    clearStoredToken()
-  } else if (res.status === 401 && auth && token) {
-    const newToken = await refreshAccessToken()
-    if (newToken) {
+    if (requestSession) clearStoredSessionIfCurrent(requestSession, 'expired')
+  } else if (res.status === 401 && auth && token && requestSession) {
+    const refreshedSession = await refreshAccessToken(requestSession)
+    if (refreshedSession) {
       return apiFetch(path, init, { ...options, skipRefresh: true })
     }
   }
@@ -154,8 +179,8 @@ export async function apiJson<T>(
 ): Promise<T> {
   const res = await apiFetch(path, init, options)
   if (!res.ok) throw new ApiResponseError(await parseApiError(res), res.status)
-  // 202/204 and other empty success bodies must not call res.json().
-  if (res.status === 204 || res.status === 205 || res.status === 202) {
+  // 204/205 are bodyless by contract. A 202 may include an accepted resource.
+  if (res.status === 204 || res.status === 205) {
     return undefined as T
   }
   const text = await res.text()

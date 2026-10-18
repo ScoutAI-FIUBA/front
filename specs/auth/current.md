@@ -71,6 +71,7 @@ Current behavior documentation.
 - Login keeps React hooks in a stable order while auth state restores, and submits the browser form values so password-manager autofill is honored even when React state has not received change events yet.
 - Register calls `authService.register`, then stores user and token in context state.
 - Logout calls `authService.logout`, clears user and token in context state, and navigates to `/login` from `AppShell`.
+- Authenticated identity transitions synchronously invalidate user-scoped catalogue and signed-poster caches before the new user is exposed through context. Reapplying the same `user.id` preserves its current-session cache.
 - `ProtectedRoute` shows an explicit session-restoration state while auth is
   loading and adds neutral delayed-wait copy after eight seconds.
 - A transient restoration failure keeps the original route in place and offers

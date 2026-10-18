@@ -17,16 +17,16 @@ import { loginDestination } from './login-navigation'
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, loginWithGoogle, isAuthenticated, isLoading } = useAuth()
+  const { user, login, loginWithGoogle, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const destination = loginDestination(location.state)
-
   if (isLoading) return <SessionRestoreStatus />
-  if (isAuthenticated) return <Navigate to={destination} replace />
+  if (isAuthenticated && user) {
+    return <Navigate to={loginDestination(location.state, user.id)} replace />
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -42,8 +42,8 @@ export function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login({ email: submittedEmail, password: submittedPassword })
-      navigate(destination, { replace: true })
+      const authenticatedUser = await login({ email: submittedEmail, password: submittedPassword })
+      navigate(loginDestination(location.state, authenticatedUser.id), { replace: true })
     } catch (err) {
       setError(loginErrorMessage(err))
     } finally {
@@ -98,8 +98,8 @@ export function LoginPage() {
               setError('')
               setLoading(true)
               try {
-                await loginWithGoogle(idToken)
-                navigate(destination, { replace: true })
+                const authenticatedUser = await loginWithGoogle(idToken)
+                navigate(loginDestination(location.state, authenticatedUser.id), { replace: true })
               } catch (err) {
                 setError(googleLoginErrorMessage(err))
               } finally {

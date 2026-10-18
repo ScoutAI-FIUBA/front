@@ -8,7 +8,7 @@ export interface AuthResult {
 export interface IAuthService {
   login(credentials: UserCredentials): Promise<AuthResult>
   register(dto: RegisterDto): Promise<AuthResult>
-  logout(): Promise<void>
+  logout(accessToken?: string | null): Promise<void>
   getCurrentUser(token: string): Promise<User | null>
   requestPasswordReset(email: string): Promise<void>
   resetPassword(token: string, password: string): Promise<void>

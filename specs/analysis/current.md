@@ -78,6 +78,7 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - ProcessingJob status language is consistent across discovery surfaces: `QUEUED` is `En cola`, `RUNNING` is `En proceso`, `DONE` is `Completado`, and `FAILED` is `Fallido`.
 - Automatic ProcessingJobs are the primary meaning of Analysis. Legacy `AnalysisSession` records are confined to the secondary `Revisión manual` routes.
 - Because the backend has no global jobs endpoint, the frontend composes teams → team videos → jobs per video with bounded concurrency, partial-failure reporting, and a short in-memory session cache.
+- The in-memory catalogue cache is owned by the authenticated `user.id`. Logout or an identity change invalidates the previous catalogue generation, and late discovery or polling responses from that generation are ignored rather than becoming visible under the next account.
 - The catalogue polls only known `QUEUED` or `RUNNING` jobs through the job detail endpoint. It never repeats the complete discovery graph on each polling interval.
 - Analysis identity is human-first: video title and team are primary; dates, duration, state, and real progress are supporting metadata. UUIDs remain in technical Details.
 - A dedicated backend endpoint for the authenticated user's global analyses remains the correct long-term replacement for this client-side composition.

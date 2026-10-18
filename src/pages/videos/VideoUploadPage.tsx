@@ -17,12 +17,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useAuth } from '@/contexts/AuthContext'
 import { teamService, videoService } from '@/services/registry'
 import type { Team } from '@/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { NEW_MATCH_PATH, videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
 import { upsertVideoInAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
+import { teamsPathForNewMatch } from '@/pages/teams/team-creation-navigation'
 
 type NewMatchStep = 1 | 2 | 3
 
@@ -61,6 +63,7 @@ function fileSizeLabel(size: number): string {
 }
 
 export function VideoUploadPage() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -135,7 +138,7 @@ export function VideoUploadPage() {
     try {
       setIsUploading(true)
       const uploaded = await videoService.upload({ title: title.trim(), teamId, description: description.trim(), file })
-      upsertVideoInAnalysisCatalog(uploaded)
+      if (!user || !upsertVideoInAnalysisCatalog(user.id, uploaded)) return
       toast.success('Partido subido correctamente')
       navigate(videoUploadSuccessPath(searchParams, uploaded))
     } catch (error) {
@@ -241,7 +244,9 @@ export function VideoUploadPage() {
                 <h3 className="scout-display text-3xl font-bold text-[#F4F5F7]">Todavía no tenés equipos</h3>
                 <p className="mt-2 text-sm text-[#A3ABBA]">Creá un equipo para poder asociar y analizar su primer partido.</p>
                 <Button asChild variant="outline" className="mt-5 h-11 rounded-full border-[#3A4254] bg-transparent px-5 text-[#F4F5F7] hover:bg-white/5 hover:text-white">
-                  <Link to="/equipos">Ir a Equipos</Link>
+                  <Link to={location.pathname === NEW_MATCH_PATH ? teamsPathForNewMatch() : '/equipos'}>
+                    Ir a Equipos
+                  </Link>
                 </Button>
               </div>
             ) : null}

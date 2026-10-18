@@ -57,6 +57,7 @@
 - Clip rows use a persisted backend `description` as their title when present. Legacy items without one keep the honest fallback `Clip N · mm:ss–mm:ss`; notes and player associations are not reconstructed.
 - The Video tab uses `presigned_thumbnail_url` from `GET /videos/{id}?team_id=...` as the native video poster when present and keeps the existing no-poster fallback when absent.
 - `GET /videos?team_id=...` does not expose the thumbnail, so the Partidos library progressively requests each visible catalog video's existing detail endpoint after the base catalog renders. A global pool limits detail requests to four at a time, an in-memory cache refreshes signed URLs before their 3600-second expiry, and null or failed posters keep the schematic court without affecting the catalog.
+- Poster and signed-thumbnail caching is scoped to the authenticated `user.id`. Identity changes clear the visible poster state and invalidate queued or in-flight poster responses from the previous account.
 - Existing collection and manual clip routes remain the editing workflow and remain routable.
 
 ## Navigation reuse
@@ -66,6 +67,7 @@
 - Upload keeps the existing `/videos/subir` compatibility route through the same implementation, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
 - A Partido whose material is still `PENDING_UPLOAD` stays on that route and polls the existing video detail boundary at a bounded interval until the real material status becomes `READY` or `FAILED`. It does not invent upload progress or navigate away.
 - Once the material is ready, `Analizar partido` creates the ProcessingJob inline through the existing endpoint and single-flight guard. The returned job becomes `latestJob` and is added to the shared catalogue immediately, so the existing QUEUED/RUNNING polling reveals DONE in the same Reporte. FAILED retry uses the same inline flow. Legacy upload and analysis routes remain available as compatibility entry points.
+- The shared HTTP client reads a JSON representation returned with `202 Accepted`, while continuing to accept an empty `202`. Job creation therefore receives the accepted job immediately and updates the current Partido without requiring a reload; `204` and `205` remain bodyless successes.
 - New analysis uses `/analisis/nuevo` with the real team and video ids.
 - Active report progress remains inline in Partido. A failed job may open its exact legacy `/analisis/jobs/:jobId?team_id=...` route only as a secondary technical-detail action, while recovery reuses `/analisis/nuevo` with the same team and video. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy job route.
 

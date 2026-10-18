@@ -7,68 +7,73 @@ import {
   type AnalysisCatalogSeed,
   type AnalysisJobCatalog,
 } from './analysis-job-catalog'
+import {
+  AnalysisCatalogIdentityChangedError,
+  UserScopedAnalysisCatalogCache,
+  isAnalysisCatalogIdentityChangedError,
+} from './user-scoped-analysis-catalog-cache'
+
+export { AnalysisCatalogIdentityChangedError, isAnalysisCatalogIdentityChangedError }
 
 export const ANALYSIS_CATALOG_CACHE_TTL_MS = 60_000
 
-let cachedCatalog: AnalysisJobCatalog | null = null
-let loadInFlight: Promise<AnalysisJobCatalog> | null = null
+const catalogCache = new UserScopedAnalysisCatalogCache(ANALYSIS_CATALOG_CACHE_TTL_MS)
 
-export function peekAnalysisJobCatalog(): AnalysisJobCatalog | null {
-  return cachedCatalog
+export function setAnalysisJobCatalogIdentity(userId: string | null): void {
+  catalogCache.setIdentity(userId)
 }
 
-export async function loadAnalysisJobCatalog(options: {
+export function peekAnalysisJobCatalog(userId: string): AnalysisJobCatalog | null {
+  return catalogCache.peek(userId)
+}
+
+export async function loadAnalysisJobCatalog(userId: string, options: {
   force?: boolean
   seed?: AnalysisCatalogSeed
 } = {}): Promise<AnalysisJobCatalog> {
-  const cacheIsFresh = cachedCatalog
-    && Date.now() - cachedCatalog.updatedAt < ANALYSIS_CATALOG_CACHE_TTL_MS
-  if (!options.force && cacheIsFresh) return cachedCatalog as AnalysisJobCatalog
-  if (loadInFlight) return loadInFlight
-
-  loadInFlight = composeAnalysisJobCatalog(
-    { teams: teamService, videos: videoService, jobs: analysisJobService },
-    { seed: options.seed },
-  ).then((catalog) => {
-    cachedCatalog = catalog
-    return catalog
-  }).finally(() => {
-    loadInFlight = null
-  })
-
-  return loadInFlight
+  return catalogCache.load(
+    userId,
+    () => composeAnalysisJobCatalog(
+      { teams: teamService, videos: videoService, jobs: analysisJobService },
+      { seed: options.seed },
+    ),
+    { force: options.force },
+  )
 }
 
 export async function refreshCachedActiveAnalysisJobs(
+  userId: string,
   catalog: AnalysisJobCatalog,
 ): Promise<AnalysisJobCatalog> {
-  const refreshed = await refreshActiveCatalogJobs(catalog, analysisJobService)
-  cachedCatalog = refreshed
-  return refreshed
+  return catalogCache.updateFromAsync(
+    userId,
+    () => refreshActiveCatalogJobs(catalog, analysisJobService),
+  )
 }
 
-export function addCreatedJobToAnalysisCatalog(job: ProcessingJob): void {
-  if (!cachedCatalog) return
-  const video = cachedCatalog.videos.find((candidate) => candidate.id === job.videoId)
-  const team = cachedCatalog.teams.find((candidate) => candidate.id === job.teamId)
-  if (!video || !team) return
-
-  cachedCatalog = {
-    ...cachedCatalog,
-    items: [
-      { job, video, team },
-      ...cachedCatalog.items.filter((item) => item.job.id !== job.id),
-    ],
-    updatedAt: Date.now(),
-  }
+export function addCreatedJobToAnalysisCatalog(userId: string, job: ProcessingJob): boolean {
+  return catalogCache.mutate(userId, (catalog) => {
+    const video = catalog.videos.find((candidate) => candidate.id === job.videoId)
+    const team = catalog.teams.find((candidate) => candidate.id === job.teamId)
+    if (!video || !team) return catalog
+    return {
+      ...catalog,
+      items: [
+        { job, video, team },
+        ...catalog.items.filter((item) => item.job.id !== job.id),
+      ],
+      updatedAt: Date.now(),
+    }
+  })
 }
 
-export function upsertVideoInAnalysisCatalog(video: Video): void {
-  if (!cachedCatalog) return
-  cachedCatalog = upsertAnalysisCatalogVideo(cachedCatalog, video)
+export function upsertVideoInAnalysisCatalog(userId: string, video: Video): boolean {
+  return catalogCache.mutate(
+    userId,
+    (catalog) => upsertAnalysisCatalogVideo(catalog, video),
+  )
 }
 
 export function resetAnalysisJobCatalogForTests(): void {
-  cachedCatalog = null
-  loadInFlight = null
+  catalogCache.reset()
 }

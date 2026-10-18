@@ -2,7 +2,7 @@ import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { IAuthService, AuthResult } from '../contracts/auth.service'
 import type { RegisterDto, User } from '@/types'
-import { clearStoredToken, getStoredToken, setStoredToken } from '../api/token'
+import { getStoredToken } from '../api/token'
 
 function toSafeUser(user: User & { password: string }): User {
   return {
@@ -17,7 +17,6 @@ function toSafeUser(user: User & { password: string }): User {
 
 function issue(user: User & { password: string }): AuthResult {
   const token = `mock-token-${user.id}`
-  setStoredToken(token)
   return { user: toSafeUser(user), token }
 }
 
@@ -58,7 +57,6 @@ export const mockAuthService: IAuthService = {
 
   async logout(): Promise<void> {
     await simulateNetwork(200)
-    clearStoredToken()
   },
 
   async getCurrentUser(token: string): Promise<User | null> {

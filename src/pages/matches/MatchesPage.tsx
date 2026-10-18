@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import { newMatchPath } from '@/pages/videos/video-upload-navigation'
 import { getVideoByIdForTeam } from '@/services/registry'
@@ -143,6 +144,8 @@ function MatchesLoading() {
 }
 
 export function MatchesPage() {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const { catalog, loadState, isRefreshing, isPollingDisconnected, refresh } =
     useAnalysisJobCatalog()
   const [filter, setFilter] = useState<MatchLibraryFilter>('all')
@@ -156,11 +159,16 @@ export function MatchesPage() {
     catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
 
   useEffect(() => {
+    setPosterUrls({})
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) return
     let active = true
     const refreshTimers: number[] = []
 
     const schedulePosterRefresh = (videoId: string) => {
-      const expiresAt = matchPosterCacheExpiry(videoId)
+      const expiresAt = matchPosterCacheExpiry(userId, videoId)
       if (!expiresAt) return
       refreshTimers.push(window.setTimeout(() => {
         if (!active) return
@@ -175,7 +183,7 @@ export function MatchesPage() {
     }
 
     for (const { video } of items) {
-      const cached = cachedMatchPoster(video.id)
+      const cached = cachedMatchPoster(userId, video.id)
       if (cached) {
         setPosterUrls((current) => (
           current[video.id] === cached ? current : { ...current, [video.id]: cached }
@@ -188,7 +196,7 @@ export function MatchesPage() {
         continue
       }
 
-      void requestMatchPoster(video, getVideoByIdForTeam).then((posterUrl) => {
+      void requestMatchPoster(userId, video, getVideoByIdForTeam).then((posterUrl) => {
         if (!active) return
         if (posterUrl) {
           setPosterUrls((current) => (
@@ -203,7 +211,7 @@ export function MatchesPage() {
       active = false
       refreshTimers.forEach((timer) => window.clearTimeout(timer))
     }
-  }, [items, posterCacheVersion])
+  }, [items, posterCacheVersion, userId])
 
   return (
     <div className="pb-16 pt-4 sm:pt-8">

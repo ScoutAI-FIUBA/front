@@ -11,17 +11,30 @@ import {
   ApiResponseError,
   ApiTimeoutError,
 } from '../src/services/api/errors.ts'
-import { apiFetch, DEFAULT_REQUEST_TIMEOUT_MS } from '../src/services/api/http-client.ts'
+import {
+  apiFetch,
+  apiJson,
+  DEFAULT_REQUEST_TIMEOUT_MS,
+  refreshAccessToken,
+} from '../src/services/api/http-client.ts'
 import {
   INVALID_CREDENTIALS_MESSAGE,
   LOGIN_NETWORK_MESSAGE,
   LOGIN_SERVER_MESSAGE,
   loginErrorMessage,
 } from '../src/pages/auth/login-errors.ts'
-import { loginDestination } from '../src/pages/auth/login-navigation.ts'
 import {
+  createLoginNavigationState,
+  loginDestination,
+} from '../src/pages/auth/login-navigation.ts'
+import {
+  getStoredSessionSnapshot,
   getStoredToken,
+  getStoredUserId,
+  invalidateStoredSession,
   setStoredToken,
+  startStoredSessionIfCurrent,
+  subscribeToStoredSession,
   subscribeToStoredToken,
 } from '../src/services/api/token.ts'
 
@@ -80,18 +93,29 @@ function restoreBrowserGlobals(): void {
   })
 }
 
-function loginResponse(accessToken = 'access-new'): Response {
+function loginResponse(accessToken = 'access-new', userId = 'user-1'): Response {
   return Response.json({
     access_token: accessToken,
     token_type: 'Bearer',
     expires_in: 900,
     user: {
-      id: 'user-1',
+      id: userId,
       email: 'analyst@example.com',
       role: 'analyst',
       email_verified: true,
     },
   })
+}
+
+function deferred<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+} {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((next) => {
+    resolve = next
+  })
+  return { promise, resolve }
 }
 
 test('login may exceed the global 20-second timeout and still finish inside 60 seconds', async (t) => {
@@ -178,12 +202,56 @@ test('password forgot accepts empty 202 bodies without parsing JSON', async (t) 
   await assert.doesNotReject(apiAuthService.requestPasswordReset('analyst@example.com'))
 })
 
+test('apiJson parses a JSON representation returned with 202 Accepted', async (t) => {
+  t.after(restoreBrowserGlobals)
+  const payload = { job: { id: 'job-accepted', status: 'QUEUED' } }
+  globalThis.fetch = (async () => Response.json(payload, { status: 202 })) as typeof fetch
+
+  const result = await apiJson<typeof payload>('/accepted-job', { method: 'POST' }, { auth: false })
+
+  assert.deepEqual(result, payload)
+})
+
+test('apiJson keeps empty 202, 204 and 205 responses bodyless', async (t) => {
+  t.after(restoreBrowserGlobals)
+  const statuses = [202, 204, 205]
+  let index = 0
+  globalThis.fetch = (async () => {
+    const status = statuses[index]
+    index += 1
+    return new Response(null, { status })
+  }) as typeof fetch
+
+  assert.equal(await apiJson<undefined>('/accepted-empty', undefined, { auth: false }), undefined)
+  assert.equal(await apiJson<undefined>('/no-content', undefined, { auth: false }), undefined)
+  assert.equal(await apiJson<undefined>('/reset-content', undefined, { auth: false }), undefined)
+})
+
 test('password reset accepts empty 204 bodies without parsing JSON', async (t) => {
   installBrowserStorage()
   t.after(restoreBrowserGlobals)
   globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch
 
   await assert.doesNotReject(apiAuthService.resetPassword('token', 'newsecret1'))
+})
+
+test('logout uses the invalidated session token without triggering refresh', async (t) => {
+  t.after(restoreBrowserGlobals)
+  const requests: Array<{ authorization: string | null; method: string | undefined }> = []
+  globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+    requests.push({
+      authorization: new Headers(init?.headers).get('Authorization'),
+      method: init?.method,
+    })
+    return new Response(null, { status: 204 })
+  }) as typeof fetch
+
+  await apiAuthService.logout('access-being-logged-out')
+
+  assert.deepEqual(requests, [{
+    authorization: 'Bearer access-being-logged-out',
+    method: 'POST',
+  }])
 })
 
 test('protected 401 refreshes once and retries with the new access token', async (t) => {
@@ -318,6 +386,141 @@ test('transient refresh failures preserve the expired token instead of forcing l
   assert.equal(getStoredToken(), 'access-expired')
 })
 
+test('a refresh response from user A cannot overwrite a newer user B session', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const emptySession = getStoredSessionSnapshot()
+  assert.equal(startStoredSessionIfCurrent(emptySession, 'access-a', 'user-a'), true)
+  const sessionA = getStoredSessionSnapshot()
+  const responseA = deferred<Response>()
+
+  globalThis.fetch = (() => responseA.promise) as typeof fetch
+  const refreshA = refreshAccessToken(sessionA)
+
+  assert.equal(startStoredSessionIfCurrent(sessionA, 'access-b', 'user-b'), true)
+  responseA.resolve(loginResponse('access-a-refreshed', 'user-a'))
+
+  assert.equal(await refreshA, null)
+  assert.equal(getStoredToken(), 'access-b')
+  assert.equal(getStoredUserId(), 'user-b')
+})
+
+test('legacy access tokens recover their subject before the first refresh', (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const payload = btoa(JSON.stringify({ sub: 'legacy-user' }))
+
+  setStoredToken(`header.${payload}.signature`)
+
+  assert.equal(getStoredSessionSnapshot().userId, 'legacy-user')
+})
+
+test('refreshPromise is scoped by session generation', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const emptySession = getStoredSessionSnapshot()
+  assert.equal(startStoredSessionIfCurrent(emptySession, 'access-a', 'user-a'), true)
+  const sessionA = getStoredSessionSnapshot()
+  const responseA = deferred<Response>()
+  const responseB = deferred<Response>()
+  let refreshRequests = 0
+
+  globalThis.fetch = (() => {
+    refreshRequests += 1
+    return refreshRequests === 1 ? responseA.promise : responseB.promise
+  }) as typeof fetch
+
+  const refreshA = refreshAccessToken(sessionA)
+  assert.equal(startStoredSessionIfCurrent(sessionA, 'access-b', 'user-b'), true)
+  const sessionB = getStoredSessionSnapshot()
+  const refreshB = refreshAccessToken(sessionB)
+
+  responseB.resolve(loginResponse('access-b-refreshed', 'user-b'))
+  assert.deepEqual(await refreshB, { token: 'access-b-refreshed', userId: 'user-b' })
+  responseA.resolve(loginResponse('access-a-refreshed', 'user-a'))
+  assert.equal(await refreshA, null)
+
+  assert.equal(refreshRequests, 2)
+  assert.equal(getStoredToken(), 'access-b-refreshed')
+  assert.equal(getStoredUserId(), 'user-b')
+})
+
+test('concurrent requests in one session share a single refresh', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const emptySession = getStoredSessionSnapshot()
+  assert.equal(startStoredSessionIfCurrent(emptySession, 'access-a', 'user-a'), true)
+  const sessionA = getStoredSessionSnapshot()
+  const refreshResponse = deferred<Response>()
+  let refreshRequests = 0
+
+  globalThis.fetch = (() => {
+    refreshRequests += 1
+    return refreshResponse.promise
+  }) as typeof fetch
+
+  const first = refreshAccessToken(sessionA)
+  const second = refreshAccessToken(sessionA)
+  refreshResponse.resolve(loginResponse('access-a-refreshed', 'user-a'))
+
+  assert.deepEqual(await first, { token: 'access-a-refreshed', userId: 'user-a' })
+  assert.deepEqual(await second, { token: 'access-a-refreshed', userId: 'user-a' })
+  assert.equal(refreshRequests, 1)
+})
+
+test('a refresh identity mismatch between tabs expires the local session', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const emptySession = getStoredSessionSnapshot()
+  assert.equal(startStoredSessionIfCurrent(emptySession, 'access-a', 'user-a'), true)
+  const sessionA = getStoredSessionSnapshot()
+  let expiration: { previousUserId: string | null; reason: string } | null = null
+  const unsubscribe = subscribeToStoredSession((change) => {
+    if (!change.token) expiration = change
+  })
+  t.after(unsubscribe)
+  globalThis.fetch = (async () => loginResponse('access-b', 'user-b')) as typeof fetch
+
+  assert.equal(await refreshAccessToken(sessionA), null)
+  assert.equal(getStoredToken(), null)
+  assert.equal(getStoredUserId(), null)
+  assert.equal(expiration?.previousUserId, 'user-a')
+  assert.equal(expiration?.reason, 'expired')
+})
+
+test('logout generation prevents an older pending operation from restoring credentials', (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const operationSession = getStoredSessionSnapshot()
+
+  invalidateStoredSession('logout')
+
+  assert.equal(
+    startStoredSessionIfCurrent(operationSession, 'late-access-a', 'user-a'),
+    false,
+  )
+  assert.equal(getStoredToken(), null)
+  assert.equal(getStoredUserId(), null)
+})
+
+test('a late 401 from user A cannot clear user B credentials', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  const emptySession = getStoredSessionSnapshot()
+  assert.equal(startStoredSessionIfCurrent(emptySession, 'access-a', 'user-a'), true)
+  const sessionA = getStoredSessionSnapshot()
+  const lateResponse = deferred<Response>()
+  globalThis.fetch = (() => lateResponse.promise) as typeof fetch
+
+  const requestA = apiFetch('/protected', undefined, { skipRefresh: true })
+  assert.equal(startStoredSessionIfCurrent(sessionA, 'access-b', 'user-b'), true)
+  lateResponse.resolve(new Response(null, { status: 401 }))
+
+  assert.equal((await requestA).status, 401)
+  assert.equal(getStoredToken(), 'access-b')
+  assert.equal(getStoredUserId(), 'user-b')
+})
+
 test('login errors use product copy without exposing backend messages', () => {
   assert.equal(loginErrorMessage(new ApiResponseError('Invalid credentials', 401)), INVALID_CREDENTIALS_MESSAGE)
   assert.equal(loginErrorMessage(new ApiTimeoutError(LOGIN_TIMEOUT_MESSAGE)), LOGIN_TIMEOUT_MESSAGE)
@@ -326,25 +529,62 @@ test('login errors use product copy without exposing backend messages', () => {
   assert.doesNotMatch(loginErrorMessage(new ApiResponseError('Invalid credentials', 401)), /Invalid credentials/)
 })
 
-test('login destination preserves an internal deep link and rejects unsafe targets', () => {
-  assert.equal(loginDestination({ from: { pathname: '/analisis/jobs/job-1', search: '?team_id=team-1', hash: '#shots' } }), '/analisis/jobs/job-1?team_id=team-1#shots')
-  assert.equal(loginDestination({ from: { pathname: '/', search: '', hash: '' } }), '/')
-  assert.equal(loginDestination({ from: { pathname: '/dashboard', search: '', hash: '' } }), '/dashboard')
-  assert.equal(loginDestination({ from: { pathname: '/login', search: '', hash: '' } }), '/')
-  assert.equal(loginDestination({ from: { pathname: '//external.example/path' } }), '/')
-  assert.equal(loginDestination(undefined), '/')
+test('login destination preserves a legitimate first-session deep link', () => {
+  const state = createLoginNavigationState(
+    { pathname: '/analisis/jobs/job-1', search: '?team_id=team-1', hash: '#shots' },
+    null,
+  )
+
+  assert.equal(state.reason, 'auth-required')
+  assert.equal(loginDestination(state, 'user-new'), '/analisis/jobs/job-1?team_id=team-1#shots')
 })
 
-test('AuthContext subscribes to token invalidation and clears both user and token', () => {
+test('expired-session destinations are restored only for the same identity', () => {
+  const state = createLoginNavigationState(
+    { pathname: '/partidos/match-from-a', search: '', hash: '' },
+    'user-a',
+  )
+
+  assert.equal(state.reason, 'session-expired')
+  assert.equal(loginDestination(state, 'user-a'), '/partidos/match-from-a')
+  assert.equal(loginDestination(state, 'user-b'), '/')
+})
+
+test('login destination rejects legacy, login and external targets', () => {
+  assert.equal(loginDestination({ from: { pathname: '/dashboard' } }, 'user-1'), '/')
+  assert.equal(loginDestination({ reason: 'auth-required', from: { pathname: '/login' } }, 'user-1'), '/')
+  assert.equal(loginDestination({ reason: 'auth-required', from: { pathname: '//external.example/path' } }, 'user-1'), '/')
+  assert.equal(loginDestination(undefined, 'user-1'), '/')
+})
+
+test('password and Google login resolve pending navigation with the returned identity', () => {
+  const source = readFileSync(
+    new URL('../src/pages/auth/LoginPage.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /const authenticatedUser = await login\(/)
+  assert.match(source, /const authenticatedUser = await loginWithGoogle\(/)
+  assert.equal(
+    source.match(/loginDestination\(location\.state, authenticatedUser\.id\)/g)?.length,
+    2,
+  )
+})
+
+test('AuthContext subscribes to versioned session changes and keeps private caches identity-scoped', () => {
   const source = readFileSync(
     new URL('../src/contexts/AuthContext.tsx', import.meta.url),
     'utf8',
   )
 
-  assert.match(source, /subscribeToStoredToken\(\(nextToken\) =>/)
-  assert.match(source, /setToken\(nextToken\)/)
-  assert.match(source, /if \(!nextToken\) setUser\(null\)/)
+  assert.match(source, /subscribeToStoredSession\(\(change\) =>/)
+  assert.match(source, /setToken\(change\.token\)/)
+  assert.match(source, /if \(!change\.token \|\| !change\.userId\)/)
+  assert.match(source, /setAnalysisJobCatalogIdentity\(userId\)/)
+  assert.match(source, /setMatchPosterCacheIdentity\(userId\)/)
   assert.match(source, /authService\.getCurrentUser\(getStoredToken\(\) \?\? ''\)/)
+  assert.match(source, /startStoredSessionIfCurrent/)
+  assert.match(source, /invalidateStoredSession\('logout'\)/)
   assert.match(source, /setSessionRestoreError\(true\)/)
 })
 
@@ -358,7 +598,9 @@ test('protected auth loading explains restoration and preserves the original rou
     'utf8',
   )
 
-  assert.match(protectedRoute, /state=\{\{ from: location \}\}/)
+  assert.match(protectedRoute, /createLoginNavigationState/)
+  assert.match(protectedRoute, /sessionEndReason === 'expired' \? lastAuthenticatedUserId : null/)
+  assert.match(protectedRoute, /sessionEndReason === 'logout'/)
   assert.match(protectedRoute, /No pudimos verificar tu sesión/)
   assert.match(loading, /AUTH_SLOW_RESTORE_DELAY_MS = 8_000/)
   assert.match(loading, /Restaurando tu sesión/)
