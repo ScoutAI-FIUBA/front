@@ -202,7 +202,7 @@ export function AnalysisJobDetailPage() {
           <Link to={`/videos?team_id=${encodeURIComponent(job.teamId)}`} className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-primary">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Volver a Videos
           </Link>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Análisis de partido</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Análisis de video</p>
           <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span>{teamLabel}</span>

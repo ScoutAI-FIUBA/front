@@ -41,14 +41,18 @@ test('clip order follows backend position', () => {
   assert.deepEqual(orderClipItems([clip('third', 3), clip('first', 1), clip('second', 2)]).map(({ id }) => id), ['first', 'second', 'third'])
 })
 
-test('collection index stays editorial and returns to the match clips context', () => {
+test('collection index stays editorial and returns to the video clips context', () => {
   const source = readFileSync(new URL('../src/pages/videos/VideoCollectionsPage.tsx', import.meta.url), 'utf8')
-  assert.match(source, /matchDetailPath\(videoId, 'clips'\)/)
+  assert.match(source, /videoDetailPath\(videoId, 'clips'\)/)
   assert.match(source, /loadCollections/)
   assert.match(source, /loadVideo/)
+  assert.match(source, /orderedCollections\.map/)
+  assert.match(source, /Crear primera colección/)
+  assert.match(source, /clipCollectionService\.create/)
   assert.match(source, /divide-y divide-\[#252B37\]/)
   assert.doesNotMatch(source, /md:grid-cols-2 xl:grid-cols-3/)
   assert.doesNotMatch(source, /getDetail\(videoId, collection\.id\)/)
+  assert.doesNotMatch(source, /colecci[oó]n (?:por defecto|autom[aá]tica)/i)
 })
 
 test('collection detail isolates the player, preserves range capture, and marks active clips', () => {

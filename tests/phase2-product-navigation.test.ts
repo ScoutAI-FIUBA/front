@@ -4,7 +4,7 @@ import test from 'node:test'
 
 const readSource = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 
-test('Inicio uses the real catalogue and the shared Partido model without legacy entities', () => {
+test('Inicio uses the real catalogue and the shared Video model without legacy entities', () => {
   const analysis = readSource('../src/pages/analysis/AnalysisPage.tsx')
   const home = readSource('../src/pages/dashboard/DashboardPage.tsx')
   const row = readSource('../src/pages/analysis/AnalysisCatalogRow.tsx')
@@ -31,50 +31,52 @@ test('legacy analysis and manual routes stay available outside primary navigatio
   assert.match(app, /path="\/analisis\/:id" element=\{<AnalysisDetailPage/)
   assert.doesNotMatch(shell, /label: 'Revisión manual'/)
   assert.doesNotMatch(shell, /label: 'Análisis'/)
-  assert.doesNotMatch(shell, /label: 'Videos'/)
+  assert.match(shell, /label: 'Videos'/)
 })
 
-test('Partidos is the real primary library over videos and ProcessingJobs', () => {
+test('Videos is the primary library over videos and ProcessingJobs', () => {
   const app = readSource('../src/App.tsx')
   const shell = readSource('../src/components/layout/AppShell.tsx')
   const matches = readSource('../src/pages/matches/MatchesPage.tsx')
 
-  assert.match(app, /path="\/partidos" element=\{<MatchesPage/)
-  assert.match(shell, /to: '\/partidos', label: 'Partidos'/)
+  assert.match(app, /path="\/videos" element=\{<MatchesPage/)
+  assert.match(app, /path="\/partidos" element=\{<LegacyVideoRouteRedirect destination="library"/)
+  assert.match(shell, /to: '\/videos', label: 'Videos'/)
   assert.match(matches, /useAnalysisJobCatalog/)
   assert.match(matches, /buildMatchLibrary/)
   assert.doesNotMatch(matches, /matchService|Herramienta experimental|datos de demostración/)
 })
 
 test('expired auth uses a neutral redirect state instead of a connection alert', () => {
-  const videos = readSource('../src/pages/videos/VideosPage.tsx')
+  const videos = readSource('../src/pages/matches/MatchesPage.tsx')
   const hook = readSource('../src/pages/analysis/use-analysis-job-catalog.ts')
   const history = readSource('../src/pages/videos/VideoAnalysisJobs.tsx')
 
   assert.match(hook, /isApiAuthenticationError/)
   assert.match(videos, /loadState === 'session-expired'/)
-  assert.match(videos, /Tu sesión terminó\. Redirigiendo al ingreso/)
+  assert.match(videos, /Tu sesión terminó/)
+  assert.match(videos, /Redirigiendo al ingreso/)
   assert.match(history, /session-expired/)
-  assert.match(videos, /No hubo respuesta de los servicios\. Revisá la conexión/)
+  assert.match(videos, /No pudimos cargar tus videos/)
 })
 
-test('direct Video playback remains available in the legacy material library', () => {
-  const videos = readSource('../src/pages/videos/VideosPage.tsx')
-  assert.match(videos, /canOpenVideoPlayback\(video\)/)
-  assert.match(videos, />Ver video</)
-  assert.match(videos, /videoPrimaryAnalysisAction\(video, latestJob\)/)
-  assert.match(videos, /analysisJobDetailPath\(analysisAction\.job\)/)
-  assert.match(videos, /`\/analisis\/nuevo\?team_id=/)
+test('direct playback, filters, clips and history remain in the canonical Video library', () => {
+  const videos = readSource('../src/pages/matches/MatchesPage.tsx')
+  assert.match(videos, /canOpenVideoPlayback\(item\.video\)/)
+  assert.match(videos, /VideoPlaybackDialog/)
+  assert.match(videos, /VideoAnalysisJobs/)
+  assert.match(videos, /filterVideoLibrary/)
+  assert.match(videos, /\/colecciones/)
 })
 
-test('the primary shell exposes only Inicio, Partidos, Equipos and Jugadores', () => {
+test('the primary shell exposes only Inicio, Videos, Equipos and Jugadores', () => {
   const shell = readSource('../src/components/layout/AppShell.tsx')
 
   assert.match(shell, /to: '\/', label: 'Inicio'/)
-  assert.match(shell, /to: '\/partidos', label: 'Partidos'/)
+  assert.match(shell, /to: '\/videos', label: 'Videos'/)
   assert.match(shell, /to: '\/equipos', label: 'Equipos'/)
   assert.match(shell, /to: '\/jugadores', label: 'Jugadores'/)
-  assert.doesNotMatch(shell, /to: '\/videos'/)
+  assert.doesNotMatch(shell, /to: '\/partidos'/)
   assert.doesNotMatch(shell, /to: '\/analisis'/)
   assert.doesNotMatch(shell, /to: '\/revision-manual'/)
 })
@@ -87,18 +89,18 @@ test('Inicio is canonical at root and dashboard remains a redirect alias', () =>
   assert.match(app, /<Route index element=\{<DashboardPage \/>\}/)
   assert.match(app, /path="\/dashboard" element=\{<Navigate to="\/" replace \/>\}/)
   assert.match(shell, /to="\/"/)
-  assert.match(home, /newMatchPath\(\)/)
-  assert.match(home, /to="\/partidos"/)
-  assert.doesNotMatch(home, /\/analisis|\/videos\/subir|\/videos"/)
+  assert.match(home, /videoUploadPath\(\)/)
+  assert.match(home, /to="\/videos"/)
+  assert.doesNotMatch(home, /\/analisis|\/partidos/)
 })
 
 test('Inicio keeps loading, error, partial and empty states product-facing', () => {
   const home = readSource('../src/pages/dashboard/DashboardPage.tsx')
 
   assert.match(home, /Cargando Inicio/)
-  assert.match(home, /No pudimos cargar tus partidos/)
+  assert.match(home, /No pudimos cargar tus videos/)
   assert.match(home, /Algunos estados no se pudieron verificar/)
-  assert.match(home, /Tu primer partido empieza acá/)
+  assert.match(home, /Tu primer video empieza acá/)
   assert.match(home, /AnalysisPollingNotice/)
   assert.match(home, /requestMatchPoster\(userId, video, getVideoByIdForTeam\)/)
   assert.match(home, /function CourtFallback/)

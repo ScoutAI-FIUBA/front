@@ -196,7 +196,7 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
               aria-valuetext={`Muestra ${sampleIndex + 1} de ${positions.length}`}
             />
           </label>
-          <p className="text-xs text-muted-foreground">Avance por secuencia de muestras. No representa tiempo de partido ni está sincronizado con el video.</p>
+          <p className="text-xs text-muted-foreground">Avance por secuencia de muestras. No representa tiempo real ni está sincronizado con el video.</p>
         </div>
       )}
     </div>

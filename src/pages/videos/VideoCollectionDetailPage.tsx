@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/utils'
-import { matchDetailPath } from '@/pages/matches/match-detail'
+import { videoDetailPath } from '@/pages/matches/match-detail'
 import { clipCollectionService, videoService } from '@/services/registry'
 import type { ClipCollectionDetail, ClipCollectionItem, Video } from '@/types'
 import { clipRange, formatClipSeconds, orderClipItems } from './clip-collections'
@@ -80,7 +80,7 @@ export function VideoCollectionDetailPage() {
       const videoData = await videoService.getById(videoId)
       setVideo(videoData)
       if (!videoData) {
-        setVideoError('No encontramos el video original de este partido.')
+        setVideoError('No encontramos el video original.')
         setPlayerLoading(false)
       } else if (!videoData.storageUrl) {
         setPlayerError('El archivo de video no está disponible.')
@@ -259,8 +259,8 @@ export function VideoCollectionDetailPage() {
     <div className="space-y-6 pb-8">
       <header className="border-b border-[#252B37] pb-6">
         <div className="flex flex-wrap items-center gap-2 text-sm text-[#8E97A7]">
-          <Link className="inline-flex items-center gap-2 transition-colors hover:text-[#F4F5F7]" to={matchDetailPath(videoId, 'clips')}>
-            <ArrowLeft className="h-4 w-4" /> Partido
+          <Link className="inline-flex items-center gap-2 transition-colors hover:text-[#F4F5F7]" to={videoDetailPath(videoId, 'clips')}>
+            <ArrowLeft className="h-4 w-4" /> Video
           </Link>
           <span aria-hidden="true">/</span>
           <Link className="transition-colors hover:text-[#F4F5F7]" to={`/videos/${videoId}/colecciones`}>Clips</Link>
@@ -272,7 +272,7 @@ export function VideoCollectionDetailPage() {
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#FF6A1F]">Colección · {orderedItems.length} {orderedItems.length === 1 ? 'clip' : 'clips'}</p>
             <h1 className="scout-display mt-2 truncate text-[clamp(2.7rem,6vw,4.4rem)] font-extrabold leading-[0.92] text-[#F4F5F7]">{detail.collection.name}</h1>
             <p className="mt-2 max-w-3xl text-sm text-[#A8B0BF]">
-              {detail.collection.description || video?.title || 'Revisión de clips del partido'}
+              {detail.collection.description || video?.title || 'Revisión de clips del video'}
             </p>
           </div>
           {video?.title ? <p className="max-w-xs truncate text-right text-xs text-[#737D8E]">Video · {video.title}</p> : null}
@@ -284,7 +284,7 @@ export function VideoCollectionDetailPage() {
           <div className="flex items-center justify-between border-b border-[#252B37] px-4 py-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#737D8E]">Reproductor</p>
-              <h2 id="review-player-title" className="mt-0.5 truncate text-sm font-semibold text-[#D9DCE2]">{video?.title || 'Video del partido'}</h2>
+              <h2 id="review-player-title" className="mt-0.5 truncate text-sm font-semibold text-[#D9DCE2]">{video?.title || 'Video original'}</h2>
             </div>
             {playingItemId ? <span className="flex items-center gap-2 text-xs font-semibold text-[#FF9A68]"><span className="h-1.5 w-1.5 rounded-full bg-[#FF6A1F]" /> Reproduciendo clip</span> : null}
           </div>
@@ -364,7 +364,7 @@ export function VideoCollectionDetailPage() {
               </DialogTrigger>
               <DialogContent className="scout-product-theme min-h-0 max-w-lg border-[#303744] bg-[#151922] text-foreground">
                 <DialogHeader>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#FF6A1F]">{video?.title || 'Video del partido'}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#FF6A1F]">{video?.title || 'Video original'}</p>
                   <DialogTitle className="scout-display text-2xl font-bold text-[#F4F5F7]">Agregar clip</DialogTitle>
                   <DialogDescription>
                     Capturá un rango de hasta 30 segundos. El inicio se toma del punto actual del reproductor.

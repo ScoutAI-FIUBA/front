@@ -249,7 +249,7 @@ test('maps playback progress to sample order without inventing time', () => {
   assert.match(playbackSource, /Reiniciar/)
   assert.match(playbackSource, /type="range"/)
   assert.match(playbackSource, /secuencia de muestras/)
-  assert.match(playbackSource, /No representa tiempo de partido ni está sincronizado con el video/)
+  assert.match(playbackSource, /No representa tiempo real ni está sincronizado con el video/)
   assert.doesNotMatch(playbackSource, /timestampSeconds|onSeekToVideo|frameIndex/)
 })
 
@@ -347,7 +347,7 @@ test('R3-B2 gives Partido Movement a flat editorial presentation without changin
   assert.match(detailSource, /Muestras/)
   assert.match(detailSource, /Posición promedio/)
   assert.match(detailSource, /presentation="match-report"/)
-  assert.match(playbackSource, /No representa tiempo de partido ni está sincronizado con el video/)
+  assert.match(playbackSource, /No representa tiempo real ni está sincronizado con el video/)
   assert.doesNotMatch(detailSource, /Ver en video|onSeekToVideo/)
   assert.match(workspaceSource, /AnalysisJobCourtPositionsView[^\n]+presentation=\{presentation\}/)
   assert.match(workspaceSource, /activeSection === 'movement' \|\| activeSection === 'similar'/)

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   createAnalysisJobShotChartService,
@@ -15,7 +16,8 @@ import {
   shotChartPointToPercent,
   shotChartResultLabel,
 } from '../src/components/analysis/shot-chart-court.ts'
-import type { ShotChartResult } from '../src/types/index.ts'
+import { basketballCourtLineGeometry } from '../src/components/analysis/basketball-court-lines.ts'
+import type { AnalysisJobShotChartCourt, ShotChartResult } from '../src/types/index.ts'
 
 function apiShot(
   result: ShotChartResult,
@@ -165,6 +167,55 @@ test('maps metre coordinates and transforms them using court dimensions', async 
     shot && shotChartPointToPercent(chart.court, shot),
     { leftPercent: 50, topPercent: 50 },
   )
+})
+
+test('draws the backend FIBA three-point geometry in the same metre coordinate frame', () => {
+  const geometry = basketballCourtLineGeometry({
+    lengthM: 28,
+    widthM: 15,
+    hoopInsetM: 1.575,
+    threePointRadiusM: 6.75,
+    cornerThreeLateralM: 6.6,
+  })
+
+  assert.equal(geometry.centreY, 7.5)
+  assert.ok(Math.abs(geometry.topCornerY - 0.9) < 1e-10)
+  assert.ok(Math.abs(geometry.bottomCornerY - 14.1) < 1e-10)
+  assert.ok(Math.abs(geometry.leftArcX - 2.990097169808489) < 1e-10)
+  assert.ok(Math.abs(geometry.rightArcX - 25.00990283019151) < 1e-10)
+  assert.equal(geometry.threePointRadiusM, 6.75)
+})
+
+test('keeps scaled shot markers aligned with the court metre view box', () => {
+  const court: AnalysisJobShotChartCourt = {
+    lengthM: 28,
+    widthM: 15,
+    hoopInsetM: 1.575,
+    hoops: {
+      home: { xM: 1.575, yM: 7.5 },
+      away: { xM: 26.425, yM: 7.5 },
+    },
+    threePointRadiusM: 6.75,
+    cornerThreeLateralM: 6.6,
+  }
+
+  const point = shotChartPointToPercent(court, { xM: 1.575, yM: 0.9 })
+
+  assert.ok(point)
+  assert.ok(Math.abs(point.leftPercent - 5.625) < 1e-10)
+  assert.ok(Math.abs(point.topPercent - 6) < 1e-10)
+})
+
+test('keeps the shot court responsive without changing its metre coordinate frame', () => {
+  const source = readFileSync(
+    new URL('../src/components/analysis/ShotChartCourt.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /style=\{\{ aspectRatio: `\$\{court\.lengthM\} \/ \$\{court\.widthM\}` \}\}/)
+  assert.match(source, /viewBox=\{`0 0 \$\{court\.lengthM\} \$\{court\.widthM\}`\}/)
+  assert.match(source, /className="absolute inset-0 h-full w-full"/)
+  assert.doesNotMatch(source, /min-w-\[/)
 })
 
 test('preserves linked and unlinked player identity exactly as returned', async () => {

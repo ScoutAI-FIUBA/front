@@ -1,14 +1,17 @@
 # Videos Current Spec
 
+> Current override (2026-10-18): `/videos` now uses the existing visual card library previously published at `/partidos`, augmented with the team/material/analysis filters, direct playback, clips, and per-video job history documented below. `/videos/:videoId` is canonical; visible `Reporte` language is now `Análisis IA` while the `tab=reporte` query value remains stable. Full acceptance criteria are in `specs/video-reorganization/current.md`.
+
 ## Status
 
 ScoutAI v2 Phase 2 material library.
 
 ## Routes
 
-- `/videos`: global/team-filtered video library.
-- `/partidos/nuevo`: canonical product entry for creating a Partido from an uploaded file.
-- `/videos/subir`: compatibility entry backed by the same upload implementation.
+- `/videos`: canonical global/team-filtered video library.
+- `/videos/subir`: canonical product entry for uploading a video.
+- `/videos/:videoId`: canonical video detail.
+- `/partidos`, `/partidos/nuevo`, and `/partidos/:videoId`: temporary compatibility redirects.
 - `/videos/:videoId/colecciones`: preserved clips/collections route.
 
 ## Current Behavior
@@ -34,10 +37,10 @@ ScoutAI v2 Phase 2 material library.
 
 ## Upload Context
 
-- The canonical desktop experience is a three-step `Nuevo partido` flow: existing team selection, match file selection, and confirmation. It changes presentation and navigation language without changing the upload payload or starting analysis automatically.
+- The canonical desktop experience is a three-step `Nuevo video` flow: existing team selection, video file selection, and confirmation. It changes presentation and navigation language without changing the upload payload or starting analysis automatically.
 - `team_id` preselects a valid team.
 - `return_to` is allow-listed to `/videos`, `/analisis/nuevo`, or `/partidos`; external or unsupported targets are rejected.
-- Upload success updates the shared catalogue with the returned video and opens `/partidos/:videoId?tab=reporte`; contextual return paths remain available for cancel/back behavior and legacy entry compatibility.
+- Upload success updates the shared catalogue with the returned video and opens `/videos/:videoId?tab=reporte`; contextual return paths remain available for cancel/back behavior and legacy entry compatibility.
 - Drag-and-drop has real drag/drop handlers and accepts one video file; picker and drop share the same validation.
 - Submission is single-flight and controls are disabled while the upload is pending.
 - Team load errors retry inline through `teamService.list()` and an empty team list remains an explicit state rather than offering unsupported inline team creation.

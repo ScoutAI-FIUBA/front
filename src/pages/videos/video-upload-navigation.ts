@@ -1,8 +1,10 @@
 import { teamVideosPath } from './video-team-navigation.ts'
-import { matchDetailPath } from '../matches/match-detail.ts'
+import { videoDetailPath } from '../matches/match-detail.ts'
 
 export const VIDEO_UPLOAD_RETURN_QUERY_PARAM = 'return_to'
-export const NEW_MATCH_PATH = '/partidos/nuevo'
+export const VIDEO_UPLOAD_PATH = '/videos/subir'
+/** @deprecated Use VIDEO_UPLOAD_PATH. */
+export const NEW_MATCH_PATH = VIDEO_UPLOAD_PATH
 
 export function safeVideoUploadReturnPath(value: string | null): string | null {
   if (!value || !value.startsWith('/') || value.startsWith('//')) return null
@@ -35,13 +37,12 @@ export function videoUploadPath({
   const safeReturn = safeVideoUploadReturnPath(returnTo ?? null)
   if (safeReturn) params.set(VIDEO_UPLOAD_RETURN_QUERY_PARAM, safeReturn)
   const query = params.toString()
-  return query ? `/videos/subir?${query}` : '/videos/subir'
+  return query ? `${VIDEO_UPLOAD_PATH}?${query}` : VIDEO_UPLOAD_PATH
 }
 
+/** @deprecated Use videoUploadPath. */
 export function newMatchPath({ teamId }: { teamId?: string } = {}): string {
-  if (!teamId) return NEW_MATCH_PATH
-  const params = new URLSearchParams({ team_id: teamId })
-  return `${NEW_MATCH_PATH}?${params.toString()}`
+  return videoUploadPath({ teamId })
 }
 
 export function videoUploadReturnPath(searchParams: URLSearchParams, selectedTeamId: string): string {
@@ -54,5 +55,5 @@ export function videoUploadSuccessPath(
   _searchParams: URLSearchParams,
   uploaded: { id: string; teamId: string },
 ): string {
-  return matchDetailPath(uploaded.id, 'reporte')
+  return videoDetailPath(uploaded.id, 'reporte')
 }

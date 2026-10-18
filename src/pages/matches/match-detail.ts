@@ -37,23 +37,29 @@ interface MatchDetailDependencies {
   jobs: Pick<IAnalysisJobService, 'listForVideo'>
 }
 
-export function matchDetailPath(videoId: string, tab: MatchDetailTab = 'video'): string {
-  const base = `/partidos/${encodeURIComponent(videoId)}`
+export function videoDetailPath(videoId: string, tab: MatchDetailTab = 'video'): string {
+  const base = `/videos/${encodeURIComponent(videoId)}`
   return tab === 'video' ? base : `${base}?tab=${tab}`
 }
+
+/** @deprecated Use videoDetailPath. Kept while internal callers migrate. */
+export const matchDetailPath = videoDetailPath
 
 export function resolveMatchDetailTab(searchParams: URLSearchParams): MatchDetailTab {
   const requested = searchParams.get('tab')
   return requested === 'reporte' || requested === 'clips' ? requested : 'video'
 }
 
-export function matchReportPath(
+export function videoAnalysisPath(
   videoId: string,
   section: MatchReportSection = 'resumen',
 ): string {
   const searchParams = new URLSearchParams({ tab: 'reporte', seccion: section })
-  return `/partidos/${encodeURIComponent(videoId)}?${searchParams.toString()}`
+  return `/videos/${encodeURIComponent(videoId)}?${searchParams.toString()}`
 }
+
+/** @deprecated Use videoAnalysisPath. Kept while internal callers migrate. */
+export const matchReportPath = videoAnalysisPath
 
 export function resolveMatchReportSection(searchParams: URLSearchParams): MatchReportSection {
   const requested = searchParams.get('seccion')

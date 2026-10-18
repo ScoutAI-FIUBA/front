@@ -59,12 +59,12 @@ src/
 - `/equipos/:teamId`: canonical team identity and roster management.
 - `/jugadores`: secondary global player registry with team and unassigned filters.
 - `/jugadores/nuevo`: compatibility entry that opens the same global create-player sheet.
-- `/partidos`: matches page.
-- `/partidos/:videoId?tab=video|reporte|clips`: canonical product detail over a video, its latest processing job, and clip collections.
-- `/videos`: videos list page.
-- `/videos/subir`: video upload page.
+- `/videos`: canonical video library, with cards, filters, playback, analysis status, clips, and job history.
+- `/videos/subir`: canonical three-step video upload page.
+- `/videos/:videoId?tab=video|reporte|clips`: canonical product detail over a video, its latest processing job, and clip collections. `reporte` remains the compatibility query value for the visible `Análisis IA` tab.
 - `/videos/:videoId/colecciones`: clip collections for a video.
 - `/videos/:videoId/colecciones/:collectionId`: clip collection detail.
+- `/partidos`, `/partidos/nuevo`, `/partidos/:videoId`: temporary compatibility redirects to their canonical Video routes, preserving search and hash.
 - `/analisis`: analysis sessions page.
 - `/analisis/:id`: analysis detail page.
 - `/analisis/jobs/:jobId?team_id=...`: real processing-job detail without match/session assumptions.
@@ -77,7 +77,7 @@ src/
 - Mock services live in `src/services/mock`.
 - `src/services/registry.ts` selects real or mock services.
 - `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
-- `matchService` and `analysisService` currently use mocks.
+- The legacy `matchService` and `analysisService` currently use mocks; no real Match page consumes `matchService`.
 - `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, `analysisJobShotChartService`, `analysisJobCourtPositionsService`, and `analysisJobSimilarService` always use the real processing-job backend.
 
 ## Mocks

@@ -1,22 +1,25 @@
 import type { CreateTeamDto } from '@/services/contracts/teams.service'
 import type { Team } from '@/types'
-import { NEW_MATCH_PATH, newMatchPath } from '../videos/video-upload-navigation.ts'
+import { VIDEO_UPLOAD_PATH, videoUploadPath } from '../videos/video-upload-navigation.ts'
 
 export const TEAM_CREATION_RETURN_QUERY_PARAM = 'return_to'
 
-export function teamsPathForNewMatch(): string {
+export function teamsPathForVideoUpload(): string {
   const params = new URLSearchParams({
-    [TEAM_CREATION_RETURN_QUERY_PARAM]: NEW_MATCH_PATH,
+    [TEAM_CREATION_RETURN_QUERY_PARAM]: VIDEO_UPLOAD_PATH,
   })
   return `/equipos?${params.toString()}`
 }
+
+/** @deprecated Use teamsPathForVideoUpload. */
+export const teamsPathForNewMatch = teamsPathForVideoUpload
 
 export function teamCreationReturnPath(
   requestedReturn: string | null,
   createdTeamId: string,
 ): string | null {
-  if (requestedReturn !== NEW_MATCH_PATH) return null
-  return newMatchPath({ teamId: createdTeamId })
+  if (requestedReturn !== VIDEO_UPLOAD_PATH) return null
+  return videoUploadPath({ teamId: createdTeamId })
 }
 
 export async function createTeamWithNavigationContext({

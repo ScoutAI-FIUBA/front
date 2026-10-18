@@ -1,5 +1,5 @@
 import { type ChangeEvent, type DragEvent, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   ArrowRight,
@@ -22,13 +22,13 @@ import { teamService, videoService } from '@/services/registry'
 import type { Team } from '@/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { NEW_MATCH_PATH, videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
+import { videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
 import { upsertVideoInAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
-import { teamsPathForNewMatch } from '@/pages/teams/team-creation-navigation'
+import { teamsPathForVideoUpload } from '@/pages/teams/team-creation-navigation'
 
-type NewMatchStep = 1 | 2 | 3
+type VideoUploadStep = 1 | 2 | 3
 
-const STEPS: Array<{ value: NewMatchStep; number: string; label: string }> = [
+const STEPS: Array<{ value: VideoUploadStep; number: string; label: string }> = [
   { value: 1, number: '01', label: 'Equipo' },
   { value: 2, number: '02', label: 'Archivo' },
   { value: 3, number: '03', label: 'Confirmar' },
@@ -52,7 +52,7 @@ const REPORT_PREVIEW = [
   },
   {
     icon: Map,
-    title: 'Partidos similares',
+    title: 'Análisis similares',
     copy: 'Comparaciones del equipo si existen otros análisis compatibles.',
   },
 ]
@@ -65,10 +65,9 @@ function fileSizeLabel(size: number): string {
 export function VideoUploadPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [searchParams] = useSearchParams()
   const requestedTeamId = searchParams.get('team_id')
-  const [step, setStep] = useState<NewMatchStep>(1)
+  const [step, setStep] = useState<VideoUploadStep>(1)
   const [teams, setTeams] = useState<Team[]>([])
   const [title, setTitle] = useState('')
   const [teamId, setTeamId] = useState('')
@@ -139,19 +138,17 @@ export function VideoUploadPage() {
       setIsUploading(true)
       const uploaded = await videoService.upload({ title: title.trim(), teamId, description: description.trim(), file })
       if (!user || !upsertVideoInAnalysisCatalog(user.id, uploaded)) return
-      toast.success('Partido subido correctamente')
+      toast.success('Video subido correctamente')
       navigate(videoUploadSuccessPath(searchParams, uploaded))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No se pudo subir el partido')
+      toast.error(error instanceof Error ? error.message : 'No se pudo subir el video')
     } finally {
       setIsUploading(false)
     }
   }
 
-  const returnPath = location.pathname === NEW_MATCH_PATH
-    ? '/partidos'
-    : videoUploadReturnPath(searchParams, teamId)
-  const canOpenStep = (target: NewMatchStep) => (
+  const returnPath = videoUploadReturnPath(searchParams, teamId)
+  const canOpenStep = (target: VideoUploadStep) => (
     target === 1 || (target === 2 && Boolean(teamId)) || (target === 3 && Boolean(teamId && file))
   )
 
@@ -163,12 +160,12 @@ export function VideoUploadPage() {
           className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#F4F5F7]"
         >
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-          Volver a Partidos
+          Volver a Videos
         </Link>
         <div className="mt-5 max-w-3xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6A1F]">Nuevo partido</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6A1F]">Nuevo video</p>
           <h1 className="scout-display mt-3 text-[clamp(3.4rem,8vw,5.2rem)] font-extrabold text-[#F4F5F7]">
-            Prepará el partido
+            Prepará el video
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA] sm:text-lg">
             Elegí tu equipo, sumá el archivo y confirmá la información antes de subirlo.
@@ -176,7 +173,7 @@ export function VideoUploadPage() {
         </div>
       </header>
 
-      <nav aria-label="Pasos para crear un partido" className="grid border-b border-[#252B38] md:grid-cols-3">
+      <nav aria-label="Pasos para subir un video" className="grid border-b border-[#252B38] md:grid-cols-3">
         {STEPS.map((item) => {
           const active = item.value === step
           const complete = item.value < step
@@ -210,9 +207,9 @@ export function VideoUploadPage() {
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A3ABBA]">01 · Equipo</p>
             <h2 id="team-step-title" className="scout-display mt-3 text-4xl font-bold text-[#F4F5F7] sm:text-5xl">
-              ¿Qué equipo juega este partido?
+              ¿A qué equipo pertenece este video?
             </h2>
-            <p className="mt-3 text-base text-[#A3ABBA]">El reporte y sus comparaciones quedarán asociados a este equipo.</p>
+            <p className="mt-3 text-base text-[#A3ABBA]">El video, sus análisis y comparaciones quedarán asociados a este equipo.</p>
           </div>
 
           <div className="mt-9 max-w-3xl border-y border-[#252B38]">
@@ -242,9 +239,9 @@ export function VideoUploadPage() {
             {teamsState === 'success' && teams.length === 0 ? (
               <div className="flex min-h-44 flex-col items-start justify-center py-8">
                 <h3 className="scout-display text-3xl font-bold text-[#F4F5F7]">Todavía no tenés equipos</h3>
-                <p className="mt-2 text-sm text-[#A3ABBA]">Creá un equipo para poder asociar y analizar su primer partido.</p>
+                <p className="mt-2 text-sm text-[#A3ABBA]">Creá un equipo para poder asociar y analizar su primer video.</p>
                 <Button asChild variant="outline" className="mt-5 h-11 rounded-full border-[#3A4254] bg-transparent px-5 text-[#F4F5F7] hover:bg-white/5 hover:text-white">
-                  <Link to={location.pathname === NEW_MATCH_PATH ? teamsPathForNewMatch() : '/equipos'}>
+                  <Link to={teamsPathForVideoUpload()}>
                     Ir a Equipos
                   </Link>
                 </Button>
@@ -298,8 +295,8 @@ export function VideoUploadPage() {
         <section className="pt-10" aria-labelledby="file-step-title">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A3ABBA]">02 · Archivo</p>
-            <h2 id="file-step-title" className="scout-display mt-3 text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Archivo del partido</h2>
-            <p className="mt-3 text-base text-[#A3ABBA]">Elegí el video completo que querés preparar para el reporte.</p>
+            <h2 id="file-step-title" className="scout-display mt-3 text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Archivo de video</h2>
+            <p className="mt-3 text-base text-[#A3ABBA]">Elegí el material que querés preparar para analizar.</p>
           </div>
 
           <label
@@ -317,7 +314,7 @@ export function VideoUploadPage() {
               {file ? <FileVideo2 aria-hidden="true" className="h-9 w-9" /> : <Upload aria-hidden="true" className="h-9 w-9" />}
             </span>
             <span className="scout-display mt-6 text-3xl font-bold text-[#F4F5F7]">
-              {file ? file.name : 'Arrastrá el archivo del partido acá'}
+              {file ? file.name : 'Arrastrá el archivo de video acá'}
             </span>
             <span className="mt-3 text-sm text-[#A3ABBA]">
               {file ? `${fileSizeLabel(file.size)} · Podés reemplazarlo antes de continuar` : 'Video MP4, MOV, AVI u otro formato reconocido por tu dispositivo'}
@@ -351,7 +348,7 @@ export function VideoUploadPage() {
           <div className="max-w-2xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A3ABBA]">03 · Confirmar</p>
             <h2 id="confirm-step-title" className="scout-display mt-3 text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Todo listo para subir</h2>
-            <p className="mt-3 text-base text-[#A3ABBA]">Revisá la información. El análisis se inicia después, desde el Reporte del Partido.</p>
+            <p className="mt-3 text-base text-[#A3ABBA]">Revisá la información. El análisis se inicia después, desde Análisis IA.</p>
           </div>
 
           <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:gap-16">
@@ -369,7 +366,7 @@ export function VideoUploadPage() {
 
               <div className="mt-8 space-y-6">
                 <div>
-                  <Label htmlFor="video-title" className="text-xs font-semibold uppercase tracking-[0.16em] text-[#A3ABBA]">Título del partido</Label>
+                  <Label htmlFor="video-title" className="text-xs font-semibold uppercase tracking-[0.16em] text-[#A3ABBA]">Título del video</Label>
                   <Input
                     id="video-title"
                     value={title}
@@ -385,7 +382,7 @@ export function VideoUploadPage() {
                     id="video-description"
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
-                    placeholder="Agregá contexto útil sobre el partido"
+                    placeholder="Agregá contexto útil sobre el video"
                     className="mt-2 h-13 rounded-none border-x-0 border-t-0 border-[#3A4254] bg-transparent px-0 text-lg text-[#F4F5F7] focus-visible:ring-0"
                     disabled={isUploading}
                   />
@@ -393,7 +390,7 @@ export function VideoUploadPage() {
               </div>
 
               <p className="mt-7 max-w-xl text-sm leading-relaxed text-[#A3ABBA]">
-                La fecha que verás en el Partido será la fecha de carga del archivo, no la fecha deportiva en que se jugó.
+                La fecha que verás en la biblioteca será la fecha de carga del archivo.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -404,7 +401,7 @@ export function VideoUploadPage() {
                   className="h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white hover:bg-[#ff7b38]"
                 >
                   {isUploading ? <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin" /> : <Upload aria-hidden="true" className="h-5 w-5" />}
-                  {isUploading ? 'Subiendo archivo…' : 'Subir partido'}
+                  {isUploading ? 'Subiendo archivo…' : 'Subir video'}
                 </Button>
                 <button type="button" disabled={isUploading} onClick={() => setStep(2)} className="min-h-11 text-sm font-semibold text-[#A3ABBA] hover:text-[#F4F5F7] disabled:opacity-50">
                   Cambiar archivo
@@ -415,7 +412,7 @@ export function VideoUploadPage() {
             <aside className="border-l border-[#252B38] pl-8 lg:pl-10" aria-labelledby="report-preview-title">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6A1F]">Tu próximo paso</p>
               <h3 id="report-preview-title" className="scout-display mt-3 text-3xl font-bold leading-tight text-[#F4F5F7]">
-                Qué vas a poder ver en el Reporte
+                Qué vas a poder ver en Análisis IA
               </h3>
               <div className="mt-7 divide-y divide-[#252B38] border-y border-[#252B38]">
                 {REPORT_PREVIEW.map(({ icon: Icon, title: itemTitle, copy }) => (

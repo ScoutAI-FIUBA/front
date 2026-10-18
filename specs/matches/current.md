@@ -1,19 +1,21 @@
-# Partidos Current Spec
+# Partidos Legacy Compatibility Spec
+
+> Current override (2026-10-18): `/partidos`, `/partidos/nuevo`, and `/partidos/:videoId` are temporary redirect-only routes to the canonical Video experience. They preserve search params and hash. New links target `/videos`; no real Match UI or backend integration is part of the current release. The detailed sections below document the preserved pre-migration behavior now presented as Videos. The authoritative migration acceptance criteria are in `specs/video-reorganization/current.md`.
 
 ## Product model
 
-- `/partidos` is the primary library in R1.
+- `/videos` is the primary library; `/partidos` remains only as a temporary compatibility redirect.
 - A visible Partido is composed in the frontend from a real `Video`, its latest known `ProcessingJob`, and its existing team context.
 - The backend `Match` entity is not used because it is not related to videos or processing jobs yet.
 
 ## Route and navigation
 
-- Primary route: `/partidos`.
-- Canonical new-match route: `/partidos/nuevo`. It presents the existing upload contract as a product flow named `Nuevo partido`, with the desktop sequence `01 Equipo`, `02 Archivo`, and `03 Confirmar`.
-- Canonical detail route: `/partidos/:videoId`.
+- Primary route: `/videos`.
+- Canonical upload route: `/videos/subir`. It presents the existing upload contract as `Nuevo video`, with the desktop sequence `01 Equipo`, `02 Archivo`, and `03 Confirmar`.
+- Canonical detail route: `/videos/:videoId`.
 - Detail tabs are refresh-safe query states: `?tab=video`, `?tab=reporte`, and `?tab=clips`; an absent or invalid value falls back to Video.
 - The completed Reporte has refresh-safe subsections in the same URL: `?tab=reporte&seccion=resumen`, `tiros`, `movimiento`, or `similares`. An absent or invalid `seccion` falls back to `resumen`, and subsection links use normal browser history.
-- Primary navigation: Inicio, Partidos, Equipos, Jugadores.
+- Primary navigation: Inicio, Videos, Equipos, Jugadores.
 - `/videos`, `/analisis`, and `/revision-manual` remain routable for compatibility but are not primary navigation items.
 
 ## Data and states
