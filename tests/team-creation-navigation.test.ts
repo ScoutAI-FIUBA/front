@@ -6,7 +6,7 @@ import type { Team } from '../src/types/index.ts'
 import {
   createTeamWithNavigationContext,
   teamCreationReturnPath,
-  teamsPathForNewMatch,
+  teamsPathForVideoUpload,
 } from '../src/pages/teams/team-creation-navigation.ts'
 
 const values: CreateTeamDto = {
@@ -21,8 +21,8 @@ const createdTeam: Team = {
   ...values,
 }
 
-test('creating a team from Nuevo partido returns with the new team selected', async () => {
-  const teamsPath = teamsPathForNewMatch()
+test('creating a team from Subir video returns with the new team selected', async () => {
+  const teamsPath = teamsPathForVideoUpload()
   const requestedReturn = new URL(teamsPath, 'https://scoutai.local').searchParams.get('return_to')
   const result = await createTeamWithNavigationContext({
     values,
@@ -30,9 +30,9 @@ test('creating a team from Nuevo partido returns with the new team selected', as
     createTeam: async () => createdTeam,
   })
 
-  assert.equal(teamsPath, '/equipos?return_to=%2Fpartidos%2Fnuevo')
+  assert.equal(teamsPath, '/equipos?return_to=%2Fvideos%2Fsubir')
   assert.equal(result.team, createdTeam)
-  assert.equal(result.returnPath, '/partidos/nuevo?team_id=team%2Fcreated')
+  assert.equal(result.returnPath, '/videos/subir?team_id=team%2Fcreated')
 })
 
 test('normal team creation does not introduce a redirect', async () => {
@@ -45,11 +45,11 @@ test('normal team creation does not introduce a redirect', async () => {
   assert.equal(result.returnPath, null)
 })
 
-test('team creation accepts only the exact Nuevo partido return target', () => {
-  assert.equal(teamCreationReturnPath('/partidos/nuevo', 'team-1'), '/partidos/nuevo?team_id=team-1')
+test('team creation accepts only the exact video upload return target', () => {
+  assert.equal(teamCreationReturnPath('/videos/subir', 'team-1'), '/videos/subir?team_id=team-1')
   assert.equal(teamCreationReturnPath('https://evil.example/steal', 'team-1'), null)
   assert.equal(teamCreationReturnPath('//evil.example/steal', 'team-1'), null)
-  assert.equal(teamCreationReturnPath('/partidos/nuevo?team_id=other', 'team-1'), null)
+  assert.equal(teamCreationReturnPath('/videos/subir?team_id=other', 'team-1'), null)
   assert.equal(teamCreationReturnPath('/equipos', 'team-1'), null)
 })
 
@@ -57,7 +57,7 @@ test('a failed creation produces no navigation result', async () => {
   await assert.rejects(
     createTeamWithNavigationContext({
       values,
-      requestedReturn: '/partidos/nuevo',
+      requestedReturn: '/videos/subir',
       createTeam: async () => {
         throw new Error('creation failed')
       },
@@ -89,5 +89,5 @@ test('cancel only closes the team dialog and never navigates', () => {
   assert.doesNotMatch(dialogSource, /navigate\(/)
   assert.match(submitFlow, /returnPath = created\.returnPath[\s\S]*if \(returnPath\)[\s\S]*navigate\(returnPath/)
   assert.doesNotMatch(submitFlow.match(/catch \(error\)[\s\S]*?finally/)?.[0] ?? '', /navigate\(|setFormOpen/)
-  assert.match(uploadSource, /location\.pathname === NEW_MATCH_PATH \? teamsPathForNewMatch\(\) : '\/equipos'/)
+  assert.match(uploadSource, /to=\{teamsPathForVideoUpload\(\)\}/)
 })

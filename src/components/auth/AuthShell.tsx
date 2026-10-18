@@ -43,7 +43,7 @@ export function AuthShell({
   children,
   mode = 'split',
   panelWidth = 'default',
-  visualTitle = 'Partidos, planteles y análisis.',
+  visualTitle = 'Videos, planteles y análisis.',
 }: AuthShellProps) {
   const panelClassName = cn(
     'relative w-full rounded-2xl border border-white/[0.08] bg-[#151922]/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.42)] backdrop-blur-sm sm:p-8',

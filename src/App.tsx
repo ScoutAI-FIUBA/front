@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
@@ -16,16 +16,27 @@ import { PlayersPage } from '@/pages/players/PlayersPage'
 import { PlayerNewPage } from '@/pages/players/PlayerNewPage'
 import { MatchesPage } from '@/pages/matches/MatchesPage'
 import { MatchDetailPage } from '@/pages/matches/MatchDetailPage'
-import { VideosPage } from '@/pages/videos/VideosPage'
 import { VideoUploadPage } from '@/pages/videos/VideoUploadPage'
 import { VideoCollectionsPage } from '@/pages/videos/VideoCollectionsPage'
 import { VideoCollectionDetailPage } from '@/pages/videos/VideoCollectionDetailPage'
+import { legacyVideoRedirectPath, type LegacyVideoDestination } from '@/pages/videos/legacy-video-routes'
 import { AnalysisPage } from '@/pages/analysis/AnalysisPage'
 import { AnalysisJobNewPage } from '@/pages/analysis/AnalysisJobNewPage'
 import { AnalysisNewPage } from '@/pages/analysis/AnalysisNewPage'
 import { AnalysisDetailPage } from '@/pages/analysis/AnalysisDetailPage'
 import { AnalysisJobDetailPage } from '@/pages/analysis/AnalysisJobDetailPage'
 import { ManualAnalysisPage } from '@/pages/analysis/ManualAnalysisPage'
+
+function LegacyVideoRouteRedirect({ destination }: { destination: LegacyVideoDestination }) {
+  const location = useLocation()
+  const { videoId = '' } = useParams()
+  return (
+    <Navigate
+      to={legacyVideoRedirectPath({ destination, videoId, search: location.search, hash: location.hash })}
+      replace
+    />
+  )
+}
 
 export default function App() {
   return (
@@ -45,13 +56,14 @@ export default function App() {
             <Route path="/equipos/:teamId" element={<TeamDetailPage />} />
             <Route path="/jugadores" element={<PlayersPage />} />
             <Route path="/jugadores/nuevo" element={<PlayerNewPage />} />
-            <Route path="/partidos" element={<MatchesPage />} />
-            <Route path="/partidos/nuevo" element={<VideoUploadPage />} />
-            <Route path="/partidos/:videoId" element={<MatchDetailPage />} />
-            <Route path="/videos" element={<VideosPage />} />
+            <Route path="/videos" element={<MatchesPage />} />
             <Route path="/videos/subir" element={<VideoUploadPage />} />
+            <Route path="/videos/:videoId" element={<MatchDetailPage />} />
             <Route path="/videos/:videoId/colecciones" element={<VideoCollectionsPage />} />
             <Route path="/videos/:videoId/colecciones/:collectionId" element={<VideoCollectionDetailPage />} />
+            <Route path="/partidos" element={<LegacyVideoRouteRedirect destination="library" />} />
+            <Route path="/partidos/nuevo" element={<LegacyVideoRouteRedirect destination="upload" />} />
+            <Route path="/partidos/:videoId" element={<LegacyVideoRouteRedirect destination="detail" />} />
             <Route path="/analisis" element={<AnalysisPage />} />
             <Route path="/analisis/nuevo" element={<AnalysisJobNewPage />} />
             <Route path="/analisis/jobs/:jobId" element={<AnalysisJobDetailPage />} />

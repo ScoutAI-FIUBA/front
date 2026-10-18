@@ -78,7 +78,7 @@ function catalog(
   }
 }
 
-test('a READY video without jobs becomes a real Partido with one Analizar action', () => {
+test('a READY video without jobs becomes a library Video with one Analizar action', () => {
   const [item] = buildMatchLibrary(catalog([video('video/1')], []))
 
   assert.equal(item.team?.name, 'Club del Sur')
@@ -87,11 +87,11 @@ test('a READY video without jobs becomes a real Partido with one Analizar action
   assert.deepEqual(item.action, {
     kind: 'new-analysis',
     label: 'Analizar',
-    to: '/partidos/video%2F1?tab=reporte',
+    to: '/videos/video%2F1?tab=reporte',
   })
 })
 
-test('the newest ProcessingJob decides the Partido state and destination', () => {
+test('the newest ProcessingJob decides the Video state and destination', () => {
   const sourceVideo = video('video-1')
   const olderDone = job('old-job', sourceVideo.id, 'DONE', '2026-10-01T13:00:00Z')
   const newerRunning = job('new/job', sourceVideo.id, 'RUNNING', '2026-10-01T14:00:00Z')
@@ -102,7 +102,7 @@ test('the newest ProcessingJob decides the Partido state and destination', () =>
   assert.deepEqual(item.action, {
     kind: 'job',
     label: 'Ver progreso',
-    to: '/partidos/video-1?tab=reporte',
+    to: '/videos/video-1?tab=reporte',
   })
 })
 
@@ -110,7 +110,7 @@ test('QUEUED, RUNNING, DONE and FAILED jobs use product-facing CTAs', () => {
   const statuses: Array<[ProcessingJobStatus, string]> = [
     ['QUEUED', 'Ver progreso'],
     ['RUNNING', 'Ver progreso'],
-    ['DONE', 'Ver reporte'],
+    ['DONE', 'Ver análisis'],
     ['FAILED', 'Ver problema'],
   ]
 
@@ -119,18 +119,18 @@ test('QUEUED, RUNNING, DONE and FAILED jobs use product-facing CTAs', () => {
     const [item] = buildMatchLibrary(catalog([sourceVideo], [job(`job-${status}`, sourceVideo.id, status)]))
     assert.equal(item.analysisState, status)
     assert.equal(item.action?.label, label)
-    assert.equal(item.action?.to, `/partidos/video-${status}?tab=reporte`)
+    assert.equal(item.action?.to, `/videos/video-${status}?tab=reporte`)
   }
 })
 
-test('Partidos exposes one product-facing state instead of video and job states', () => {
+test('Videos exposes one product-facing state instead of raw video and job states', () => {
   const cases: Array<[Video['status'], ProcessingJobStatus | null, string]> = [
     ['processing', null, 'Preparando archivo'],
     ['failed', null, 'Archivo con error'],
     ['uploaded', null, 'Sin analizar'],
     ['uploaded', 'QUEUED', 'En cola'],
     ['uploaded', 'RUNNING', 'Analizando'],
-    ['uploaded', 'DONE', 'Reporte listo'],
+    ['uploaded', 'DONE', 'Análisis listo'],
     ['uploaded', 'FAILED', 'Error de análisis'],
   ]
 
@@ -177,7 +177,7 @@ test('an unverified job history is a partial result and never offers Analizar', 
   assert.equal(item.action, null)
 })
 
-test('Partidos filters active, completed and all error states without hiding source failures', () => {
+test('Videos filters active, completed and all error states without hiding source failures', () => {
   const videos = [
     video('queued'),
     video('running'),
@@ -200,30 +200,35 @@ test('Partidos filters active, completed and all error states without hiding sou
   assert.equal(filterMatchLibrary(items, 'all').length, 6)
 })
 
-test('Partidos renders loading, retry, empty, partial failure and responsive card states', () => {
+test('Videos renders loading, retry, empty, partial failure and responsive card states', () => {
   const source = readFileSync(new URL('../src/pages/matches/MatchesPage.tsx', import.meta.url), 'utf8')
 
-  assert.match(source, /Cargando partidos/)
-  assert.match(source, /No pudimos cargar tus partidos/)
+  assert.match(source, /Cargando videos/)
+  assert.match(source, /No pudimos cargar tus videos/)
   assert.match(source, /Reintentar/)
-  assert.match(source, /Subí tu primer partido para obtener tiros, evidencia, movimiento y comparaciones/)
+  assert.match(source, /Subí tu primer video para obtener tiros, evidencia, movimiento y comparaciones/)
   assert.match(source, /Algunos estados no se pudieron verificar/)
   assert.match(source, /md:grid-cols-2 xl:grid-cols-3/)
-  assert.match(source, /Subir partido/)
-  assert.match(source, /Subí tus partidos, seguí el análisis y encontrá cada jugada/)
+  assert.match(source, /Subir video/)
+  assert.match(source, /Subí tus videos, seguí el análisis y encontrá cada jugada/)
   assert.match(source, /flex-nowrap items-center gap-2 overflow-x-auto/)
   assert.match(source, /text-balance/)
   assert.match(source, /requestMatchPoster\(userId, video, getVideoByIdForTeam\)/)
   assert.match(source, /posterUrl=\{posterUrls\[item\.video\.id\]\}/)
-  assert.doesNotMatch(source, /Video ·|>\s*Reporte\s*</)
+  assert.match(source, /VideoAnalysisJobs/)
+  assert.match(source, /VideoPlaybackDialog/)
+  assert.match(source, /Filtrar por equipo/)
+  assert.match(source, /Estado del video/)
+  assert.match(source, /Estado del análisis/)
   assert.doesNotMatch(source, /score|rival|competencia|64%|10\/2\/8\/14/i)
 })
 
-test('Partidos uses the canonical Nuevo partido entry', () => {
+test('Videos uses the canonical upload and detail routes with isolated legacy redirects', () => {
   const source = readFileSync(new URL('../src/pages/matches/MatchesPage.tsx', import.meta.url), 'utf8')
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 
-  assert.match(source, /newMatchPath\(\)/)
-  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<VideoUploadPage \/>\}/)
+  assert.match(source, /videoUploadPath\(\)/)
+  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<LegacyVideoRouteRedirect destination="upload" \/>\}/)
   assert.match(appSource, /path="\/videos\/subir" element=\{<VideoUploadPage \/>\}/)
+  assert.match(appSource, /path="\/videos\/:videoId" element=\{<MatchDetailPage \/>\}/)
 })

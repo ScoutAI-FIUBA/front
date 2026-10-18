@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/utils'
-import { matchDetailPath } from '@/pages/matches/match-detail'
+import { videoDetailPath } from '@/pages/matches/match-detail'
 import { clipCollectionService, videoService } from '@/services/registry'
 import type { ClipCollection, Video } from '@/types'
 import { orderClipCollections } from './clip-collections'
@@ -55,10 +55,10 @@ export function VideoCollectionsPage() {
       setVideoError('')
       const videoData = await videoService.getById(videoId)
       setVideo(videoData)
-      if (!videoData) setVideoError('No pudimos cargar el contexto de este partido.')
+      if (!videoData) setVideoError('No pudimos cargar el contexto de este video.')
     } catch (loadError) {
       setVideo(null)
-      setVideoError(loadError instanceof Error ? loadError.message : 'No pudimos cargar el contexto de este partido.')
+      setVideoError(loadError instanceof Error ? loadError.message : 'No pudimos cargar el contexto de este video.')
     } finally {
       setVideoLoading(false)
     }
@@ -97,17 +97,17 @@ export function VideoCollectionsPage() {
     <div className="space-y-8 pb-8">
       <header className="border-b border-[#252B37] pb-7">
         <Button asChild variant="ghost" size="sm" className="-ml-3 mb-4 text-[#A8B0BF] hover:text-[#F4F5F7]">
-          <Link to={matchDetailPath(videoId, 'clips')}>
-            <ArrowLeft className="h-4 w-4" /> Volver al partido
+          <Link to={videoDetailPath(videoId, 'clips')}>
+            <ArrowLeft className="h-4 w-4" /> Volver al video
           </Link>
         </Button>
 
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#FF6A1F]">Partido · revisión de video</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#FF6A1F]">Video · revisión de clips</p>
             <h1 className="scout-display mt-2 text-[clamp(3rem,7vw,5rem)] font-extrabold leading-[0.9] text-[#F4F5F7]">Clips</h1>
             <p className="mt-3 max-w-2xl text-sm text-[#A8B0BF]">
-              {videoLoading ? 'Cargando contexto del partido…' : video?.title || 'Colecciones del partido'}
+              {videoLoading ? 'Cargando contexto del video…' : video?.title || 'Colecciones del video'}
             </p>
           </div>
 
@@ -119,7 +119,7 @@ export function VideoCollectionsPage() {
               <DialogHeader>
                 <DialogTitle className="scout-display text-2xl font-bold text-[#F4F5F7]">Nueva colección</DialogTitle>
                 <DialogDescription>
-                  Guardá una selección de clips dentro de {video?.title || 'este partido'}.
+                  Guardá una selección de clips dentro de {video?.title || 'este video'}.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-1">
@@ -159,7 +159,7 @@ export function VideoCollectionsPage() {
 
       {videoError && !videoLoading ? (
         <Alert className="flex flex-wrap items-center justify-between gap-3 border-[#735021] bg-[#17140F] text-[#D7C4A1]">
-          <p className="text-sm">El contexto del partido no está disponible. Las colecciones siguen activas.</p>
+          <p className="text-sm">El contexto del video no está disponible. Las colecciones siguen activas.</p>
           <Button size="sm" variant="ghost" className="text-[#FFB878] hover:text-[#FFD1A8]" onClick={() => void loadVideo()}>
             <RefreshCw className="h-4 w-4" /> Reintentar contexto
           </Button>
@@ -210,7 +210,7 @@ export function VideoCollectionsPage() {
           <Clapperboard className="h-9 w-9 text-[#FF6A1F]" />
           <h2 className="scout-display mt-5 text-4xl font-bold text-[#F4F5F7]">Todavía no hay colecciones</h2>
           <p className="mt-2 max-w-lg text-sm leading-6 text-[#A8B0BF]">
-            Creá la primera para reunir los fragmentos que quieras revisar de este partido.
+            Creá la primera para reunir los fragmentos que quieras revisar de este video.
           </p>
           <Button className="mt-6" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" /> Crear primera colección

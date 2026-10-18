@@ -7,7 +7,7 @@ import {
   type VideoAnalysisState,
   type VideoMaterialState,
 } from '../videos/video-library-filters.ts'
-import { matchDetailPath } from './match-detail.ts'
+import { videoDetailPath } from './match-detail.ts'
 
 export type MatchLibraryFilter = 'all' | 'active' | 'done' | 'failed'
 
@@ -23,7 +23,7 @@ export type MatchLibraryDisplayState =
 
 export interface MatchLibraryAction {
   kind: 'new-analysis' | 'job'
-  label: 'Analizar' | 'Ver progreso' | 'Ver reporte' | 'Ver problema'
+  label: 'Analizar' | 'Ver progreso' | 'Ver análisis' | 'Ver problema'
   to: string
 }
 
@@ -71,7 +71,7 @@ export function matchLibraryDisplayLabel(state: MatchLibraryDisplayState): strin
     case 'analyzing':
       return 'Analizando'
     case 'report-ready':
-      return 'Reporte listo'
+      return 'Análisis listo'
     case 'analysis-error':
       return 'Error de análisis'
     case 'unavailable':
@@ -83,11 +83,11 @@ function jobAction(video: Video, job: ProcessingJob): MatchLibraryAction {
   switch (job.status) {
     case 'QUEUED':
     case 'RUNNING':
-      return { kind: 'job', label: 'Ver progreso', to: matchDetailPath(video.id, 'reporte') }
+      return { kind: 'job', label: 'Ver progreso', to: videoDetailPath(video.id, 'reporte') }
     case 'DONE':
-      return { kind: 'job', label: 'Ver reporte', to: matchDetailPath(video.id, 'reporte') }
+      return { kind: 'job', label: 'Ver análisis', to: videoDetailPath(video.id, 'reporte') }
     case 'FAILED':
-      return { kind: 'job', label: 'Ver problema', to: matchDetailPath(video.id, 'reporte') }
+      return { kind: 'job', label: 'Ver problema', to: videoDetailPath(video.id, 'reporte') }
   }
 
   throw new Error(`Estado de análisis no soportado: ${String(job.status)}`)
@@ -107,7 +107,7 @@ export function buildMatchLibrary(catalog: AnalysisJobCatalog): MatchLibraryItem
         ? {
             kind: 'new-analysis' as const,
             label: 'Analizar' as const,
-            to: matchDetailPath(video.id, 'reporte'),
+            to: videoDetailPath(video.id, 'reporte'),
           }
         : null
 

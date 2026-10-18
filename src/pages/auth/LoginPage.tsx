@@ -52,7 +52,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthShell visualTitle="Partidos, planteles y análisis.">
+    <AuthShell visualTitle="Videos, planteles y análisis.">
           <AuthPanelHeader
             eyebrow="Acceso"
             title="Iniciar sesión"

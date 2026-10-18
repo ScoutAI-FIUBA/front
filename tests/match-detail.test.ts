@@ -9,8 +9,8 @@ import {
   loadMatchDetail,
   matchAnalysisElapsedLabel,
   matchAnalysisPath,
-  matchDetailPath,
-  matchReportPath,
+  videoAnalysisPath,
+  videoDetailPath,
   resolveMatchDetailTab,
   resolveMatchReportSection,
 } from '../src/pages/matches/match-detail.ts'
@@ -59,16 +59,16 @@ function job(id: string, status: ProcessingJobStatus, createdAt: string): Proces
   }
 }
 
-test('Partido detail paths and tabs are canonical, encoded and refresh-safe', () => {
-  assert.equal(matchDetailPath('video/1'), '/partidos/video%2F1')
-  assert.equal(matchDetailPath('video/1', 'reporte'), '/partidos/video%2F1?tab=reporte')
-  assert.equal(matchDetailPath('video/1', 'clips'), '/partidos/video%2F1?tab=clips')
+test('Video detail paths and tabs are canonical, encoded and refresh-safe', () => {
+  assert.equal(videoDetailPath('video/1'), '/videos/video%2F1')
+  assert.equal(videoDetailPath('video/1', 'reporte'), '/videos/video%2F1?tab=reporte')
+  assert.equal(videoDetailPath('video/1', 'clips'), '/videos/video%2F1?tab=clips')
   assert.equal(resolveMatchDetailTab(new URLSearchParams()), 'video')
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=reporte')), 'reporte')
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=clips')), 'clips')
   assert.equal(resolveMatchDetailTab(new URLSearchParams('tab=unknown')), 'video')
-  assert.equal(matchReportPath('video/1'), '/partidos/video%2F1?tab=reporte&seccion=resumen')
-  assert.equal(matchReportPath('video/1', 'tiros'), '/partidos/video%2F1?tab=reporte&seccion=tiros')
+  assert.equal(videoAnalysisPath('video/1'), '/videos/video%2F1?tab=reporte&seccion=resumen')
+  assert.equal(videoAnalysisPath('video/1', 'tiros'), '/videos/video%2F1?tab=reporte&seccion=tiros')
   assert.equal(resolveMatchReportSection(new URLSearchParams()), 'resumen')
   assert.equal(resolveMatchReportSection(new URLSearchParams('tab=reporte&seccion=movimiento')), 'movimiento')
   assert.equal(resolveMatchReportSection(new URLSearchParams('tab=reporte&seccion=unknown')), 'resumen')
@@ -130,7 +130,7 @@ test('job history failure stays explicit and never becomes a false no-job state'
   assert.equal(model?.jobsUnavailable, true)
 })
 
-test('preparing material loads as a Partido without requesting an impossible job history', async () => {
+test('preparing material loads as a Video without requesting an impossible job history', async () => {
   let jobRequests = 0
   const preparingVideo = { ...video, status: 'processing' as const }
   const model = await loadMatchDetail(preparingVideo.id, {
@@ -230,17 +230,17 @@ test('a partial clip failure preserves the real collection without inventing emp
   assert.equal(model.hasPartialFailure, true)
 })
 
-test('the detail shell covers Video, Reporte, Clips and every real job state', () => {
+test('the detail shell covers Video, Análisis IA, Clips and every real job state', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
   const workspaceSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url), 'utf8')
   const shootingControllerSource = readFileSync(new URL('../src/pages/analysis/use-analysis-job-shooting-data.ts', import.meta.url), 'utf8')
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
   const playerSource = readFileSync(new URL('../src/pages/analysis/AnalysisWorkspaceVideo.tsx', import.meta.url), 'utf8')
 
-  assert.match(appSource, /path="\/partidos\/:videoId"/)
-  assert.match(detailSource, /ArrowLeft[^\n]+Partidos|<ArrowLeft[\s\S]*?Partidos/)
+  assert.match(appSource, /path="\/videos\/:videoId"/)
+  assert.match(detailSource, /ArrowLeft[^\n]+Videos|<ArrowLeft[\s\S]*?Videos/)
   assert.match(detailSource, /label: 'Video'/)
-  assert.match(detailSource, /label: 'Reporte'/)
+  assert.match(detailSource, /label: 'Análisis IA'/)
   assert.match(detailSource, /label: 'Clips'/)
   assert.match(detailSource, /job\.status === 'QUEUED'/)
   assert.match(detailSource, /job\.status === 'RUNNING'/)
@@ -266,7 +266,19 @@ test('the detail shell covers Video, Reporte, Clips and every real job state', (
   assert.doesNotMatch(detailSource, /score|rival|competencia|64%|10\/2\/8\/14/i)
 })
 
-test('R3-B1 gives Partido an editorial report presentation without replacing the legacy workspace', () => {
+test('a ready Video exposes the existing manual clip flow without requiring analysis', () => {
+  const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
+  const videoTabStart = detailSource.indexOf('function MatchVideoTab')
+  const videoTabEnd = detailSource.indexOf('function ReportStructurePreview')
+  const videoTabSource = detailSource.slice(videoTabStart, videoTabEnd)
+
+  assert.match(videoTabSource, /Guardar clip/)
+  assert.match(videoTabSource, /\/videos\/\$\{encodeURIComponent\(video\.id\)\}\/colecciones/)
+  assert.match(videoTabSource, /sin iniciar un análisis IA/)
+  assert.doesNotMatch(videoTabSource, /latestJob|ProcessingJob|analysisJobService/)
+})
+
+test('the Video detail keeps the editorial analysis presentation without replacing the legacy workspace', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
   const workspaceSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url), 'utf8')
   const overviewSource = readFileSync(new URL('../src/pages/analysis/AnalysisJobOverview.tsx', import.meta.url), 'utf8')
@@ -292,7 +304,7 @@ test('R3-B1 gives Partido an editorial report presentation without replacing the
   assert.match(courtSource, /selected && presentation === 'match-report'/)
 })
 
-test('R3-B1.1 compacts only the Partido report header', () => {
+test('the Video detail compacts only the AI analysis header', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
 
   assert.match(detailSource, /const isCompactReportHeader = activeTab === 'reporte'/)
@@ -304,38 +316,38 @@ test('R3-B1.1 compacts only the Partido report header', () => {
   assert.match(detailSource, /text-\[clamp\(3\.2rem,8vw,5rem\)\]/)
 })
 
-test('R3-C keeps every non-DONE Reporte state product-facing and contract-honest', () => {
+test('every non-DONE AI analysis state remains product-facing and contract-honest', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
   const queuedStart = detailSource.indexOf("job.status === 'QUEUED'")
   const runningStart = detailSource.indexOf("job.status === 'RUNNING'")
   const failedStart = detailSource.indexOf("job.status === 'FAILED'")
-  const doneStart = detailSource.indexOf('aria-label="Secciones del reporte"')
+  const doneStart = detailSource.indexOf('aria-label="Secciones del análisis IA"')
   const queuedSource = detailSource.slice(queuedStart, runningStart)
   const runningSource = detailSource.slice(runningStart, failedStart)
   const failedSource = detailSource.slice(failedStart, doneStart)
 
-  assert.match(detailSource, /Este partido todavía no tiene reporte/)
-  assert.match(detailSource, /'Analizar partido'/)
+  assert.match(detailSource, /Este video todavía no tiene análisis/)
+  assert.match(detailSource, /'Analizar video'/)
   assert.match(detailSource, /ReportStructurePreview/)
-  assert.match(queuedSource, /Tu partido está en cola/)
+  assert.match(queuedSource, /Tu video está en cola/)
   assert.match(queuedSource, /job\.progressPercent != null/)
   assert.doesNotMatch(queuedSource, /analysisJobDetailPath|LoaderCircle/)
-  assert.match(runningSource, /Estamos analizando tu partido/)
+  assert.match(runningSource, /Estamos analizando tu video/)
   assert.match(runningSource, /matchAnalysisElapsedLabel\(job\.startedAt\)/)
   assert.match(runningSource, /job\.progressPercent != null/)
   assert.doesNotMatch(runningSource, /analysisJobDetailPath|LoaderCircle/)
-  assert.match(failedSource, /No se pudo analizar este partido/)
+  assert.match(failedSource, /No se pudo analizar este video/)
   assert.match(failedSource, /onClick=\{onStartAnalysis\}/)
   assert.match(failedSource, /analysisJobDetailPath\(job\)/)
   assert.doesNotMatch(detailSource, /Detectando jugadores|Procesando tiros|frames procesados|\bETA\b/i)
 })
 
-test('R4-A keeps upload preparation and analysis creation inside the exact Partido', () => {
+test('upload preparation and analysis creation stay inside the exact Video', () => {
   const detailSource = readFileSync(new URL('../src/pages/matches/MatchDetailPage.tsx', import.meta.url), 'utf8')
   const uploadSource = readFileSync(new URL('../src/pages/videos/VideoUploadPage.tsx', import.meta.url), 'utf8')
   const navigationSource = readFileSync(new URL('../src/pages/videos/video-upload-navigation.ts', import.meta.url), 'utf8')
 
-  assert.match(navigationSource, /matchDetailPath\(uploaded\.id, 'reporte'\)/)
+  assert.match(navigationSource, /videoDetailPath\(uploaded\.id, 'reporte'\)/)
   assert.match(uploadSource, /upsertVideoInAnalysisCatalog\(user\.id, uploaded\)/)
   assert.match(detailSource, /createMatchVideoPreparationPoller/)
   assert.match(detailSource, /getVideoByIdForTeam\(preparationVideoId, preparationTeamId\)/)

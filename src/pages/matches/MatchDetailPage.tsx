@@ -52,8 +52,8 @@ import {
   loadMatchClips,
   loadMatchDetail,
   matchAnalysisElapsedLabel,
-  matchDetailPath,
-  matchReportPath,
+  videoAnalysisPath,
+  videoDetailPath,
   resolveMatchDetailTab,
   resolveMatchReportSection,
   type MatchClipsModel,
@@ -71,7 +71,7 @@ const TABS: Array<{
   icon: typeof Play
 }> = [
   { id: 'video', label: 'Video', icon: Play },
-  { id: 'reporte', label: 'Reporte', icon: BarChart3 },
+  { id: 'reporte', label: 'Análisis IA', icon: BarChart3 },
   { id: 'clips', label: 'Clips', icon: Clapperboard },
 ]
 
@@ -81,7 +81,7 @@ const REPORT_SECTIONS: Array<{
   description: string
   workspaceSection: Exclude<AnalysisJobResultsSection, 'details'>
 }> = [
-  { id: 'resumen', label: 'Resumen', description: 'Una lectura general del partido.', workspaceSection: 'overview' },
+  { id: 'resumen', label: 'Resumen', description: 'Una lectura general del análisis.', workspaceSection: 'overview' },
   { id: 'tiros', label: 'Tiros', description: 'Ubicaciones, resultados y evidencia disponible.', workspaceSection: 'shots' },
   { id: 'movimiento', label: 'Movimiento', description: 'Recorridos y mapas de calor por jugador.', workspaceSection: 'movement' },
   { id: 'similares', label: 'Similares', description: 'Comparaciones con otros análisis del equipo.', workspaceSection: 'similar' },
@@ -145,13 +145,29 @@ function MatchVideoTab({ video }: { video: Video }) {
   }
 
   return (
-    <AnalysisWorkspaceVideo
-      video={video}
-      videoId={video.id}
-      teamId={video.teamId}
-      title={video.title}
-      minimalChrome
-    />
+    <section className="space-y-4" aria-label="Reproducción y clips del video">
+      <AnalysisWorkspaceVideo
+        video={video}
+        videoId={video.id}
+        teamId={video.teamId}
+        title={video.title}
+        minimalChrome
+      />
+      <div className="flex flex-col gap-4 border-y border-[#252B38] py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-[#F4F5F7]">¿Querés guardar un fragmento?</p>
+          <p className="mt-1 text-xs leading-relaxed text-[#A3ABBA]">
+            Elegí una colección y usá el editor manual, sin iniciar un análisis IA.
+          </p>
+        </div>
+        <Button asChild className="shrink-0 rounded-full">
+          <Link to={`/videos/${encodeURIComponent(video.id)}/colecciones`}>
+            <Clapperboard aria-hidden="true" className="h-4 w-4" />
+            Guardar clip
+          </Link>
+        </Button>
+      </div>
+    </section>
   )
 }
 
@@ -160,7 +176,7 @@ function ReportStructurePreview({ title }: { title: string }) {
     <section aria-labelledby="report-structure-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Estructura del reporte</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Estructura del análisis</p>
           <h3 id="report-structure-title" className="scout-display mt-1 text-2xl font-bold text-[#F4F5F7]">{title}</h3>
         </div>
         <p className="text-xs text-[#788397]">Sin datos anticipados</p>
@@ -207,7 +223,7 @@ function MatchReportTab({
         <div>
           <h2 className="scout-display text-3xl font-bold text-[#F4F5F7]">Estado no disponible</h2>
           <p className="mt-2 text-sm text-[#A3ABBA]">
-            No pudimos verificar el historial de análisis. No vamos a asumir que este partido está sin analizar.
+            No pudimos verificar el historial de análisis. No vamos a asumir que este video está sin analizar.
           </p>
         </div>
         <Button type="button" variant="outline" className="rounded-full" onClick={onRetry}>
@@ -226,9 +242,9 @@ function MatchReportTab({
       <section className="space-y-10 py-3">
         <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte del partido</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis IA del video</p>
             <h2 className="scout-display mt-3 max-w-4xl text-[clamp(2.6rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              {failed ? 'No se pudo preparar este archivo' : 'Este partido todavía no tiene reporte'}
+              {failed ? 'No se pudo preparar este archivo' : 'Este video todavía no tiene análisis'}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
               {failed
@@ -243,7 +259,7 @@ function MatchReportTab({
                 className="mt-6 h-[54px] rounded-full bg-[#FF6A1F] px-8 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]"
               >
                 {isCreatingAnalysis ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowRight aria-hidden="true" className="h-4 w-4" />}
-                {isCreatingAnalysis ? 'Iniciando…' : 'Analizar partido'}
+                {isCreatingAnalysis ? 'Iniciando…' : 'Analizar video'}
               </Button>
             ) : failed ? null : (
               <p className="mt-6 max-w-sm text-sm text-[#A3ABBA]">El análisis estará disponible cuando termine la preparación del archivo.</p>
@@ -266,12 +282,12 @@ function MatchReportTab({
       <section className="space-y-9 py-3" aria-live="polite">
         <div className="grid gap-8 border-b border-[#252B38] pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Reporte solicitado</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis solicitado</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              Tu partido está en cola
+              Tu video está en cola
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
-              La solicitud ya fue recibida. El reporte se actualizará acá cuando el análisis comience, sin que tengas que salir del Partido.
+              La solicitud ya fue recibida. El análisis se actualizará acá cuando el procesamiento comience, sin que tengas que salir del video.
             </p>
             <dl className="mt-6 flex flex-wrap gap-x-12 gap-y-5 border-y border-[#252B38] py-4">
               <div>
@@ -288,7 +304,7 @@ function MatchReportTab({
           </div>
           <ProcessingShotArc variant="queued" presentation="report" />
         </div>
-        <ReportStructurePreview title="El reporte aparecerá acá" />
+        <ReportStructurePreview title="El análisis aparecerá acá" />
       </section>
     )
   }
@@ -302,7 +318,7 @@ function MatchReportTab({
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Análisis en curso</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              Estamos analizando tu partido
+              Estamos analizando tu video
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">Los resultados aparecerán acá cuando termine.</p>
             {hasProgress ? (
@@ -329,7 +345,7 @@ function MatchReportTab({
             presentation="report"
           />
         </div>
-        <ReportStructurePreview title="El reporte se está preparando" />
+        <ReportStructurePreview title="El análisis se está preparando" />
       </section>
     )
   }
@@ -339,9 +355,9 @@ function MatchReportTab({
       <section className="space-y-9 py-3">
         <div className="grid gap-8 border-b border-red-500/20 pb-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Reporte interrumpido</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">Análisis interrumpido</p>
             <h2 className="scout-display mt-3 text-[clamp(2.7rem,6vw,4.2rem)] font-extrabold leading-[0.98] text-[#F4F5F7]">
-              No se pudo analizar este partido
+              No se pudo analizar este video
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-[#A3ABBA]">
               El video y sus clips siguen disponibles. Podés iniciar un análisis nuevo con el mismo material.
@@ -360,7 +376,7 @@ function MatchReportTab({
           </div>
           <ProcessingShotArc variant="failed" presentation="report" />
         </div>
-        <ReportStructurePreview title="El reporte todavía no está disponible" />
+        <ReportStructurePreview title="El análisis todavía no está disponible" />
       </section>
     )
   }
@@ -369,14 +385,14 @@ function MatchReportTab({
     <section className="space-y-5">
       <nav
         className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        aria-label="Secciones del reporte"
+        aria-label="Secciones del análisis IA"
       >
         {REPORT_SECTIONS.map((section, index) => {
           const selected = activeSection === section.id
           return (
             <Link
               key={section.id}
-              to={matchReportPath(video.id, section.id)}
+              to={videoAnalysisPath(video.id, section.id)}
               aria-current={selected ? 'page' : undefined}
               className={`scout-display relative inline-flex min-h-14 shrink-0 items-center px-3 text-xl font-bold tracking-[0.01em] transition-colors ${
                 selected ? 'text-[#F4F5F7]' : 'text-[#A3ABBA] hover:text-[#F4F5F7]'
@@ -457,7 +473,7 @@ function MatchClipsTab({ videoId }: { videoId: string }) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Momentos guardados</p>
-          <h2 className="scout-display mt-2 text-4xl font-bold text-[#F4F5F7]">Clips del partido</h2>
+          <h2 className="scout-display mt-2 text-4xl font-bold text-[#F4F5F7]">Clips del video</h2>
           <p className="mt-3 text-sm text-[#A3ABBA]">
             {totalClips === 0 ? 'Todavía no hay clips guardados.' : `${totalClips} ${totalClips === 1 ? 'clip guardado' : 'clips guardados'}.`}
           </p>
@@ -650,7 +666,7 @@ export function MatchDetailPage() {
       },
       onError: (error) => {
         if (!isApiAuthenticationError(error)) {
-          setCreationError('No pudimos iniciar el análisis. El partido sigue disponible para reintentar.')
+          setCreationError('No pudimos iniciar el análisis. El video sigue disponible para reintentar.')
         }
       },
       onSubmittingChange: setIsCreatingAnalysis,
@@ -667,18 +683,18 @@ export function MatchDetailPage() {
 
   const handleReportSectionChange = useCallback((section: AnalysisJobResultsSection) => {
     if (!videoId) return
-    navigate(matchReportPath(videoId, reportSectionFor(section)))
+    navigate(videoAnalysisPath(videoId, reportSectionFor(section)))
   }, [navigate, videoId])
 
   if (loadState === 'loading') {
     return (
       <div className="py-12">
-        <Link to="/partidos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA]">
-          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
+        <Link to="/videos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA]">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Videos
         </Link>
         <div className="mt-10 flex min-h-[50vh] items-center justify-center gap-3 text-sm text-[#A3ABBA]" aria-live="polite" aria-busy="true">
           <LoaderCircle className="h-5 w-5 animate-spin text-[#FF6A1F] motion-reduce:animate-none" aria-hidden="true" />
-          Cargando partido…
+          Cargando video…
         </div>
       </div>
     )
@@ -687,12 +703,12 @@ export function MatchDetailPage() {
   if (loadState === 'error') {
     return (
       <div className="py-12">
-        <Link to="/partidos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] hover:text-[#F4F5F7]">
-          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
+        <Link to="/videos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] hover:text-[#F4F5F7]">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Videos
         </Link>
         <section className="mt-10 flex flex-col items-start gap-5 border-y border-red-500/20 py-10 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="scout-display text-4xl font-bold text-[#F4F5F7]">No pudimos cargar este partido</h1>
+            <h1 className="scout-display text-4xl font-bold text-[#F4F5F7]">No pudimos cargar este video</h1>
             <p className="mt-3 text-sm text-[#A3ABBA]">Revisá la conexión e intentá nuevamente.</p>
           </div>
           <Button type="button" variant="outline" className="rounded-full" onClick={() => void load()}>
@@ -706,11 +722,11 @@ export function MatchDetailPage() {
   if (loadState === 'not-found' || !model || !displayState) {
     return (
       <div className="py-12">
-        <Link to="/partidos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] hover:text-[#F4F5F7]">
-          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
+        <Link to="/videos" className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] hover:text-[#F4F5F7]">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Videos
         </Link>
         <section className="mt-10 border-y border-[#252B38] py-12">
-          <h1 className="scout-display text-4xl font-bold text-[#F4F5F7]">Partido no encontrado</h1>
+          <h1 className="scout-display text-4xl font-bold text-[#F4F5F7]">Video no encontrado</h1>
           <p className="mt-3 text-sm text-[#A3ABBA]">El video no existe o ya no está disponible.</p>
         </section>
       </div>
@@ -720,10 +736,10 @@ export function MatchDetailPage() {
   return (
     <div className={isCompactReportHeader ? 'pb-16 pt-4 sm:pt-5' : 'pb-16 pt-8'}>
       <Link
-        to="/partidos"
+        to="/videos"
         className="inline-flex items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#F4F5F7]"
       >
-        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Partidos
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Videos
       </Link>
 
       <header className={isCompactReportHeader ? 'mt-3 border-b border-[#252B38] pb-4' : 'mt-7 border-b border-[#252B38] pb-8'}>
@@ -748,13 +764,13 @@ export function MatchDetailPage() {
         </div>
       </header>
 
-      <nav className="flex overflow-x-auto border-b border-[#252B38] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Secciones del partido">
+      <nav className="flex overflow-x-auto border-b border-[#252B38] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Secciones del video">
         {TABS.map(({ id, label, icon: Icon }) => {
           const selected = activeTab === id
           return (
             <Link
               key={id}
-              to={matchDetailPath(model.video.id, id)}
+              to={videoDetailPath(model.video.id, id)}
               role="tab"
               aria-selected={selected}
               className={`relative inline-flex ${isCompactReportHeader ? 'min-h-12' : 'min-h-[58px]'} shrink-0 items-center gap-2 px-5 text-base font-semibold transition-colors ${

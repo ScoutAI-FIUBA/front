@@ -148,7 +148,7 @@ test('formats all three values as explicitly labelled similarity scores', () => 
   assert.match(source, /Similitud general/)
   assert.match(source, /Similitud de tiros/)
   assert.match(source, /Similitud de movimiento/)
-  assert.match(source, /Partidos similares/)
+  assert.match(source, /Análisis similares/)
   assert.match(source, /style=\{\{ width: `\$\{percentage\}%` \}\}/)
   assert.match(source, /divide-y divide-white\/10 border-y/)
   assert.doesNotMatch(source, /xl:grid-cols-2/)

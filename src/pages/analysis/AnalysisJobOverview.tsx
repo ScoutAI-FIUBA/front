@@ -268,7 +268,7 @@ export function AnalysisJobOverview({
   return (
     <section className="space-y-6" aria-labelledby="overview-title">
       <div>
-        <h2 id="overview-title" className="text-xl font-semibold text-foreground">Resumen del partido</h2>
+        <h2 id="overview-title" className="text-xl font-semibold text-foreground">Resumen del análisis</h2>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Confirmá tu equipo y entrá directo a los tiros o al movimiento en cancha.</p>
       </div>
 

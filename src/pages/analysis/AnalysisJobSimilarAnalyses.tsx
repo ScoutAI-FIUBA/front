@@ -54,7 +54,7 @@ function SimilarAnalysisCard({
           <VideoIcon className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Partido comparable</p>
+          <p className="text-xs text-muted-foreground">Análisis comparable</p>
           <h3 className="mt-0.5 truncate font-semibold text-foreground">
             {video?.title ?? 'Video sin contexto disponible'}
           </h3>
@@ -267,7 +267,7 @@ export function AnalysisJobSimilarAnalysesView({
         <header className="flex flex-col gap-3 border-b border-[#252B38] pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Comparación del equipo</p>
-            <h2 id="similar-analyses-title" className="scout-display mt-2 text-4xl font-extrabold text-[#F4F5F7]">Partidos similares</h2>
+            <h2 id="similar-analyses-title" className="scout-display mt-2 text-4xl font-extrabold text-[#F4F5F7]">Análisis similares</h2>
             <p className="mt-2 max-w-2xl text-sm text-[#A3ABBA]">Similitud general, de tiros y de movimiento según el análisis disponible.</p>
           </div>
           <p className="text-xs text-[#788397]">{similar.candidatesCompared} análisis comparados</p>
@@ -302,7 +302,7 @@ export function AnalysisJobSimilarAnalysesView({
   return (
     <section className="min-w-0 space-y-5" aria-labelledby="similar-analyses-title">
       <div className="min-w-0">
-        <h2 id="similar-analyses-title" className="text-xl font-semibold text-foreground">Partidos similares</h2>
+        <h2 id="similar-analyses-title" className="text-xl font-semibold text-foreground">Análisis similares</h2>
         <p className="mt-1 text-sm text-muted-foreground">Compará patrones de tiro y movimiento con otros análisis del equipo.</p>
       </div>
 

@@ -586,7 +586,7 @@ export function AnalysisSetup({
                 </div>
 
                 <details className="rounded-lg border px-4 py-3">
-                  <summary className="cursor-pointer text-sm font-semibold">Agregar contexto del partido (opcional)</summary>
+                  <summary className="cursor-pointer text-sm font-semibold">Agregar contexto del video (opcional)</summary>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label>Rival</Label>

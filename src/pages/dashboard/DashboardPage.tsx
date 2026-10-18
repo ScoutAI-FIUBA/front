@@ -13,12 +13,12 @@ import {
   type MatchLibraryDisplayState,
   type MatchLibraryItem,
 } from '@/pages/matches/match-library'
-import { matchDetailPath } from '@/pages/matches/match-detail'
+import { videoDetailPath } from '@/pages/matches/match-detail'
 import {
   cachedMatchPoster,
   requestMatchPoster,
 } from '@/pages/matches/match-posters'
-import { newMatchPath } from '@/pages/videos/video-upload-navigation'
+import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
 import { getVideoByIdForTeam } from '@/services/registry'
 import { selectHomePriorityMatch, selectRecentHomeMatches } from './home-priority'
 
@@ -41,10 +41,10 @@ function stateTone(state: MatchLibraryDisplayState): string {
 }
 
 function priorityActionLabel(state: MatchLibraryDisplayState): string {
-  if (state === 'report-ready') return 'Ver reporte'
+  if (state === 'report-ready') return 'Ver análisis'
   if (state === 'analysis-error' || state === 'material-error') return 'Resolver problema'
-  if (state === 'unanalyzed') return 'Analizar partido'
-  if (state === 'unavailable') return 'Ver partido'
+  if (state === 'unanalyzed') return 'Analizar video'
+  if (state === 'unavailable') return 'Ver video'
   return 'Ver progreso'
 }
 
@@ -93,21 +93,21 @@ function PriorityMatch({
       <div className="flex flex-col justify-center px-7 py-9 lg:px-10">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Continuar</p>
         <h2 id="priority-match-title" className="scout-display mt-4 text-balance text-[clamp(2.7rem,5vw,4.5rem)] font-extrabold text-[#F4F5F7]">
-          {item.video.title || 'Partido sin título'}
+          {item.video.title || 'Video sin título'}
         </h2>
         <p className="mt-4 text-sm text-[#A3ABBA]">
           {item.team?.name ?? 'Equipo no disponible'} · Fecha de carga {formatUploadDate(item.video.uploadedAt)}
         </p>
 
         {progress != null ? (
-          <div className="mt-7 border-l-2 border-[#FF6A1F] pl-4" role="status" aria-label={`Análisis del partido: ${progress}%`}>
+          <div className="mt-7 border-l-2 border-[#FF6A1F] pl-4" role="status" aria-label={`Análisis del video: ${progress}%`}>
             <p className="scout-display text-4xl font-bold text-[#F4F5F7]">{progress}%</p>
             <p className="mt-1 text-sm text-[#A3ABBA]">Análisis en curso</p>
           </div>
         ) : null}
 
         <Button asChild className="mt-8 h-[52px] self-start rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
-          <Link to={matchDetailPath(item.video.id, 'reporte')}>
+          <Link to={videoDetailPath(item.video.id, 'reporte')}>
             {priorityActionLabel(displayState)}
             <ArrowRight aria-hidden="true" className="h-5 w-5" />
           </Link>
@@ -128,7 +128,7 @@ function RecentMatchRow({
 
   return (
     <Link
-      to={matchDetailPath(item.video.id)}
+      to={videoDetailPath(item.video.id)}
       className="group grid min-h-[132px] gap-5 border-b border-[#252B38] py-5 transition-colors last:border-b-0 hover:bg-white/[0.02] sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-center"
     >
       <div className="relative h-24 overflow-hidden border border-[#252B38] bg-[#11151D]">
@@ -142,7 +142,7 @@ function RecentMatchRow({
         <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] ${stateTone(displayState)}`}>
           {matchLibraryDisplayLabel(displayState)}
         </span>
-        <h3 className="scout-display mt-3 truncate text-2xl font-bold text-[#F4F5F7]">{item.video.title || 'Partido sin título'}</h3>
+        <h3 className="scout-display mt-3 truncate text-2xl font-bold text-[#F4F5F7]">{item.video.title || 'Video sin título'}</h3>
         <p className="mt-1 text-sm text-[#A3ABBA]">
           {item.team?.name ?? 'Equipo no disponible'} · {formatUploadDate(item.video.uploadedAt)}
         </p>
@@ -218,13 +218,13 @@ export function DashboardPage() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#FF6A1F]">Inicio</p>
           <h1 className="scout-display text-[clamp(3.5rem,8vw,5.4rem)] font-extrabold text-[#F4F5F7]">Seguí donde quedaste</h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-[#A3ABBA] sm:text-lg">
-            Retomá el partido que necesita tu atención o abrí uno de los últimos reportes.
+            Retomá el video que necesita tu atención o abrí uno de los últimos análisis.
           </p>
         </div>
         <Button asChild className="h-[54px] shrink-0 rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white shadow-none hover:bg-[#ff7b38]">
-          <Link to={newMatchPath()}>
+          <Link to={videoUploadPath()}>
             <Plus aria-hidden="true" className="h-5 w-5" />
-            Nuevo partido
+            Subir video
           </Link>
         </Button>
       </header>
@@ -243,7 +243,7 @@ export function DashboardPage() {
           <section role="alert" className="flex min-h-52 flex-col items-start justify-center border-y border-[#252B38] py-10">
             <div className="flex items-center gap-3 text-red-300">
               <CircleAlert aria-hidden="true" className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">No pudimos cargar tus partidos</h2>
+              <h2 className="text-lg font-semibold">No pudimos cargar tus videos</h2>
             </div>
             <p className="mt-3 text-sm text-[#A3ABBA]">Revisá tu conexión e intentá nuevamente.</p>
             <Button type="button" variant="outline" onClick={() => void refresh()} className="mt-6 h-11 rounded-full border-[#3A4254] bg-transparent px-5 text-[#F4F5F7] hover:bg-white/5 hover:text-white">
@@ -260,7 +260,7 @@ export function DashboardPage() {
             <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
               <p className="text-sm font-semibold">Algunos estados no se pudieron verificar</p>
-              <p className="mt-1 text-sm text-[#A3ABBA]">Conservamos los partidos disponibles mientras vuelve la conexión.</p>
+              <p className="mt-1 text-sm text-[#A3ABBA]">Conservamos los videos disponibles mientras vuelve la conexión.</p>
             </div>
           </section>
         ) : null}
@@ -270,10 +270,10 @@ export function DashboardPage() {
             <div className="mb-7 w-56 text-[#657089] opacity-60">
               <svg aria-hidden="true" viewBox="0 0 28 15"><BasketballCourtLines lengthM={28} widthM={15} /></svg>
             </div>
-            <h2 className="scout-display text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Tu primer partido empieza acá</h2>
-            <p className="mt-4 max-w-lg text-base leading-relaxed text-[#A3ABBA]">Subí un partido para preparar el archivo y obtener su Reporte.</p>
+            <h2 className="scout-display text-4xl font-bold text-[#F4F5F7] sm:text-5xl">Tu primer video empieza acá</h2>
+            <p className="mt-4 max-w-lg text-base leading-relaxed text-[#A3ABBA]">Subí un video para preparar el archivo y obtener su análisis.</p>
             <Button asChild className="mt-7 h-[52px] rounded-full bg-[#FF6A1F] px-7 text-base font-semibold text-white hover:bg-[#ff7b38]">
-              <Link to={newMatchPath()}>Nuevo partido<ArrowRight aria-hidden="true" className="h-5 w-5" /></Link>
+              <Link to={videoUploadPath()}>Subir video<ArrowRight aria-hidden="true" className="h-5 w-5" /></Link>
             </Button>
           </section>
         ) : null}
@@ -287,9 +287,9 @@ export function DashboardPage() {
                 <div className="flex items-end justify-between gap-4 border-b border-[#252B38] pb-5">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF6A1F]">Tu biblioteca</p>
-                    <h2 id="recent-matches-title" className="scout-display mt-2 text-4xl font-bold text-[#F4F5F7]">Partidos recientes</h2>
+                    <h2 id="recent-matches-title" className="scout-display mt-2 text-4xl font-bold text-[#F4F5F7]">Videos recientes</h2>
                   </div>
-                  <Link to="/partidos" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#FF6A1F]">
+                  <Link to="/videos" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#A3ABBA] transition-colors hover:text-[#FF6A1F]">
                     Ver todos
                     <ArrowRight aria-hidden="true" className="h-4 w-4" />
                   </Link>

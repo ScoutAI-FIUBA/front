@@ -31,8 +31,8 @@ test('login and register keep one restrained product identity', () => {
   const register = readSource('../src/pages/auth/RegisterPage.tsx')
   const google = readSource('../src/components/auth/GoogleSignInButton.tsx')
 
-  assert.match(login, /Partidos, planteles y análisis\./)
-  assert.match(register, /Partidos, planteles y análisis\./)
+  assert.match(login, /Videos, planteles y análisis\./)
+  assert.match(register, /Videos, planteles y análisis\./)
   assert.match(login, /text-foreground\/75/)
   assert.match(google, /Continuar con Google/)
   assert.doesNotMatch(register, /Métricas|Gestión de Equipos|2024 SCOUTAI|Privacidad|Términos/)

@@ -39,6 +39,8 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - `src/pages/analysis/analysis-job-similar.ts`
 - `src/components/analysis/ShotChartCourt.tsx`
 - `src/components/analysis/shot-chart-court.ts`
+- `src/components/analysis/BasketballCourtLines.tsx`
+- `src/components/analysis/basketball-court-lines.ts`
 - `src/components/analysis/CourtPositionsCourt.tsx`
 - `src/components/analysis/court-positions-court.ts`
 - `src/components/analysis/CourtPositionsHeatmap.tsx`
@@ -226,6 +228,8 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - Shot chart loads through `GET /jobs/{jobId}/shot-chart?team_id=...` without per-player requests; player filtering uses the full response locally.
 - Changing the persisted team side remounts and reloads the shot-chart block so no player association from the previous side remains visible.
 - The court uses backend-provided metre dimensions as its SVG view box and converts each valid `x_m` / `y_m` position to responsive percentages. Invalid or out-of-court coordinates are never rendered.
+- The shared court drawing interprets `corner_three_lateral_m` in the backend's FIBA coordinate frame as the lateral distance from the width centre line. For the current 28 m × 15 m contract, `6.60` therefore places the straight three-point lines at `y=0.90` and `y=14.10`, joined to the backend-provided 6.75 m arcs around the hoops.
+- Three-point geometry is presentation-only. It does not move shot markers or recalculate their backend-provided `points`, `zone`, distance, result, or statistics.
 - Made, missed, and unknown shots use three separate marker and text treatments; unknown is never labelled or styled as a miss.
 - Shot-chart coverage reports charted shots, shots without a valid court position, and shots without an identified shooter. Empty, loading, retryable error, partial, and unconfirmed-team states are distinct.
 - Completed job detail loads Court Positions through `GET /jobs/{jobId}/court-positions?team_id=...&sample_every=...` independently from team-side, Stats, and Shot Chart.

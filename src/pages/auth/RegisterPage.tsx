@@ -50,7 +50,7 @@ export function RegisterPage() {
   )
 
   return (
-    <AuthShell panelWidth="wide" visualTitle="Partidos, planteles y análisis.">
+    <AuthShell panelWidth="wide" visualTitle="Videos, planteles y análisis.">
             <AuthPanelHeader
               eyebrow="Nuevo acceso"
               title="Crear cuenta"
