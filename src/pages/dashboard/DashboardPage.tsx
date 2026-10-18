@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import {
   buildMatchLibrary,
@@ -171,6 +172,8 @@ function HomeLoading() {
 }
 
 export function DashboardPage() {
+  const { user } = useAuth()
+  const userId = user?.id ?? null
   const { catalog, loadState, isPollingDisconnected, refresh } = useAnalysisJobCatalog()
   const items = useMemo(() => catalog ? buildMatchLibrary(catalog) : [], [catalog])
   const priority = useMemo(() => selectHomePriorityMatch(items), [items])
@@ -185,21 +188,26 @@ export function DashboardPage() {
   const [posterUrls, setPosterUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    setPosterUrls({})
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId) return
     let active = true
     for (const { video } of visibleMatches) {
-      const cached = cachedMatchPoster(video.id)
+      const cached = cachedMatchPoster(userId, video.id)
       if (cached) {
         setPosterUrls((current) => current[video.id] === cached ? current : { ...current, [video.id]: cached })
         continue
       }
 
-      void requestMatchPoster(video, getVideoByIdForTeam).then((posterUrl) => {
+      void requestMatchPoster(userId, video, getVideoByIdForTeam).then((posterUrl) => {
         if (!active || !posterUrl) return
         setPosterUrls((current) => current[video.id] === posterUrl ? current : { ...current, [video.id]: posterUrl })
       })
     }
     return () => { active = false }
-  }, [visibleMatches])
+  }, [userId, visibleMatches])
 
   const hasPartialFailure = catalog?.partialFailures.some((failure) => failure.scope !== 'active-job') ?? false
 

@@ -3,6 +3,7 @@ import { CircleAlert } from 'lucide-react'
 import { SessionRestoreStatus } from '@/components/auth/SessionRestoreStatus'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { createLoginNavigationState } from '@/pages/auth/login-navigation'
 
 export function ProtectedRoute() {
   const location = useLocation()
@@ -11,6 +12,8 @@ export function ProtectedRoute() {
     isLoading,
     retrySessionRestore,
     sessionRestoreError,
+    lastAuthenticatedUserId,
+    sessionEndReason,
   } = useAuth()
 
   if (isLoading) {
@@ -35,7 +38,17 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    if (sessionEndReason === 'logout') return <Navigate to="/login" replace />
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={createLoginNavigationState(
+          location,
+          sessionEndReason === 'expired' ? lastAuthenticatedUserId : null,
+        )}
+      />
+    )
   }
 
   return <Outlet />

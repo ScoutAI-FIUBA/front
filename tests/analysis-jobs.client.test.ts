@@ -5,6 +5,8 @@ import {
   type ApiProcessingJob,
   type AnalysisJobRequest,
 } from '../src/services/api/analysis-jobs.client.ts'
+import { apiJson } from '../src/services/api/http-client.ts'
+import { createAnalysisJobSubmission } from '../src/pages/videos/analysis-job-creation.ts'
 
 function apiJob(overrides: Partial<ApiProcessingJob> = {}): ApiProcessingJob {
   return {
@@ -80,6 +82,41 @@ test('create posts team_id in the body and maps the queued job', async () => {
   assert.equal(created.status, 'QUEUED')
   assert.equal(created.progressPercent, null)
   assert.equal(created.videoId, 'video-1')
+})
+
+test('a JSON 202 creates and publishes the accepted job without a reload', async (t) => {
+  const originalFetch = globalThis.fetch
+  t.after(() => {
+    globalThis.fetch = originalFetch
+  })
+  globalThis.fetch = (async () => Response.json({
+    job: apiJob({
+      id: 'job-accepted',
+      status: 'QUEUED',
+      progress_percent: null,
+      started_at: null,
+    }),
+  }, { status: 202 })) as typeof fetch
+  const service = createAnalysisJobService(
+    (path, init) => apiJson(path, init, { auth: false }),
+  )
+  let visibleJobId: string | null = null
+  let creationError: unknown
+  const submission = createAnalysisJobSubmission({
+    create: () => service.create('video-1', { teamId: 'team-1' }),
+    onCreated: (job) => {
+      visibleJobId = job.id
+    },
+    onError: (error) => {
+      creationError = error
+    },
+    onSubmittingChange: () => undefined,
+  })
+
+  await submission.submit()
+
+  assert.equal(visibleJobId, 'job-accepted')
+  assert.equal(creationError, undefined)
 })
 
 test('get uses the job endpoint and preserves nullable progress', async () => {

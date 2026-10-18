@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, MapPin, Pencil, Plus, Search, Shield, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -10,10 +10,16 @@ import { playerService, teamService } from '@/services/registry'
 import type { CreateTeamDto } from '@/services/contracts/teams.service'
 import type { Team } from '@/types'
 import { TeamFormDialog } from './TeamFormDialog'
+import {
+  createTeamWithNavigationContext,
+  TEAM_CREATION_RETURN_QUERY_PARAM,
+} from './team-creation-navigation'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
 export function TeamsPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [teams, setTeams] = useState<Team[]>([])
   const [counts, setCounts] = useState<Record<string, number> | null>(null)
   const [loadState, setLoadState] = useState<LoadState>('loading')
@@ -75,14 +81,24 @@ export function TeamsPage() {
   const submitTeam = async (values: CreateTeamDto) => {
     setSubmitting(true)
     try {
+      let returnPath: string | null = null
       if (editingTeam) {
         await teamService.update(editingTeam.id, values)
         toast.success('Equipo actualizado')
       } else {
-        await teamService.create(values)
+        const created = await createTeamWithNavigationContext({
+          values,
+          requestedReturn: searchParams.get(TEAM_CREATION_RETURN_QUERY_PARAM),
+          createTeam: (dto) => teamService.create(dto),
+        })
         toast.success('Equipo creado')
+        returnPath = created.returnPath
       }
       setFormOpen(false)
+      if (returnPath) {
+        navigate(returnPath, { replace: true })
+        return
+      }
       await load()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo guardar el equipo')

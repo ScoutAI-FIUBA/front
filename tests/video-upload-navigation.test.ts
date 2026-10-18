@@ -47,7 +47,7 @@ test('upload drop affordance has real handlers and a pending guard', () => {
   assert.match(source, /onDragOver=/)
   assert.match(source, /onDrop=\{handleDrop\}/)
   assert.match(source, /isUploading/)
-  assert.match(source, /upsertVideoInAnalysisCatalog\(uploaded\)/)
+  assert.match(source, /upsertVideoInAnalysisCatalog\(user\.id, uploaded\)/)
   assert.match(source, /videoUploadSuccessPath/)
 })
 

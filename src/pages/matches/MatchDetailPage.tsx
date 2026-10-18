@@ -15,6 +15,7 @@ import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNoti
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
 import {
   AnalysisJobResultsWorkspace,
@@ -544,6 +545,7 @@ function MatchClipsTab({ videoId }: { videoId: string }) {
 }
 
 export function MatchDetailPage() {
+  const { user } = useAuth()
   const { videoId = '' } = useParams<{ videoId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -592,9 +594,9 @@ export function MatchDetailPage() {
     const poller = createMatchVideoPreparationPoller({
       load: () => getVideoByIdForTeam(preparationVideoId, preparationTeamId),
       onVideo: (video) => {
+        if (!user || !upsertVideoInAnalysisCatalog(user.id, video)) return
         setIsPollingDisconnected(false)
         setIsPreparationPollingStopped(false)
-        upsertVideoInAnalysisCatalog(video)
         setModel((current) => current?.video.id === video.id
           ? { ...current, video }
           : current)
@@ -607,14 +609,14 @@ export function MatchDetailPage() {
     })
     poller.start(preparationStatus)
     return () => poller.stop()
-  }, [loadState, preparationStatus, preparationTeamId, preparationVideoId])
+  }, [loadState, preparationStatus, preparationTeamId, preparationVideoId, user])
 
   const handleJobUpdated = useCallback((updatedJob: ProcessingJob) => {
-    addCreatedJobToAnalysisCatalog(updatedJob)
+    if (!user || !addCreatedJobToAnalysisCatalog(user.id, updatedJob)) return
     setModel((current) => current?.latestJob?.id === updatedJob.id
       ? { ...current, latestJob: updatedJob }
       : current)
-  }, [])
+  }, [user])
 
   const latestJob = model?.latestJob
   useEffect(() => {
@@ -640,7 +642,7 @@ export function MatchDetailPage() {
     return createAnalysisJobSubmission({
       create: () => analysisJobService.create(analysisVideoId, { teamId: analysisTeamId }),
       onCreated: (job) => {
-        addCreatedJobToAnalysisCatalog(job)
+        if (!user || !addCreatedJobToAnalysisCatalog(user.id, job)) return
         setCreationError(null)
         setModel((current) => current?.video.id === job.videoId
           ? { ...current, latestJob: job, jobsUnavailable: false }
@@ -653,7 +655,7 @@ export function MatchDetailPage() {
       },
       onSubmittingChange: setIsCreatingAnalysis,
     })
-  }, [analysisTeamId, analysisVideoId])
+  }, [analysisTeamId, analysisVideoId, user])
 
   const handleStartAnalysis = useCallback(() => {
     if (!analysisSubmission || !model || videoMaterialState(model.video) !== 'ready') return

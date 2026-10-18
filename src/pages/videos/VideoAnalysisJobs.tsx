@@ -21,6 +21,7 @@ import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs
 import { addCreatedJobToAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
+import { useAuth } from '@/contexts/AuthContext'
 
 type LoadState = 'loading' | 'success' | 'error' | 'session-expired'
 
@@ -47,6 +48,7 @@ export function VideoAnalysisJobs({
   videoTitle,
   videoReady,
 }: VideoAnalysisJobsProps) {
+  const { user } = useAuth()
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [jobs, setJobs] = useState<ProcessingJob[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -101,8 +103,8 @@ export function VideoAnalysisJobs({
   const creationSubmission = useMemo(() => createAnalysisJobSubmission({
     create: () => analysisJobService.create(videoId, { teamId }),
     onCreated: (job) => {
+      if (!user || !addCreatedJobToAnalysisCatalog(user.id, job)) return
       setJobs((current) => addCreatedAnalysisJob(current, job))
-      addCreatedJobToAnalysisCatalog(job)
       setCreationError(null)
       setLoadState('success')
     },
@@ -110,7 +112,7 @@ export function VideoAnalysisJobs({
       setCreationError('No pudimos iniciar el análisis. Reintentá en unos segundos.')
     },
     onSubmittingChange: setIsCreating,
-  }), [teamId, videoId])
+  }), [teamId, user, videoId])
 
   useEffect(() => {
     void loadJobs()
