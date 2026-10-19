@@ -67,5 +67,19 @@ test('collection detail isolates the player, preserves range capture, and marks 
   assert.match(source, /orderedItems\.length === 1 \? 'clip' : 'clips'/)
   assert.match(source, /formatClipSeconds\(Number\(startSeconds\) \|\| 0\).*formatClipSeconds\(Number\(endSeconds\) \|\| 0\)/s)
   assert.match(source, /Usar actual/)
+  assert.match(source, /import \{ ClipTimeline \}/)
+  assert.match(source, /<ClipTimeline/)
+  assert.match(source, /maxRangeSeconds=\{MAX_CLIP_DURATION_SECONDS\}/)
+  assert.match(source, /onRangeChange=\{handleTimelineRangeChange\}/)
+  assert.match(source, /exportInFlightRef\.current/)
+  assert.match(source, /disabled=\{Boolean\(exportingId\)\}/)
   assert.match(source, /scout-display[^"]*truncate[^"]*"[^>]*>\{detail\.collection\.name\}/)
+})
+
+test('clip export has a dedicated timeout without changing the global request timeout', () => {
+  const source = readFileSync(new URL('../src/services/api/clip-collections.api.ts', import.meta.url), 'utf8')
+
+  assert.match(source, /CLIP_EXPORT_TIMEOUT_MS = 180_000/)
+  assert.match(source, /timeoutMs: CLIP_EXPORT_TIMEOUT_MS/)
+  assert.match(source, /timeoutMessage: CLIP_EXPORT_TIMEOUT_MESSAGE/)
 })

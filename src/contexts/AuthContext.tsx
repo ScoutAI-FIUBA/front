@@ -21,6 +21,7 @@ import {
 } from '@/services/api/token'
 import { setAnalysisJobCatalogIdentity } from '@/pages/analysis/analysis-job-catalog-store'
 import { setMatchPosterCacheIdentity } from '@/pages/matches/match-posters'
+import { restoreSessionUser } from './session-restore'
 
 interface AuthContextValue {
   user: User | null
@@ -97,7 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     setSessionRestoreError(false)
     try {
-      const current = await authService.getCurrentUser(getStoredToken() ?? '')
+      const current = await restoreSessionUser(() =>
+        authService.getCurrentUser(getStoredToken() ?? ''),
+      )
       if (
         restoreAttempt.current !== attempt ||
         getStoredSessionSnapshot().generation !== operationSession.generation
