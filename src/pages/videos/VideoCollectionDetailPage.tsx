@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/utils'
+import { ClipTimeline } from '@/pages/analysis/ClipTimeline'
 import { videoDetailPath } from '@/pages/matches/match-detail'
 import { clipCollectionService, videoService } from '@/services/registry'
 import type { ClipCollectionDetail, ClipCollectionItem, Video } from '@/types'
@@ -42,11 +43,15 @@ export function VideoCollectionDetailPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [startSeconds, setStartSeconds] = useState('0')
   const [endSeconds, setEndSeconds] = useState('10')
+  const [currentTime, setCurrentTime] = useState(0)
+  const [playerDuration, setPlayerDuration] = useState(0)
+  const [rangeEdited, setRangeEdited] = useState(false)
   const [clipDescription, setClipDescription] = useState('')
   const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState('')
   const [exportingId, setExportingId] = useState('')
+  const exportInFlightRef = useRef<string | null>(null)
 
   const orderedItems = useMemo(() => orderClipItems(detail?.items ?? []), [detail])
 
@@ -79,6 +84,7 @@ export function VideoCollectionDetailPage() {
       setPlayerLoading(true)
       const videoData = await videoService.getById(videoId)
       setVideo(videoData)
+      setPlayerDuration(videoData?.durationMs ? videoData.durationMs / 1000 : 0)
       if (!videoData) {
         setVideoError('No encontramos el video original.')
         setPlayerLoading(false)
@@ -104,7 +110,11 @@ export function VideoCollectionDetailPage() {
   const seedClipRange = () => {
     const current = Math.max(0, videoRef.current?.currentTime ?? 0)
     const roundedStart = Math.round(current * 10) / 10
-    const duration = video?.durationMs != null ? video.durationMs / 1000 : null
+    const duration = playerDuration > 0
+      ? playerDuration
+      : video?.durationMs != null
+        ? video.durationMs / 1000
+        : null
     const proposedEnd = roundedStart + 10
     const boundedEnd = duration == null ? proposedEnd : Math.min(duration, proposedEnd)
     setStartSeconds(String(roundedStart))
@@ -113,7 +123,7 @@ export function VideoCollectionDetailPage() {
   }
 
   const handleAddOpenChange = (open: boolean) => {
-    if (open) seedClipRange()
+    if (open && !rangeEdited) seedClipRange()
     setAddOpen(open)
   }
 
@@ -144,6 +154,7 @@ export function VideoCollectionDetailPage() {
         description: clipDescription.trim() || undefined,
       })
       setAddOpen(false)
+      setRangeEdited(false)
       setSelectedItem(item)
       toast.success('Clip agregado')
       await loadDetail()
@@ -156,6 +167,22 @@ export function VideoCollectionDetailPage() {
 
   const applyCurrentTime = (setter: (value: string) => void) => {
     setter(String(Math.round((videoRef.current?.currentTime ?? 0) * 10) / 10))
+    setRangeEdited(true)
+  }
+
+  const handleTimelineSeek = (time: number) => {
+    const player = videoRef.current
+    if (!player) return
+    player.currentTime = time
+    setCurrentTime(time)
+    setActiveClipEnd(null)
+    setPlayingItemId('')
+  }
+
+  const handleTimelineRangeChange = (start: number, end: number) => {
+    setStartSeconds(String(Math.round(start * 10) / 10))
+    setEndSeconds(String(Math.round(end * 10) / 10))
+    setRangeEdited(true)
   }
 
   const playItem = (item: ClipCollectionItem) => {
@@ -166,6 +193,7 @@ export function VideoCollectionDetailPage() {
       return
     }
     player.currentTime = item.startMs / 1000
+    setCurrentTime(item.startMs / 1000)
     setActiveClipEnd(item.endMs / 1000)
     setPlayingItemId(item.id)
     void player.play().catch(() => {
@@ -176,7 +204,9 @@ export function VideoCollectionDetailPage() {
 
   const handleVideoTimeUpdate = () => {
     const player = videoRef.current
-    if (!player || activeClipEnd == null || player.currentTime < activeClipEnd) return
+    if (!player) return
+    setCurrentTime(player.currentTime)
+    if (activeClipEnd == null || player.currentTime < activeClipEnd) return
     player.pause()
     setActiveClipEnd(null)
     setPlayingItemId('')
@@ -193,7 +223,9 @@ export function VideoCollectionDetailPage() {
   }
 
   const handleExport = async (item: ClipCollectionItem) => {
+    if (exportInFlightRef.current) return
     try {
+      exportInFlightRef.current = item.id
       setExportingId(item.id)
       const downloadUrl = await clipCollectionService.exportClip(videoId, collectionId, item.id)
       const link = document.createElement('a')
@@ -208,6 +240,7 @@ export function VideoCollectionDetailPage() {
     } catch (exportError) {
       toast.error(exportError instanceof Error ? exportError.message : 'No se pudo preparar la descarga')
     } finally {
+      exportInFlightRef.current = null
       setExportingId('')
     }
   }
@@ -298,6 +331,11 @@ export function VideoCollectionDetailPage() {
                 controls
                 className="h-full w-full"
                 onCanPlay={() => { setPlayerLoading(false); setPlayerError('') }}
+                onLoadedMetadata={(event) => {
+                  if (Number.isFinite(event.currentTarget.duration)) {
+                    setPlayerDuration(event.currentTarget.duration)
+                  }
+                }}
                 onError={() => { setPlayerLoading(false); setPlayerError('No pudimos cargar el archivo de video.') }}
                 onTimeUpdate={handleVideoTimeUpdate}
                 onPause={() => setPlayingItemId('')}
@@ -325,6 +363,21 @@ export function VideoCollectionDetailPage() {
             ) : null}
           </div>
 
+          {video?.storageUrl && playerDuration > 0 && !playerUnavailable ? (
+            <div className="border-t border-[#252B37] px-4 py-4">
+              <ClipTimeline
+                videoUrl={video.storageUrl}
+                duration={playerDuration}
+                currentTime={currentTime}
+                rangeStart={Number.isFinite(Number(startSeconds)) ? Number(startSeconds) : null}
+                rangeEnd={Number.isFinite(Number(endSeconds)) ? Number(endSeconds) : null}
+                maxRangeSeconds={MAX_CLIP_DURATION_SECONDS}
+                onSeek={handleTimelineSeek}
+                onRangeChange={handleTimelineRangeChange}
+              />
+            </div>
+          ) : null}
+
           <div className="grid gap-4 border-t border-[#252B37] px-5 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#737D8E]">{playingItemId ? 'Reproduciendo ahora' : selectedItem ? 'Clip seleccionado' : 'Video original'}</p>
@@ -340,7 +393,7 @@ export function VideoCollectionDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={exportingId === selectedItem.id}
+                disabled={Boolean(exportingId)}
                 onClick={() => void handleExport(selectedItem)}
               >
                 {exportingId === selectedItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -386,14 +439,14 @@ export function VideoCollectionDetailPage() {
                     <div>
                       <Label htmlFor="clip-start">Inicio (segundos)</Label>
                       <div className="mt-1.5 flex gap-2">
-                        <Input id="clip-start" type="number" min="0" step="0.1" value={startSeconds} onChange={(event) => setStartSeconds(event.target.value)} />
+                        <Input id="clip-start" type="number" min="0" step="0.1" value={startSeconds} onChange={(event) => { setStartSeconds(event.target.value); setRangeEdited(true) }} />
                         <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime(setStartSeconds)}>Usar actual</Button>
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="clip-end">Fin (segundos)</Label>
                       <div className="mt-1.5 flex gap-2">
-                        <Input id="clip-end" type="number" min="0" step="0.1" value={endSeconds} onChange={(event) => setEndSeconds(event.target.value)} />
+                        <Input id="clip-end" type="number" min="0" step="0.1" value={endSeconds} onChange={(event) => { setEndSeconds(event.target.value); setRangeEdited(true) }} />
                         <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime(setEndSeconds)}>Usar actual</Button>
                       </div>
                     </div>
@@ -437,7 +490,7 @@ export function VideoCollectionDetailPage() {
                       </span>
                     </button>
                     <span className="flex items-start opacity-60 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={exportingId === item.id} aria-label={`Descargar clip ${item.position}`} onClick={() => void handleExport(item)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={Boolean(exportingId)} aria-label={`Descargar clip ${item.position}`} onClick={() => void handleExport(item)}>
                         {exportingId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                       </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9A6A72] hover:text-[#F28A95]" disabled={deletingId === item.id} aria-label={`Eliminar clip ${item.position}`} onClick={() => void handleDelete(item)}>

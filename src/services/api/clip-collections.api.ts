@@ -12,6 +12,10 @@ import {
   type ApiClipCollectionItem,
 } from './contract-mappers'
 
+export const CLIP_EXPORT_TIMEOUT_MS = 180_000
+export const CLIP_EXPORT_TIMEOUT_MESSAGE =
+  'La exportación está tardando más de lo esperado. No vuelvas a iniciarla todavía; intentá nuevamente en unos minutos.'
+
 interface ApiClipCollection {
   id: string
   video_id: string
@@ -95,6 +99,10 @@ export const apiClipCollectionService: IClipCollectionService = {
     const data = await apiJson<{ download_url: string }>(
       `${collectionPath(videoId, collectionId)}/clips/${encodeURIComponent(itemId)}/export`,
       { method: 'POST' },
+      {
+        timeoutMs: CLIP_EXPORT_TIMEOUT_MS,
+        timeoutMessage: CLIP_EXPORT_TIMEOUT_MESSAGE,
+      },
     )
     return data.download_url
   },

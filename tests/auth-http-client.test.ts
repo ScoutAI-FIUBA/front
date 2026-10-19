@@ -37,6 +37,10 @@ import {
   subscribeToStoredSession,
   subscribeToStoredToken,
 } from '../src/services/api/token.ts'
+import {
+  SESSION_RESTORE_MAX_ATTEMPTS,
+  restoreSessionUser,
+} from '../src/contexts/session-restore.ts'
 
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>()
@@ -366,6 +370,53 @@ test('transient auth me failures preserve the access token and remain retryable'
     (error: unknown) => error instanceof ApiResponseError && error.status === 503,
   )
   assert.equal(getStoredToken(), 'access-existing')
+})
+
+test('session restore retries one transient network failure automatically', async () => {
+  let attempts = 0
+
+  const user = await restoreSessionUser(async () => {
+    attempts += 1
+    if (attempts === 1) throw new ApiTimeoutError('temporary timeout')
+    return {
+      id: 'user-1',
+      email: 'analyst@example.com',
+      role: 'analyst',
+      emailVerified: true,
+    }
+  })
+
+  assert.equal(SESSION_RESTORE_MAX_ATTEMPTS, 2)
+  assert.equal(attempts, 2)
+  assert.equal(user?.id, 'user-1')
+})
+
+test('session restore does not retry HTTP response errors', async () => {
+  let attempts = 0
+
+  await assert.rejects(
+    restoreSessionUser(async () => {
+      attempts += 1
+      throw new ApiResponseError('Unavailable', 503)
+    }),
+    (error: unknown) => error instanceof ApiResponseError && error.status === 503,
+  )
+
+  assert.equal(attempts, 1)
+})
+
+test('session restore stops after one automatic retry', async () => {
+  let attempts = 0
+
+  await assert.rejects(
+    restoreSessionUser(async () => {
+      attempts += 1
+      throw new ApiNetworkError('temporary network failure')
+    }),
+    (error: unknown) => error instanceof ApiNetworkError,
+  )
+
+  assert.equal(attempts, SESSION_RESTORE_MAX_ATTEMPTS)
 })
 
 test('transient refresh failures preserve the expired token instead of forcing logout', async (t) => {
