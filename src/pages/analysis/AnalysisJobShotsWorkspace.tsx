@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type {
+  AnalysisJobPlayerShootingStats,
   AnalysisJobShotChartShot,
   ProcessingJob,
 } from '@/types'
@@ -40,6 +41,11 @@ import {
   buildAnalysisJobPlayerLabels,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity'
+import {
+  buildAnalysisJobPlayerShootingRows,
+  formatAnalysisShootingMetric,
+  type AnalysisJobPlayerShootingRow,
+} from './analysis-job-player-stats'
 import type { AnalysisJobShootingDataController } from './use-analysis-job-shooting-data'
 
 interface AnalysisJobShotsWorkspaceProps {
@@ -61,6 +67,12 @@ const ZONE_LABELS: Record<string, string> = {
 function formatPercentage(value: number | null): string {
   if (value == null) return '—'
   return `${(value * 100).toLocaleString('es-AR', { maximumFractionDigits: 1 })}%`
+}
+
+function playerZoneSummary(zones: AnalysisJobPlayerShootingRow['zones']): string {
+  return zones.map((zone) => (
+    `${ZONE_LABELS[zone.key] ?? zone.key} ${formatAnalysisShootingMetric(zone.made, zone.attempted, zone.percentage)}`
+  )).join(' · ')
 }
 
 function shotPlayerLabel(
@@ -199,6 +211,158 @@ function ShotMomentList({
         )
       })}
     </div>
+  )
+}
+
+function PlayerShootingStatsSection({
+  players,
+  presentation,
+}: {
+  players: AnalysisJobPlayerShootingStats[]
+  presentation: 'legacy' | 'match-report'
+}) {
+  const reportPresentation = presentation === 'match-report'
+  const rows = buildAnalysisJobPlayerShootingRows(players)
+
+  return (
+    <section
+      className={cn(
+        reportPresentation
+          ? 'border-t border-[#252B38] pt-7'
+          : 'rounded-xl border border-white/10 bg-surface p-5 sm:p-6',
+      )}
+      aria-labelledby="player-shooting-stats-title"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className={cn(
+            'text-xs font-semibold uppercase tracking-[0.16em]',
+            reportPresentation ? 'text-[#788397]' : 'text-muted-foreground',
+          )}>Rendimiento detectado</p>
+          <h3
+            id="player-shooting-stats-title"
+            className={cn(
+              'mt-1 font-semibold text-foreground',
+              reportPresentation ? 'scout-display text-3xl font-bold' : 'text-lg',
+            )}
+          >
+            Por jugador
+          </h3>
+          <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+            Métricas estimadas a partir de los tiros detectados en este análisis.
+          </p>
+        </div>
+        <BarChart3 className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
+      </div>
+
+      {rows.length === 0 ? (
+        <EmptyState
+          className={cn('mt-5 py-8', reportPresentation && 'border-y border-[#252B38]')}
+          icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
+          title="No hay estadísticas por jugador"
+          description="El análisis no devolvió jugadores con métricas de tiro para mostrar."
+        />
+      ) : (
+        <>
+          <div className={cn(
+            'mt-5 divide-y md:hidden',
+            reportPresentation ? 'divide-[#252B38] border-y border-[#252B38]' : 'divide-white/10 border-y border-white/10',
+          )}>
+            {rows.map((row) => (
+              <article key={row.key} className="py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="truncate font-semibold text-foreground">{row.label}</h4>
+                      {row.rosterLinked ? <Badge variant="analyzed">Plantel</Badge> : null}
+                      {row.onCourt ? <Badge variant="outline">Mayor presencia</Badge> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {row.groupLabel}
+                      {row.jerseyNumber ? ` · #${row.jerseyNumber}` : ''}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="scout-display text-3xl font-bold tabular-nums text-foreground">{row.points}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">PTS</p>
+                  </div>
+                </div>
+
+                <dl className={cn(
+                  'mt-4 grid grid-cols-3 gap-2 border-y py-3',
+                  reportPresentation ? 'border-[#252B38]' : 'border-white/10',
+                )}>
+                  {[
+                    ['TC', row.fieldGoals],
+                    ['2P', row.twoPoint],
+                    ['3P', row.threePoint],
+                  ].map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+                      <dd className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {row.zones.length > 0 ? (
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                    Zonas: {playerZoneSummary(row.zones)}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+
+          <div className={cn(
+            'mt-5 hidden overflow-x-auto rounded-xl border md:block',
+            reportPresentation ? 'border-[#252B38]' : 'border-white/10',
+          )}>
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className={cn(
+                'text-[10px] uppercase tracking-[0.14em] text-muted-foreground',
+                reportPresentation ? 'bg-[#11151D]' : 'bg-surface-subtle',
+              )}>
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Jugador</th>
+                  <th className="px-4 py-3 font-semibold">Grupo</th>
+                  <th className="px-4 py-3 text-right font-semibold">PTS</th>
+                  <th className="px-4 py-3 text-right font-semibold">TC</th>
+                  <th className="px-4 py-3 text-right font-semibold">2P</th>
+                  <th className="px-4 py-3 text-right font-semibold">3P</th>
+                </tr>
+              </thead>
+              <tbody className={cn('divide-y', reportPresentation ? 'divide-[#252B38]' : 'divide-white/10')}>
+                {rows.map((row) => (
+                  <tr key={row.key}>
+                    <td className="px-4 py-4 align-top">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-foreground">{row.label}</span>
+                        {row.rosterLinked ? <Badge variant="analyzed">Plantel</Badge> : null}
+                        {row.onCourt ? <Badge variant="outline">Mayor presencia</Badge> : null}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {row.stablePlayerId ? `${row.observations} observaciones totales` : `Seguimiento ${row.key.split(':')[1]}`}
+                        {row.jerseyNumber ? ` · #${row.jerseyNumber}` : ''}
+                      </p>
+                      {row.zones.length > 0 ? (
+                        <p className="mt-2 max-w-xl text-xs leading-relaxed text-muted-foreground">
+                          Zonas: {playerZoneSummary(row.zones)}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-4 align-top text-muted-foreground">{row.groupLabel}</td>
+                    <td className="px-4 py-4 text-right align-top font-semibold tabular-nums text-foreground">{row.points}</td>
+                    <td className="px-4 py-4 text-right align-top tabular-nums text-foreground">{row.fieldGoals}</td>
+                    <td className="px-4 py-4 text-right align-top tabular-nums text-foreground">{row.twoPoint}</td>
+                    <td className="px-4 py-4 text-right align-top tabular-nums text-foreground">{row.threePoint}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -446,6 +610,13 @@ export function AnalysisJobShotsWorkspace({
             <span>{chart.coverage.shotsWithoutShooter} sin tirador identificado</span>
           </div>
         </>
+      )}
+
+      {statsState === 'success' && (
+        <PlayerShootingStatsSection
+          players={stats?.players ?? []}
+          presentation={presentation}
+        />
       )}
     </section>
   )
