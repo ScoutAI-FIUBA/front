@@ -5,6 +5,10 @@ import {
   useRef,
   useState,
 } from 'react'
+import {
+  buildTimelineThumbnails,
+  configureTimelineThumbnailVideo,
+} from './clip-thumbnails'
 
 interface ClipTimelineProps {
   videoUrl: string
@@ -62,10 +66,17 @@ export function ClipTimeline({
     const thumbnailVideo = document.createElement('video')
     const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
-    thumbnailVideo.src = videoUrl
-    thumbnailVideo.muted = true
-    thumbnailVideo.preload = 'auto'
-    thumbnailVideo.playsInline = true
+    let resolveMetadata!: () => void
+    let rejectMetadata!: (error: Error) => void
+    const metadataReady = new Promise<void>((resolve, reject) => {
+      resolveMetadata = resolve
+      rejectMetadata = reject
+    })
+    const handleMetadata = () => resolveMetadata()
+    const handleMetadataError = () => rejectMetadata(new Error('No se pudo leer el video'))
+    thumbnailVideo.addEventListener('loadedmetadata', handleMetadata, { once: true })
+    thumbnailVideo.addEventListener('error', handleMetadataError, { once: true })
+    configureTimelineThumbnailVideo(thumbnailVideo, videoUrl)
 
     const seekTo = (time: number) => new Promise<void>((resolve, reject) => {
       const handleSeeked = () => {
@@ -91,10 +102,7 @@ export function ClipTimeline({
 
       try {
         if (thumbnailVideo.readyState < 1) {
-          await new Promise<void>((resolve, reject) => {
-            thumbnailVideo.addEventListener('loadedmetadata', () => resolve(), { once: true })
-            thumbnailVideo.addEventListener('error', () => reject(new Error('No se pudo leer el video')), { once: true })
-          })
+          await metadataReady
         }
 
         const aspectRatio = thumbnailVideo.videoWidth > 0 && thumbnailVideo.videoHeight > 0
@@ -103,14 +111,16 @@ export function ClipTimeline({
         canvas.height = 96
         canvas.width = Math.round(canvas.height * aspectRatio)
 
-        const frames: string[] = []
-        for (let index = 0; index < THUMBNAIL_COUNT; index += 1) {
-          if (cancelled) return
-          const time = ((index + 0.5) / THUMBNAIL_COUNT) * duration
-          await seekTo(time)
-          context.drawImage(thumbnailVideo, 0, 0, canvas.width, canvas.height)
-          frames.push(canvas.toDataURL('image/jpeg', 0.68))
-        }
+        const frames = await buildTimelineThumbnails(
+          duration,
+          THUMBNAIL_COUNT,
+          seekTo,
+          () => {
+            context.drawImage(thumbnailVideo, 0, 0, canvas.width, canvas.height)
+            return canvas.toDataURL('image/jpeg', 0.68)
+          },
+          () => cancelled,
+        )
 
         if (!cancelled) setThumbnails(frames)
       } catch {
@@ -122,6 +132,8 @@ export function ClipTimeline({
 
     return () => {
       cancelled = true
+      thumbnailVideo.removeEventListener('loadedmetadata', handleMetadata)
+      thumbnailVideo.removeEventListener('error', handleMetadataError)
       thumbnailVideo.removeAttribute('src')
       thumbnailVideo.load()
     }

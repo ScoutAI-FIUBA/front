@@ -15,6 +15,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/utils'
 import { ClipTimeline } from '@/pages/analysis/ClipTimeline'
+import {
+  clipPreviewStart,
+  hasReachedClipEnd,
+  normalizeClipRangeUpdate,
+} from '@/pages/analysis/clip-range'
 import { videoDetailPath } from '@/pages/matches/match-detail'
 import { clipCollectionService, videoService } from '@/services/registry'
 import type { ClipCollectionDetail, ClipCollectionItem, Video } from '@/types'
@@ -47,7 +52,7 @@ export function VideoCollectionDetailPage() {
   const [playerDuration, setPlayerDuration] = useState(0)
   const [rangeEdited, setRangeEdited] = useState(false)
   const [clipDescription, setClipDescription] = useState('')
-  const [activeClipEnd, setActiveClipEnd] = useState<number | null>(null)
+  const activeClipEndRef = useRef<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState('')
   const [exportingId, setExportingId] = useState('')
@@ -165,24 +170,56 @@ export function VideoCollectionDetailPage() {
     }
   }
 
-  const applyCurrentTime = (setter: (value: string) => void) => {
-    setter(String(Math.round((videoRef.current?.currentTime ?? 0) * 10) / 10))
-    setRangeEdited(true)
-  }
-
   const handleTimelineSeek = (time: number) => {
     const player = videoRef.current
-    if (!player) return
+    if (!player || player.readyState < 1) return
+    player.pause()
     player.currentTime = time
     setCurrentTime(time)
-    setActiveClipEnd(null)
+    activeClipEndRef.current = null
     setPlayingItemId('')
   }
 
   const handleTimelineRangeChange = (start: number, end: number) => {
-    setStartSeconds(String(Math.round(start * 10) / 10))
-    setEndSeconds(String(Math.round(end * 10) / 10))
+    const update = normalizeClipRangeUpdate({
+      start,
+      end,
+      duration: playerDuration,
+      maxDuration: MAX_CLIP_DURATION_SECONDS,
+      previousStart: Number.isFinite(Number(startSeconds)) ? Number(startSeconds) : null,
+      previousEnd: Number.isFinite(Number(endSeconds)) ? Number(endSeconds) : null,
+    })
+    if (!update) return
+
+    setStartSeconds(String(update.start))
+    setEndSeconds(String(update.end))
     setRangeEdited(true)
+    if (update.previewTime != null) handleTimelineSeek(update.previewTime)
+  }
+
+  const handleNumericRangeChange = (edge: 'start' | 'end', value: string) => {
+    videoRef.current?.pause()
+    activeClipEndRef.current = null
+    setPlayingItemId('')
+    if (edge === 'start') setStartSeconds(value)
+    else setEndSeconds(value)
+    setRangeEdited(true)
+
+    const changed = Number(value)
+    const other = Number(edge === 'start' ? endSeconds : startSeconds)
+    if (!value.trim() || !Number.isFinite(changed) || !Number.isFinite(other)) return
+    handleTimelineRangeChange(
+      edge === 'start' ? changed : other,
+      edge === 'end' ? changed : other,
+    )
+  }
+
+  const applyCurrentTime = (edge: 'start' | 'end') => {
+    const time = videoRef.current?.currentTime ?? 0
+    handleTimelineRangeChange(
+      edge === 'start' ? time : Number(startSeconds),
+      edge === 'end' ? time : Number(endSeconds),
+    )
   }
 
   const playItem = (item: ClipCollectionItem) => {
@@ -194,7 +231,7 @@ export function VideoCollectionDetailPage() {
     }
     player.currentTime = item.startMs / 1000
     setCurrentTime(item.startMs / 1000)
-    setActiveClipEnd(item.endMs / 1000)
+    activeClipEndRef.current = item.endMs / 1000
     setPlayingItemId(item.id)
     void player.play().catch(() => {
       setPlayingItemId('')
@@ -206,20 +243,33 @@ export function VideoCollectionDetailPage() {
     const player = videoRef.current
     if (!player) return
     setCurrentTime(player.currentTime)
-    if (activeClipEnd == null || player.currentTime < activeClipEnd) return
+    if (!hasReachedClipEnd(player.currentTime, activeClipEndRef.current)) return
     player.pause()
-    setActiveClipEnd(null)
+    activeClipEndRef.current = null
     setPlayingItemId('')
   }
 
+  const handleVideoPlay = () => {
+    const player = videoRef.current
+    if (!player) return
+    const start = Number(startSeconds)
+    const end = Number(endSeconds)
+    const previewStart = clipPreviewStart(
+      activeClipEndRef.current,
+      start,
+      end,
+      playerDuration,
+    )
+    if (previewStart == null) return
+
+    player.currentTime = previewStart
+    setCurrentTime(previewStart)
+    activeClipEndRef.current = end
+    setPlayingItemId('selection-preview')
+  }
+
   const retryPlayer = () => {
-    if (!video) {
-      void loadVideo()
-      return
-    }
-    setPlayerError('')
-    setPlayerLoading(true)
-    setPlayerRevision((revision) => revision + 1)
+    void loadVideo()
   }
 
   const handleExport = async (item: ClipCollectionItem) => {
@@ -329,6 +379,7 @@ export function VideoCollectionDetailPage() {
                 key={`${video.id}-${playerRevision}`}
                 src={video.storageUrl}
                 controls
+                playsInline
                 className="h-full w-full"
                 onCanPlay={() => { setPlayerLoading(false); setPlayerError('') }}
                 onLoadedMetadata={(event) => {
@@ -338,8 +389,9 @@ export function VideoCollectionDetailPage() {
                 }}
                 onError={() => { setPlayerLoading(false); setPlayerError('No pudimos cargar el archivo de video.') }}
                 onTimeUpdate={handleVideoTimeUpdate}
+                onPlay={handleVideoPlay}
                 onPause={() => setPlayingItemId('')}
-                onEnded={() => { setPlayingItemId(''); setActiveClipEnd(null) }}
+                onEnded={() => { setPlayingItemId(''); activeClipEndRef.current = null }}
               />
             ) : null}
 
@@ -439,15 +491,15 @@ export function VideoCollectionDetailPage() {
                     <div>
                       <Label htmlFor="clip-start">Inicio (segundos)</Label>
                       <div className="mt-1.5 flex gap-2">
-                        <Input id="clip-start" type="number" min="0" step="0.1" value={startSeconds} onChange={(event) => { setStartSeconds(event.target.value); setRangeEdited(true) }} />
-                        <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime(setStartSeconds)}>Usar actual</Button>
+                        <Input id="clip-start" type="number" min="0" step="0.1" value={startSeconds} onChange={(event) => handleNumericRangeChange('start', event.target.value)} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime('start')}>Usar actual</Button>
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="clip-end">Fin (segundos)</Label>
                       <div className="mt-1.5 flex gap-2">
-                        <Input id="clip-end" type="number" min="0" step="0.1" value={endSeconds} onChange={(event) => { setEndSeconds(event.target.value); setRangeEdited(true) }} />
-                        <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime(setEndSeconds)}>Usar actual</Button>
+                        <Input id="clip-end" type="number" min="0" step="0.1" value={endSeconds} onChange={(event) => handleNumericRangeChange('end', event.target.value)} />
+                        <Button type="button" variant="outline" size="sm" onClick={() => applyCurrentTime('end')}>Usar actual</Button>
                       </div>
                     </div>
                   </div>

@@ -10,6 +10,7 @@ import {
   type WorkspaceClip,
   type WorkspaceSaveState,
 } from './AnalysisWorkspace'
+import { normalizeClipRangeUpdate } from './clip-range'
 
 const DEFAULT_CLIP_LABEL = 'Pick and Roll'
 const MAX_CLIP_DURATION_SECONDS = 30
@@ -137,25 +138,19 @@ export function AnalysisNewPage() {
   }
 
   const updateClipRange = (start: number, end: number) => {
-    if (!Number.isFinite(start) || !Number.isFinite(end) || duration <= 0) return
-    const previousStart = rangeStart
-    const previousEnd = rangeEnd
-    let nextStart = clamp(start, 0, duration)
-    let nextEnd = clamp(end, 0, duration)
+    const update = normalizeClipRangeUpdate({
+      start,
+      end,
+      duration,
+      maxDuration: MAX_CLIP_DURATION_SECONDS,
+      previousStart: rangeStart,
+      previousEnd: rangeEnd,
+    })
+    if (!update) return
 
-    if (nextEnd <= nextStart) return
-    if (nextEnd - nextStart > MAX_CLIP_DURATION_SECONDS) {
-      if (previousStart != null && Math.abs(nextStart - previousStart) > 0.01) {
-        nextStart = Math.max(0, nextEnd - MAX_CLIP_DURATION_SECONDS)
-      } else {
-        nextEnd = Math.min(duration, nextStart + MAX_CLIP_DURATION_SECONDS)
-      }
-    }
-
-    setRangeStart(Math.round(nextStart * 10) / 10)
-    setRangeEnd(Math.round(nextEnd * 10) / 10)
-    if (previousStart == null || Math.abs(nextStart - previousStart) > 0.01) seekVideo(nextStart)
-    else if (previousEnd == null || Math.abs(nextEnd - previousEnd) > 0.01) seekVideo(nextEnd)
+    setRangeStart(update.start)
+    setRangeEnd(update.end)
+    if (update.previewTime != null) seekVideo(update.previewTime)
   }
 
   const markRangeStart = () => {
