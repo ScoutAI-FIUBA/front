@@ -13,6 +13,7 @@ import {
   courtPositionPlayerLabel,
   defaultCourtPositionFilter,
   filterCourtPositionPlayers,
+  filterIdentifiedCourtPositionPlayers,
   loadAnalysisJobCourtPositions,
   movementSequenceIndex,
 } from '../src/pages/analysis/analysis-job-court-positions.ts'
@@ -142,7 +143,7 @@ test('maps and filters model v2 players by stable identity without exposing it a
     filterCourtPositionPlayers(players, 'stable:player-stable-9').map((player) => player.trackId),
     [9],
   )
-  assert.equal(defaultCourtPositionFilter(players, 1), 'stable:player-stable-9')
+  assert.equal(defaultCourtPositionFilter(players, 1), 'track:7')
 })
 
 test('maps an empty response and a null source file without fabricating players', async () => {
@@ -220,14 +221,61 @@ test('filters locally by side, unassigned tracks, and individual track', async (
   assert.deepEqual(filterCourtPositionPlayers(players, 'track:9').map((player) => player.trackId), [9])
 })
 
-test('defaults Movement to one player, preferring the confirmed team side', async () => {
+test('defaults Movement to an identified player and falls back to all when none exist', async () => {
   const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
   const players = (await service.get('job-1', 'team-1')).players
 
   assert.equal(defaultCourtPositionFilter(players, 0), 'track:7')
-  assert.equal(defaultCourtPositionFilter(players, 1), 'track:9')
+  assert.equal(defaultCourtPositionFilter(players, 1), 'track:7')
   assert.equal(defaultCourtPositionFilter(players, null), 'track:7')
   assert.equal(defaultCourtPositionFilter([], 0), 'all')
+  assert.equal(
+    defaultCourtPositionFilter(players.map((player) => ({ ...player, jerseyNumber: null })), 0),
+    'all',
+  )
+  const playersWithoutJerseys = players.map((player) => ({ ...player, jerseyNumber: null }))
+  const rosterIdentities = [{ trackId: 9, rosterPlayerId: 'roster-9' }]
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(playersWithoutJerseys, rosterIdentities).map((player) => player.trackId),
+    [9],
+  )
+  assert.equal(defaultCourtPositionFilter(playersWithoutJerseys, 1, rosterIdentities), 'track:9')
+})
+
+test('Movement ignores ambiguous Stats identities but keeps valid jersey identification', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+  const duplicateTrackIdentities = [
+    { trackId: 9, rosterPlayerId: 'roster-a' },
+    { trackId: 9, rosterPlayerId: 'roster-b' },
+  ]
+
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(players, duplicateTrackIdentities).map((player) => player.trackId),
+    [7],
+  )
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(
+      players.map((player) => player.trackId === 9 ? { ...player, jerseyNumber: '09' } : player),
+      duplicateTrackIdentities,
+    ).map((player) => player.trackId),
+    [7, 9],
+  )
+})
+
+test('Movement keeps jersey players selectable when Stats fails and otherwise falls back to all', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(players, undefined).map((player) => player.trackId),
+    [7],
+  )
+  assert.equal(defaultCourtPositionFilter(players, 0, undefined), 'track:7')
+  assert.equal(
+    defaultCourtPositionFilter(players.map((player) => ({ ...player, jerseyNumber: null })), 0, undefined),
+    'all',
+  )
 })
 
 test('maps playback progress to sample order without inventing time', () => {
@@ -294,6 +342,27 @@ test('court and detail containers use responsive width guards without a mobile m
   assert.doesNotMatch(detailSource, /min-w-\[/)
 })
 
+test('Movement filters player controls without removing aggregate position evidence', () => {
+  const detailSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobCourtPositions.tsx', import.meta.url),
+    'utf8',
+  )
+  const workspaceSource = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(detailSource, /const identifiedPlayers = useMemo/)
+  assert.match(detailSource, /const visibleIdentifiedPlayers = useMemo/)
+  assert.match(detailSource, /filterIdentifiedCourtPositionPlayers/)
+  assert.match(detailSource, /identifiedPlayers\.map/)
+  assert.match(detailSource, /visibleIdentifiedPlayers\.map/)
+  assert.match(detailSource, /buildCourtPositionsHeatmap\(positions\.court, visiblePlayers\)/)
+  assert.match(detailSource, /players=\{visiblePlayers\}/)
+  assert.match(workspaceSource, /analysisJobPlayerIdentitiesForJob\(job\.id, shootingData\)/)
+  assert.equal(workspaceSource.match(/playerIdentities=\{playerIdentities\}/g)?.length, 2)
+})
+
 test('all analysis courts share recognisable basketball geometry', () => {
   const linesSource = readFileSync(
     new URL('../src/components/analysis/BasketballCourtLines.tsx', import.meta.url),
@@ -349,7 +418,7 @@ test('R3-B2 gives Partido Movement a flat editorial presentation without changin
   assert.match(detailSource, /presentation="match-report"/)
   assert.match(playbackSource, /No representa tiempo real ni está sincronizado con el video/)
   assert.doesNotMatch(detailSource, /Ver en video|onSeekToVideo/)
-  assert.match(workspaceSource, /AnalysisJobCourtPositionsView[^\n]+presentation=\{presentation\}/)
+  assert.match(workspaceSource, /<AnalysisJobCourtPositionsView[\s\S]*?presentation=\{presentation\}/)
   assert.match(workspaceSource, /activeSection === 'movement' \|\| activeSection === 'similar'/)
   assert.match(workspaceSource, /reportContentOnlySection \? 'hidden'/)
 })

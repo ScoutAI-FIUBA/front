@@ -273,6 +273,9 @@ Implemented behavior through the ScoutAI v2 Phase 2 automatic-analysis discovery
 - Stats map `stable_player_id`, `observations`, `on_court`, and `coverage.players_on_court` when present, defaulting the additive v2 fields safely for older v1 responses.
 - Shot Chart maps `stable_player_id` on players and shots plus `filtered_to_stable_player_id`; the workspace keeps its existing one-request local filtering behavior and does not issue a new request per player selection.
 - Court Positions maps the optional `stable_player_id`; individual filters use a stable-key value for v2 and a track-key value for v1.
+- Player tables, individual shot-chart options, and individual Movement options expose only players with a non-empty mapped `rosterPlayerId` or a trimmed jersey number containing exactly one or two digits. This visibility rule is centralized in the analysis player-identity helper and never depends on display text, shooting totals, observations, or `on_court`. Because Court Positions does not carry roster linkage, Movement reuses Stats identity by stable/track key without another request, but only while those Stats are successful and belong to the exact current job; duplicate Stats keys are treated as ambiguous and do not contribute roster identity.
+- The identified-player visibility rule is presentation-only. API clients retain every returned player, `Todos` keeps every shot and spatial sample, aggregate totals and heatmaps remain unchanged, and an empty identified-player set falls back to the aggregate `all` selection.
+- Because aggregate totals still include unattributed and non-identified evidence, their values may be greater than the sum of the visible per-player rows. This is expected and preserves the backend coverage contract.
 - The dedicated `analysisJobSimilarService` maps processing-job similarity scores and keeps `limit=5` and `movement_weight=0.5` encapsulated in its request boundary.
 
 ## Non-Scope

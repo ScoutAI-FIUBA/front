@@ -1,8 +1,12 @@
-import type { AnalysisJobPlayerShootingStats } from '../../types/index.ts'
+import type {
+  AnalysisJobPlayerShootingStats,
+  AnalysisJobShotChartPlayer,
+} from '../../types/index.ts'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity.ts'
 import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
@@ -41,10 +45,26 @@ export function formatAnalysisShootingMetric(
   return `${made}/${attempted} · ${formatAnalysisShootingPercentage(percentage)}`
 }
 
+export function filterAnalysisJobIdentifiedShotChartPlayers(
+  players: AnalysisJobShotChartPlayer[],
+  playerIdentities: AnalysisJobPlayerShootingStats[] = [],
+): AnalysisJobShotChartPlayer[] {
+  const identitiesByKey = new Map(
+    playerIdentities.flatMap((player) => {
+      const key = analysisJobPlayerKey(player)
+      return key ? [[key, player] as const] : []
+    }),
+  )
+  return players.filter((player) => isAnalysisJobPlayerIdentified({
+    jerseyNumber: player.jerseyNumber,
+    rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
+  }))
+}
+
 export function buildAnalysisJobPlayerShootingRows(
   players: AnalysisJobPlayerShootingStats[],
 ): AnalysisJobPlayerShootingRow[] {
-  const orderedPlayers = [...players].sort(
+  const orderedPlayers = players.filter(isAnalysisJobPlayerIdentified).sort(
     (left, right) => Number(right.onCourt) - Number(left.onCourt),
   )
   const labels = buildAnalysisJobPlayerLabels(orderedPlayers)

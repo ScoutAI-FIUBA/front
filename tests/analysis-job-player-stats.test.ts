@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
   buildAnalysisJobPlayerShootingRows,
+  filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
 } from '../src/pages/analysis/analysis-job-player-stats.ts'
-import type { AnalysisJobPlayerShootingStats } from '../src/types/index.ts'
+import type { AnalysisJobPlayerShootingStats, AnalysisJobShotChartPlayer } from '../src/types/index.ts'
 
 function player(
   overrides: Partial<AnalysisJobPlayerShootingStats> = {},
@@ -54,6 +55,27 @@ test('builds visible player rows from the already-loaded analysis stats', () => 
       byZone: {},
     }),
     player(),
+    player({
+      trackId: 14,
+      stablePlayerId: 'stable-14',
+      jerseyNumber: '14',
+      observations: 0,
+      onCourt: false,
+      rosterPlayerId: null,
+      rosterName: null,
+      displayName: '#14',
+      points: 0,
+      fieldGoalsMade: 0,
+      fieldGoalsAttempted: 0,
+      fieldGoalPercentage: null,
+      twoPointMade: 0,
+      twoPointAttempted: 0,
+      twoPointPercentage: null,
+      threePointMade: 0,
+      threePointAttempted: 0,
+      threePointPercentage: null,
+      byZone: {},
+    }),
   ])
 
   assert.equal(rows.length, 2)
@@ -64,13 +86,47 @@ test('builds visible player rows from the already-loaded analysis stats', () => 
   assert.equal(rows[0]?.twoPoint, '2/3 · 66,7%')
   assert.equal(rows[0]?.threePoint, '1/2 · 50%')
   assert.deepEqual(rows[0]?.zones.map((zone) => zone.key), ['paint', 'corner_three'])
-  assert.equal(rows[1]?.label, 'Seguimiento 3')
-  assert.equal(rows[1]?.groupLabel, 'Grupo detectado A')
+  assert.equal(rows[1]?.label, '#14')
+  assert.equal(rows[1]?.points, 0)
+  assert.equal(rows.some((row) => row.key === 'track:3'), false)
 })
 
 test('keeps missing percentages explicit and empty player stats empty', () => {
   assert.equal(formatAnalysisShootingMetric(0, 0, null), '0/0 · —')
   assert.deepEqual(buildAnalysisJobPlayerShootingRows([]), [])
+})
+
+test('Shot Chart keeps valid jersey options when Stats fails and returns no generic options', () => {
+  const chartPlayers: AnalysisJobShotChartPlayer[] = [
+    {
+      trackId: 7,
+      stablePlayerId: null,
+      teamSide: 1,
+      jerseyNumber: '07',
+      displayName: '#07',
+      shots: [],
+    },
+    {
+      trackId: 9,
+      stablePlayerId: null,
+      teamSide: 1,
+      jerseyNumber: null,
+      displayName: 'Player 9',
+      shots: [],
+    },
+  ]
+
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(chartPlayers, undefined).map((candidate) => candidate.trackId),
+    [7],
+  )
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(
+      chartPlayers.map((candidate) => ({ ...candidate, jerseyNumber: null })),
+      undefined,
+    ),
+    [],
+  )
 })
 
 test('Tiros renders player stats responsively without requesting stats again', () => {
@@ -80,7 +136,7 @@ test('Tiros renders player stats responsively without requesting stats again', (
   )
 
   assert.match(source, /<PlayerShootingStatsSection/)
-  assert.match(source, /players=\{stats\?\.players \?\? \[\]\}/)
+  assert.match(source, /players=\{currentStats\?\.players \?\? \[\]\}/)
   assert.match(source, />\s*Por jugador\s*</)
   assert.match(source, />Jugador</)
   assert.match(source, />PTS</)
@@ -102,6 +158,10 @@ test('player stats integration preserves the existing shot chart and filters', (
   assert.match(source, /<ShotChartCourt/)
   assert.match(source, /filterAnalysisJobShots\(chart\.shots, filters\)/)
   assert.match(source, /aria-label="Filtrar por jugador"/)
-  assert.match(source, /chartPlayers\.map/)
+  assert.match(source, /identifiedChartPlayers\.map/)
+  assert.match(source, /filterAnalysisJobIdentifiedShotChartPlayers/)
+  assert.match(source, /isAnalysisJobPlayerIdentified/)
+  assert.match(source, /current\.player === filters\.player/)
+  assert.match(source, /player: 'all'/)
   assert.match(source, /onSelectShot=\{selectShot\}/)
 })

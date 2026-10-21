@@ -27,6 +27,7 @@ import {
   analysisJobCourtPositionsLoadKey,
   courtPositionSideLabel,
   defaultCourtPositionFilter,
+  filterIdentifiedCourtPositionPlayers,
   filterCourtPositionPlayers,
   isCourtPositionPlayerFilter,
   loadAnalysisJobCourtPositions,
@@ -36,10 +37,13 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  type AnalysisJobPlayerIdentification,
+  type AnalysisJobPlayerIdentity,
 } from './analysis-job-player-identity'
 
 interface AnalysisJobCourtPositionsProps {
   job: ProcessingJob
+  playerIdentities?: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification>
   onTechnicalSummaryChange?: (summary: AnalysisMovementTechnicalSummary | null) => void
   presentation?: 'legacy' | 'match-report'
 }
@@ -63,6 +67,7 @@ function formatAveragePosition(player: AnalysisJobCourtPositionsPlayer): string 
 
 export function AnalysisJobCourtPositionsView({
   job,
+  playerIdentities,
   onTechnicalSummaryChange,
   presentation = 'legacy',
 }: AnalysisJobCourtPositionsProps) {
@@ -79,10 +84,15 @@ export function AnalysisJobCourtPositionsView({
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const ourTeamSideRef = useRef(job.ourTeamSide)
+  const playerIdentitiesRef = useRef(playerIdentities)
 
   useEffect(() => {
     ourTeamSideRef.current = job.ourTeamSide
   }, [job.ourTeamSide])
+
+  useEffect(() => {
+    playerIdentitiesRef.current = playerIdentities
+  }, [playerIdentities])
 
   useEffect(() => {
     let active = true
@@ -108,7 +118,7 @@ export function AnalysisJobCourtPositionsView({
       (loaded) => {
         if (!active || !loaded) return
         setPositions(loaded)
-        setFilter(defaultCourtPositionFilter(loaded.players, ourTeamSideRef.current))
+        setFilter(defaultCourtPositionFilter(loaded.players, ourTeamSideRef.current, playerIdentitiesRef.current))
         setLoadState('success')
         onTechnicalSummaryChange?.({
           coverage: loaded.coverage,
@@ -131,6 +141,19 @@ export function AnalysisJobCourtPositionsView({
     () => filterCourtPositionPlayers(positions?.players ?? [], filter),
     [filter, positions?.players],
   )
+  const identifiedPlayers = useMemo(
+    () => filterIdentifiedCourtPositionPlayers(positions?.players ?? [], playerIdentities),
+    [playerIdentities, positions?.players],
+  )
+  const visibleIdentifiedPlayers = useMemo(
+    () => filterIdentifiedCourtPositionPlayers(visiblePlayers, playerIdentities),
+    [playerIdentities, visiblePlayers],
+  )
+  useEffect(() => {
+    if (!isCourtPositionPlayerFilter(filter)) return
+    if (identifiedPlayers.some((player) => analysisJobPlayerKey(player) === filter)) return
+    setFilter('all')
+  }, [filter, identifiedPlayers])
   const heatmap = useMemo(
     () => positions
       ? buildCourtPositionsHeatmap(positions.court, visiblePlayers)
@@ -240,7 +263,7 @@ export function AnalysisJobCourtPositionsView({
             <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
               <SelectTrigger id="court-positions-filter" className="w-full border-[#3A4254] bg-transparent text-[#F4F5F7]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {positions.players.map((player) => (
+                {identifiedPlayers.map((player) => (
                   <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
                     {analysisJobPlayerLabelFromMap(player, playerLabels)}
                   </SelectItem>
@@ -301,9 +324,9 @@ export function AnalysisJobCourtPositionsView({
           )}
         </div>
 
-        {!selectedPlayer && visiblePlayers.length > 0 ? (
+        {!selectedPlayer && visibleIdentifiedPlayers.length > 0 ? (
           <div className="divide-y divide-[#252B38] border-y border-[#252B38]">
-            {visiblePlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
+            {visibleIdentifiedPlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
               <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 py-3 text-sm">
                 <span className="font-medium text-[#F4F5F7]">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
                 <span className="tabular-nums text-[#A3ABBA]">{formatMetres(player.movement.distanceM)}</span>
@@ -343,7 +366,7 @@ export function AnalysisJobCourtPositionsView({
           <Select value={filter} onValueChange={(value) => setFilter(value as CourtPositionsFilter)}>
             <SelectTrigger id="court-positions-filter" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {positions.players.map((player) => (
+              {identifiedPlayers.map((player) => (
                 <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
                   {analysisJobPlayerLabelFromMap(player, playerLabels)}
                 </SelectItem>
@@ -396,9 +419,9 @@ export function AnalysisJobCourtPositionsView({
         )}
       </div>
 
-      {!selectedPlayer && visiblePlayers.length > 0 && (
+      {!selectedPlayer && visibleIdentifiedPlayers.length > 0 && (
         <div className="divide-y divide-white/10 border-y border-white/10">
-          {visiblePlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
+          {visibleIdentifiedPlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
             <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-3 text-sm">
               <span className="font-medium text-foreground">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
               <span className="tabular-nums text-muted-foreground">{formatMetres(player.movement.distanceM)}</span>

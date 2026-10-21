@@ -22,6 +22,7 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  isAnalysisJobPlayerIdentified,
 } from './analysis-job-player-identity'
 
 interface AnalysisJobShootingStatsProps {
@@ -259,10 +260,10 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
     )
   }
 
-  const isEmpty = stats.teams.length === 0 && stats.players.length === 0
-  const orderedPlayers = [...stats.players].sort(
+  const orderedPlayers = stats.players.filter(isAnalysisJobPlayerIdentified).sort(
     (left, right) => Number(right.onCourt) - Number(left.onCourt),
   )
+  const isEmpty = stats.teams.length === 0 && orderedPlayers.length === 0
   const playerLabels = buildAnalysisJobPlayerLabels(orderedPlayers)
 
   return (
@@ -289,7 +290,7 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
             ))}
           </div>
 
-          {stats.players.length > 0 && (
+          {orderedPlayers.length > 0 && (
             <div className="mt-6">
               <h3 className="font-semibold text-foreground">Por jugador</h3>
               <div className="mt-3 overflow-x-auto rounded-lg border">

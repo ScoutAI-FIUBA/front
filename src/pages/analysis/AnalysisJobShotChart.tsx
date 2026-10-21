@@ -24,6 +24,7 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  isAnalysisJobPlayerIdentified,
 } from './analysis-job-player-identity'
 
 interface AnalysisJobShotChartProps {
@@ -171,6 +172,7 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
   const filteredShots = selectedPlayer === 'all'
     ? chart.shots
     : chart.shots.filter((shot) => analysisJobPlayerKey(shot) === selectedPlayer)
+  const identifiedPlayers = chart.players.filter(isAnalysisJobPlayerIdentified)
   const playerLabels = buildAnalysisJobPlayerLabels(chart.players)
   const validShots = filteredShots.filter(
     (shot) => shotChartPointToPercent(chart.court, shot) != null,
@@ -186,14 +188,14 @@ export function AnalysisJobShotChartView({ job }: AnalysisJobShotChartProps) {
             Ubicación de los tiros proyectada sobre las dimensiones de cancha informadas por el sistema.
           </p>
         </div>
-        {chart.players.length > 0 && (
+        {identifiedPlayers.length > 0 && (
           <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
             <SelectTrigger className="w-full sm:w-56" aria-label="Filtrar tiros por jugador">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los jugadores</SelectItem>
-              {chart.players.map((player) => (
+              {identifiedPlayers.map((player) => (
                 <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
                   {analysisJobPlayerLabelFromMap(player, playerLabels)}
                 </SelectItem>

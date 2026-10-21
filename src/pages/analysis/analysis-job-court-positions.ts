@@ -10,6 +10,9 @@ import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabel,
+  isAnalysisJobPlayerIdentified,
+  type AnalysisJobPlayerIdentification,
+  type AnalysisJobPlayerIdentity,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity.ts'
 
@@ -25,6 +28,28 @@ export type CourtPositionsFilter =
   | 'side-1'
   | 'unassigned'
   | AnalysisJobPlayerKey
+
+export function filterIdentifiedCourtPositionPlayers(
+  players: AnalysisJobCourtPositionsPlayer[],
+  playerIdentities: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification> = [],
+): AnalysisJobCourtPositionsPlayer[] {
+  const identitiesByKey = new Map<AnalysisJobPlayerKey, AnalysisJobPlayerIdentification>()
+  const ambiguousKeys = new Set<AnalysisJobPlayerKey>()
+  playerIdentities.forEach((player) => {
+    const key = analysisJobPlayerKey(player)
+    if (!key || ambiguousKeys.has(key)) return
+    if (identitiesByKey.has(key)) {
+      identitiesByKey.delete(key)
+      ambiguousKeys.add(key)
+      return
+    }
+    identitiesByKey.set(key, player)
+  })
+  return players.filter((player) => isAnalysisJobPlayerIdentified({
+    jerseyNumber: player.jerseyNumber,
+    rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
+  }))
+}
 
 export function analysisJobCourtPositionsContextForJob(
   job: Pick<ProcessingJob, 'id' | 'teamId' | 'status'>,
@@ -66,10 +91,12 @@ export function filterCourtPositionPlayers(
 export function defaultCourtPositionFilter(
   players: AnalysisJobCourtPositionsPlayer[],
   ourTeamSide: AnalysisJobTeamSide | null,
+  playerIdentities: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification> = [],
 ): CourtPositionsFilter {
+  const identifiedPlayers = filterIdentifiedCourtPositionPlayers(players, playerIdentities)
   const preferred = ourTeamSide == null
-    ? players[0]
-    : players.find((player) => player.teamSide === ourTeamSide) ?? players[0]
+    ? identifiedPlayers[0]
+    : identifiedPlayers.find((player) => player.teamSide === ourTeamSide) ?? identifiedPlayers[0]
   return preferred ? analysisJobPlayerKey(preferred) ?? 'all' : 'all'
 }
 
