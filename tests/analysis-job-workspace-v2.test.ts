@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import type { AnalysisJobShotChartShot } from '../src/types/index.ts'
+import type { AnalysisJobPlayerShootingStats, AnalysisJobShotChartShot, AnalysisJobShootingStats } from '../src/types/index.ts'
 import {
   analysisShotKey,
   DEFAULT_SHOT_EVIDENCE_FILTERS,
   filterAnalysisJobShots,
   shotHasVideoEvidence,
 } from '../src/pages/analysis/analysis-job-shot-evidence.ts'
+import { analysisJobPlayerIdentitiesForJob } from '../src/pages/analysis/analysis-job-player-identity.ts'
 
 const readSource = (relativePath: string) => readFileSync(
   new URL(relativePath, import.meta.url),
@@ -36,6 +37,74 @@ function shot(overrides: Partial<AnalysisJobShotChartShot> = {}): AnalysisJobSho
     ...overrides,
   }
 }
+
+function playerIdentity(
+  rosterPlayerId: string,
+): AnalysisJobPlayerShootingStats {
+  return {
+    trackId: 7,
+    stablePlayerId: null,
+    teamSide: 1,
+    jerseyNumber: null,
+    observations: 1,
+    onCourt: true,
+    rosterPlayerId,
+    rosterName: rosterPlayerId,
+    displayName: rosterPlayerId,
+    points: 0,
+    fieldGoalsMade: 0,
+    fieldGoalsAttempted: 0,
+    fieldGoalPercentage: null,
+    twoPointMade: 0,
+    twoPointAttempted: 0,
+    twoPointPercentage: null,
+    threePointMade: 0,
+    threePointAttempted: 0,
+    threePointPercentage: null,
+    byZone: {},
+  }
+}
+
+function statsIdentity(jobId: string, rosterPlayerId: string): AnalysisJobShootingStats {
+  return {
+    jobId,
+    videoId: `video-${jobId}`,
+    ourTeamSide: 1,
+    teams: [],
+    players: [playerIdentity(rosterPlayerId)],
+    shots: [],
+    coverage: {
+      shotsDetected: 0,
+      shotsScored: 0,
+      shotsWithoutCourtPosition: 0,
+      shotsWithoutShooter: 0,
+      playersTracked: 1,
+      playersOnCourt: 1,
+      playersWithJerseyNumber: 0,
+      playersLinkedToRoster: 1,
+      measures: [],
+      notMeasured: [],
+    },
+  }
+}
+
+test('job B never reuses job A player identity while its Stats are still loading', () => {
+  const statsA = statsIdentity('job-a', 'roster-a')
+  const statsB = statsIdentity('job-b', 'roster-b')
+
+  assert.equal(analysisJobPlayerIdentitiesForJob('job-b', {
+    statsState: 'success',
+    stats: statsA,
+  }), undefined)
+  assert.equal(analysisJobPlayerIdentitiesForJob('job-b', {
+    statsState: 'loading',
+    stats: statsA,
+  }), undefined)
+  assert.deepEqual(analysisJobPlayerIdentitiesForJob('job-b', {
+    statsState: 'success',
+    stats: statsB,
+  }), statsB.players)
+})
 
 test('only shots with a real non-negative timestamp expose video evidence', () => {
   assert.equal(shotHasVideoEvidence(shot({ timestampSeconds: 18 })), true)

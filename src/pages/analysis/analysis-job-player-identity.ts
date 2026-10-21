@@ -3,6 +3,19 @@ export interface AnalysisJobPlayerIdentity {
   trackId?: number | null
 }
 
+export interface AnalysisJobPlayerIdentification {
+  rosterPlayerId?: string | null
+  jerseyNumber?: string | null
+}
+
+interface AnalysisJobPlayerIdentitySource<TPlayer> {
+  statsState: 'blocked' | 'loading' | 'success' | 'error'
+  stats: {
+    jobId: string
+    players: TPlayer[]
+  } | null
+}
+
 export interface AnalysisJobPlayerLabelSource extends AnalysisJobPlayerIdentity {
   rosterName?: string | null
   jerseyNumber?: string | null
@@ -20,6 +33,26 @@ export function analysisJobPlayerKey(
     return `track:${player.trackId}`
   }
   return null
+}
+
+export function isAnalysisJobPlayerIdentified(
+  player: AnalysisJobPlayerIdentification,
+): boolean {
+  const jerseyNumber = player.jerseyNumber?.trim()
+  return Boolean(
+    player.rosterPlayerId?.trim()
+    || (jerseyNumber && /^[0-9]{1,2}$/.test(jerseyNumber)),
+  )
+}
+
+export function analysisJobPlayerIdentitiesForJob<
+  TPlayer extends AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification,
+>(
+  jobId: string,
+  source: AnalysisJobPlayerIdentitySource<TPlayer>,
+): TPlayer[] | undefined {
+  if (source.statsState !== 'success' || source.stats?.jobId !== jobId) return undefined
+  return source.stats.players
 }
 
 function meaningfulBackendLabel(player: AnalysisJobPlayerLabelSource): string | null {

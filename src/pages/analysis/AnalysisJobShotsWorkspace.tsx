@@ -39,10 +39,12 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity'
 import {
   buildAnalysisJobPlayerShootingRows,
+  filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
   type AnalysisJobPlayerShootingRow,
 } from './analysis-job-player-stats'
@@ -51,6 +53,7 @@ import type { AnalysisJobShootingDataController } from './use-analysis-job-shoot
 interface AnalysisJobShotsWorkspaceProps {
   job: ProcessingJob
   shootingData: AnalysisJobShootingDataController
+  playerIdentities?: AnalysisJobPlayerShootingStats[]
   onSeekToVideo: (seconds: number) => void
   onOpenOverview?: () => void
   presentation?: 'legacy' | 'match-report'
@@ -369,6 +372,7 @@ function PlayerShootingStatsSection({
 export function AnalysisJobShotsWorkspace({
   job,
   shootingData,
+  playerIdentities,
   onSeekToVideo,
   onOpenOverview,
   presentation = 'legacy',
@@ -381,6 +385,7 @@ export function AnalysisJobShotsWorkspace({
     chart,
     retryChart,
   } = shootingData
+  const currentStats = stats?.jobId === job.id ? stats : null
   const [filters, setFilters] = useState<ShotEvidenceFilters>(DEFAULT_SHOT_EVIDENCE_FILTERS)
   const [selectedShotKey, setSelectedShotKey] = useState<string | null>(null)
   const [showMomentList, setShowMomentList] = useState(false)
@@ -390,6 +395,28 @@ export function AnalysisJobShotsWorkspace({
     setSelectedShotKey(null)
     setShowMomentList(false)
   }, [job.id, job.ourTeamSide])
+
+  useEffect(() => {
+    if (filters.player === 'all') return
+    const statsPlayersByKey = new Map(
+      (playerIdentities ?? []).flatMap((player) => {
+        const key = analysisJobPlayerKey(player)
+        return key ? [[key, player] as const] : []
+      }),
+    )
+    const selectedPlayerIsVisible = chart?.players.some((player) => {
+      if (analysisJobPlayerKey(player) !== filters.player) return false
+      return isAnalysisJobPlayerIdentified({
+        jerseyNumber: player.jerseyNumber,
+        rosterPlayerId: statsPlayersByKey.get(filters.player)?.rosterPlayerId,
+      })
+    }) ?? false
+    if (!selectedPlayerIsVisible) {
+      setFilters((current) => current.player === filters.player
+        ? { ...current, player: 'all' }
+        : current)
+    }
+  }, [chart, filters.player, playerIdentities])
 
   const reportPresentation = presentation === 'match-report'
 
@@ -410,13 +437,13 @@ export function AnalysisJobShotsWorkspace({
     )
   }
 
-  const ourTeam = stats?.teams.find((team) => team.teamSide === stats.ourTeamSide) ?? null
-  const ourTeamHighPresence = stats?.players.filter((player) => (
-    player.teamSide === stats.ourTeamSide && player.onCourt
+  const ourTeam = currentStats?.teams.find((team) => team.teamSide === currentStats.ourTeamSide) ?? null
+  const ourTeamHighPresence = currentStats?.players.filter((player) => (
+    player.teamSide === currentStats.ourTeamSide && player.onCourt
   )).length ?? 0
   const zones = [...new Set(chart?.shots.map((shot) => shot.zone) ?? [])].sort()
   const statsPlayersByKey = new Map(
-    (stats?.players ?? []).flatMap((player) => {
+    (playerIdentities ?? []).flatMap((player) => {
       const key = analysisJobPlayerKey(player)
       return key ? [[key, player] as const] : []
     }),
@@ -426,6 +453,10 @@ export function AnalysisJobShotsWorkspace({
     const rightOnCourt = statsPlayersByKey.get(analysisJobPlayerKey(right) as AnalysisJobPlayerKey)?.onCourt ?? false
     return Number(rightOnCourt) - Number(leftOnCourt)
   })
+  const identifiedChartPlayers = filterAnalysisJobIdentifiedShotChartPlayers(
+    chartPlayers,
+    playerIdentities,
+  )
   const playerLabels = buildAnalysisJobPlayerLabels(chartPlayers.map((player) => ({
     ...player,
     rosterName: statsPlayersByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterName ?? null,
@@ -527,7 +558,7 @@ export function AnalysisJobShotsWorkspace({
               <SelectTrigger className={cn(reportPresentation && 'h-9 rounded-full border-[#3A4254] bg-transparent text-xs')} aria-label="Filtrar por jugador"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los jugadores</SelectItem>
-                {chartPlayers.map((player) => (
+                {identifiedChartPlayers.map((player) => (
                   <SelectItem key={analysisJobPlayerKey(player)} value={analysisJobPlayerKey(player) as string}>
                     {analysisJobPlayerLabelFromMap(player, playerLabels)}
                   </SelectItem>
@@ -614,7 +645,7 @@ export function AnalysisJobShotsWorkspace({
 
       {statsState === 'success' && (
         <PlayerShootingStatsSection
-          players={stats?.players ?? []}
+          players={currentStats?.players ?? []}
           presentation={presentation}
         />
       )}

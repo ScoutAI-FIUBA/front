@@ -8,6 +8,7 @@ import { AnalysisJobDetails } from './AnalysisJobDetails'
 import { AnalysisJobOverview } from './AnalysisJobOverview'
 import { AnalysisJobShotsWorkspace } from './AnalysisJobShotsWorkspace'
 import { AnalysisJobSimilarAnalysesView } from './AnalysisJobSimilarAnalyses'
+import { analysisJobPlayerIdentitiesForJob } from './analysis-job-player-identity'
 import {
   AnalysisWorkspaceVideo,
   type AnalysisWorkspaceVideoHandle,
@@ -57,6 +58,7 @@ export function AnalysisJobResultsWorkspace({
   presentation = 'legacy',
 }: AnalysisJobResultsWorkspaceProps) {
   const shootingData = useAnalysisJobShootingData(job)
+  const playerIdentities = analysisJobPlayerIdentitiesForJob(job.id, shootingData)
   const [movementSummary, setMovementSummary] = useState<AnalysisMovementTechnicalSummary | null>(null)
   const [videoState, setVideoState] = useState<AnalysisWorkspaceVideoState>('loading')
   const [evidenceOpen, setEvidenceOpen] = useState(false)
@@ -79,12 +81,12 @@ export function AnalysisJobResultsWorkspace({
 
   const shootingSummary = useMemo<AnalysisShootingSummary | null>(() => {
     const { stats, statsState } = shootingData
-    if (statsState !== 'success' || !stats) return null
+    if (statsState !== 'success' || !stats || stats.jobId !== job.id) return null
     return {
       team: stats.teams.find((candidate) => candidate.teamSide === stats.ourTeamSide) ?? null,
       coverage: stats.coverage,
     }
-  }, [shootingData])
+  }, [job.id, shootingData])
 
   const handleSeekToVideo = useCallback((seconds: number) => {
     if (presentation === 'match-report') setEvidenceOpen(true)
@@ -189,13 +191,19 @@ export function AnalysisJobResultsWorkspace({
             <AnalysisJobShotsWorkspace
               job={job}
               shootingData={shootingData}
+              playerIdentities={playerIdentities}
               onSeekToVideo={handleSeekToVideo}
               onOpenOverview={() => onSectionChange('overview')}
               presentation={presentation}
             />
           </div>
           <div hidden={activeSection !== 'movement'}>
-            <AnalysisJobCourtPositionsView job={job} onTechnicalSummaryChange={setMovementSummary} presentation={presentation} />
+            <AnalysisJobCourtPositionsView
+              job={job}
+              playerIdentities={playerIdentities}
+              onTechnicalSummaryChange={setMovementSummary}
+              presentation={presentation}
+            />
           </div>
           <div hidden={activeSection !== 'similar'}>
             <AnalysisJobSimilarAnalysesView job={job} teamName={team?.name} presentation={presentation} />
