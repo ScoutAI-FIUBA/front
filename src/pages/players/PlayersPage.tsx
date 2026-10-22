@@ -251,7 +251,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
         onDataChanged={refreshData}
       />
 
-      <PlayerAnalysisStatsSheet open={statsOpen} onOpenChange={setStatsOpen} player={statsPlayer} />
+      <PlayerAnalysisStatsSheet key={statsPlayer?.id ?? 'none'} open={statsOpen} onOpenChange={setStatsOpen} player={statsPlayer} />
     </div>
   )
 }
