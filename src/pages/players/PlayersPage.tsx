@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapPinOff, Pencil, Plus, Search, Shield } from 'lucide-react'
+import { BarChart3, MapPinOff, Pencil, Plus, Search, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { positionLabel } from '@/lib/positions'
 import { playerService, teamService } from '@/services/registry'
 import type { Player, Team } from '@/types'
 import { GlobalPlayerSheet, type GlobalPlayerSheetIntent } from './GlobalPlayerSheet'
+import { PlayerAnalysisStatsSheet } from './PlayerAnalysisStatsSheet'
 import {
   filterGlobalPlayers,
   sortGlobalPlayers,
@@ -37,6 +38,8 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
   const [teamFilter, setTeamFilter] = useState('all')
   const [sheetOpen, setSheetOpen] = useState(openCreateOnMount)
   const [sheetIntent, setSheetIntent] = useState<GlobalPlayerSheetIntent>({ kind: 'create' })
+  const [statsPlayer, setStatsPlayer] = useState<Player | null>(null)
+  const [statsOpen, setStatsOpen] = useState(false)
 
   const refreshData = useCallback(async () => {
     const [loadedPlayers, loadedTeams] = await Promise.all([
@@ -80,6 +83,11 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
   const openEdit = (player: Player) => {
     setSheetIntent({ kind: 'edit', player })
     setSheetOpen(true)
+  }
+
+  const openStats = (player: Player) => {
+    setStatsPlayer(player)
+    setStatsOpen(true)
   }
 
   const handleSheetOpenChange = (open: boolean) => {
@@ -184,6 +192,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
             </span>
             <div className="hidden min-w-36 lg:block" />
             <div className="h-8 w-8 shrink-0" />
+            <div className="h-8 w-8 shrink-0" />
           </div>
           {filteredPlayers.map((player) => {
             const teamName = player.teamId ? teamNames.get(player.teamId) : null
@@ -212,6 +221,16 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 text-muted-foreground opacity-70 group-hover:opacity-100 focus-visible:opacity-100"
+                  aria-label={`Ver estadísticas de ${player.firstName} ${player.lastName}`}
+                  title="Ver estadísticas"
+                  onClick={() => openStats(player)}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-muted-foreground opacity-70 group-hover:opacity-100 focus-visible:opacity-100"
                   aria-label={`Editar a ${player.firstName} ${player.lastName}`}
                   onClick={() => openEdit(player)}
                 >
@@ -231,6 +250,8 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
         teams={teams}
         onDataChanged={refreshData}
       />
+
+      <PlayerAnalysisStatsSheet open={statsOpen} onOpenChange={setStatsOpen} player={statsPlayer} />
     </div>
   )
 }

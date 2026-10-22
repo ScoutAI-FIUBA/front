@@ -316,6 +316,98 @@ export interface AnalysisJobShotChart {
   coverage: AnalysisJobShotChartCoverage
 }
 
+/** pct is a fraction 0..1 (null without attempts); only display code converts it. */
+export interface PlayerShootingLine {
+  made: number
+  attempted: number
+  pct: number | null
+}
+
+export interface PlayerZoneLine extends PlayerShootingLine {
+  unresolvedAttempts: number
+}
+
+export interface PlayerAnalysisVideo {
+  jobId: string
+  videoId: string
+  videoTitle: string | null
+  jerseyNumber: string | null
+  secondsOnScreen: number | null
+  distanceM: number | null
+  points: number
+  fieldGoals: { made: number; attempted: number }
+  twoPoint: { made: number; attempted: number }
+  threePoint: { made: number; attempted: number }
+  unresolvedAttempts: number
+}
+
+export interface PlayerAnalysisStats {
+  playerId: string
+  calcVersion: number
+  /** Analysed videos where the player is linked, not official games. */
+  games: number
+  points: number
+  fieldGoals: PlayerShootingLine
+  twoPoint: PlayerShootingLine
+  threePoint: PlayerShootingLine
+  unresolvedAttempts: number
+  /** Seconds visible in video, not minutes played. */
+  secondsOnScreen: number | null
+  distanceM: number | null
+  byZone: Record<string, PlayerZoneLine>
+  byShotType: Record<string, PlayerZoneLine>
+  videos: PlayerAnalysisVideo[]
+  notMeasured: string[]
+}
+
+export type PlayerShotOutcomeConfidence =
+  | 'detected'
+  | 'inferred'
+  | 'timeout'
+  | 'unresolved'
+
+export interface PlayerShotChartShot {
+  /** Unique among the player's shots; shot ids repeat across jobs. */
+  shotKey: string
+  shotId: number | null
+  jobId: string
+  videoId: string
+  videoTitle: string | null
+  xM: number
+  yM: number
+  /** Use result, not a boolean: unknown outcomes are not misses. */
+  result: ShotChartResult
+  /** Worth of the shot by location, even when missed. */
+  shotValue: 2 | 3
+  zone: string | null
+  shotType: string | null
+  distanceM: number | null
+  timestampSeconds: number | null
+  outcomeConfidence: PlayerShotOutcomeConfidence | null
+  needsReview: boolean | null
+}
+
+export interface PlayerShotChart {
+  playerId: string
+  player: {
+    id: string
+    firstName: string
+    lastName: string
+    jerseyNumber: string | null
+    teamId: string | null
+  }
+  calcVersion: number
+  court: AnalysisJobShotChartCourt
+  shots: PlayerShotChartShot[]
+  coverage: {
+    shotsCharted: number
+    made: number
+    missed: number
+    unresolved: number
+    videos: number
+  }
+}
+
 export interface AnalysisJobCourtPosition {
   frameIndex: number | null
   xM: number

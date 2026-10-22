@@ -113,6 +113,17 @@ for (const side of [0, 1] as const) {
   })
 }
 
+test('PUT still returns the mapped job when the response carries player_stats_sync', async () => {
+  const request: AnalysisJobRequest = async <T>() =>
+    ({ job: apiJob(1), player_stats_sync: 'ok' }) as T
+  const service = createAnalysisJobTeamSideService(request)
+
+  const updated = await service.setOurTeamSide('job-1', 'team-1', 1)
+
+  assert.equal(updated.id, 'job-1')
+  assert.equal(updated.ourTeamSide, 1)
+})
+
 test('prevents a second confirmation while the first PUT is in flight', async () => {
   let calls = 0
   let resolveRequest: ((job: ProcessingJob) => void) | undefined
