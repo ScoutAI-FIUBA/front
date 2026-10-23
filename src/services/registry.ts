@@ -1,6 +1,7 @@
 import type { IAuthService } from './contracts/auth.service'
 import type { ITeamService } from './contracts/teams.service'
 import type { IPlayerService } from './contracts/players.service'
+import type { IPlayerAnalysisService } from './contracts/player-analysis.service'
 import type { IMatchService } from './contracts/matches.service'
 import type { IVideoService } from './contracts/videos.service'
 import type { IAnalysisService } from './contracts/analysis.service'
@@ -13,6 +14,7 @@ import type { IAnalysisJobSimilarService } from './contracts/analysis-job-simila
 import type { IClipCollectionService } from './contracts/clip-collections.service'
 import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
+import { apiPlayerAnalysisService } from './api/player-analysis.api'
 import { apiTeamService } from './api/teams.api'
 import { apiVideoService, getApiVideoByIdForTeam } from './api/videos.api'
 import { apiClipCollectionService } from './api/clip-collections.api'
@@ -25,6 +27,7 @@ import { apiAnalysisJobSimilarService } from './api/analysis-job-similar.api'
 import { mockAuthService } from './mock/auth.mock'
 import { mockTeamService } from './mock/teams.mock'
 import { mockPlayerService } from './mock/players.mock'
+import { mockPlayerAnalysisService } from './mock/player-analysis.mock'
 import { mockMatchService } from './mock/matches.mock'
 import { mockVideoService } from './mock/videos.mock'
 import { mockAnalysisService } from './mock/analysis.mock'
@@ -36,6 +39,9 @@ export const isMockApiEnabled = import.meta.env.VITE_USE_MOCK_API === 'true'
 export const authService: IAuthService = isMockApiEnabled ? mockAuthService : apiAuthService
 export const teamService: ITeamService = isMockApiEnabled ? mockTeamService : apiTeamService
 export const playerService: IPlayerService = isMockApiEnabled ? mockPlayerService : apiPlayerService
+export const playerAnalysisService: IPlayerAnalysisService = isMockApiEnabled
+  ? mockPlayerAnalysisService
+  : apiPlayerAnalysisService
 
 /** Match legacy y el flujo manual legacy siguen en mock; el análisis automático usa ProcessingJobs reales. */
 export const matchService: IMatchService = mockMatchService

@@ -79,7 +79,7 @@ export interface ApiAnalysisJobShotChart {
   coverage: ApiAnalysisJobShotChartCoverage
 }
 
-function mapCourt(court: ApiAnalysisJobShotChartCourt): AnalysisJobShotChartCourt {
+export function mapCourt(court: ApiAnalysisJobShotChartCourt): AnalysisJobShotChartCourt {
   return {
     lengthM: court.length_m,
     widthM: court.width_m,

@@ -2,7 +2,7 @@
 
 ## Current Integration Model
 
-The frontend can use the backend for auth, teams, players, videos, and clip collections. It uses mocks for matches and analysis.
+The frontend can use the backend for auth, teams, players, videos, and clip collections. It also uses the real processing-job backend for analysis jobs (jobs, team sides, stats, shot chart, court positions, similar clips) and the player analysis stats endpoints. It uses mocks for matches and for the legacy analysis sessions.
 
 Service selection happens in `src/services/registry.ts`.
 
@@ -39,11 +39,16 @@ Backend-capable services:
 - Players: `apiPlayerService` or `mockPlayerService`.
 - Videos: `apiVideoService` or `mockVideoService`.
 - Clip collections: `apiClipCollectionService` or `mockClipCollectionService`.
+- Player analysis stats: `apiPlayerAnalysisService` or `mockPlayerAnalysisService` (follows `VITE_USE_MOCK_API`).
+
+Always real API (no mock):
+
+- Analysis jobs: `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, `analysisJobShotChartService`, `analysisJobCourtPositionsService`, and `analysisJobSimilarService`.
 
 Mock-only services:
 
 - Matches: `mockMatchService`.
-- Analysis: `mockAnalysisService`.
+- Analysis (legacy sessions): `mockAnalysisService`.
 
 ## Videos Backend Integration
 
@@ -89,6 +94,22 @@ Current limits:
 - Playback uses the original video URL plus the item's temporal range.
 - Export synchronously generates or reuses a physical clip and returns `download_url`.
 - Collection update/delete and item reorder endpoints do not exist. The backend can update only an item's description through PATCH; frontend editing of existing descriptions is not included yet.
+
+## Player Analysis Stats
+
+Bearer auth, ownership from the token. Used by the stats sheet on `/jugadores`. Client: `src/services/api/player-analysis.client.ts`.
+
+- `GET /players/{id}/analysis-stats`: `player_id`, `calc_version`, `games` (analyzed videos, not official games), `points`, `field_goals` / `two_point` / `three_point` (`made`, `attempted`, `pct`), `unresolved_attempts`, `seconds_on_screen` (visible time, not minutes played) and `distance_m` (both nullable), `by_zone` and `by_shot_type` (`made`, `attempted`, `unresolved_attempts`, `pct`), `videos[]` (per job: `job_id`, `video_id`, `video_title`, `jersey_number`, `seconds_on_screen`, `distance_m`, `points`, field goal / two point / three point made and attempted, `unresolved_attempts`), and `not_measured[]`. A player without analyzed videos returns 200 with zeros, nulls, empty collections, and the full `not_measured` list.
+- `GET /players/{id}/shot-chart`: `player`, `calc_version`, `court` (28 x 15 m, hoops, three-point radius, corner three lateral), `shots[]`, and `coverage` (`shots_charted`, `made`, `missed`, `unresolved`, `videos`). Each shot has a unique `shot_key` (shot ids repeat across jobs), `x_m`, `y_m`, `result` (`made`, `missed`, `unknown`), `shot_value` (2 or 3, worth by location, not points scored), `zone`, `shot_type`, `distance_m`, `timestamp_seconds`, `outcome_confidence`, and `needs_review`. The frontend uses `result`, not the boolean `made`, which is false for both missed and unknown shots. `y_m = 15` is the sideline nearest the camera and positions are not flipped per team, so the court side may not match the attacked hoop.
+
+Percentage conventions differ by endpoint and must not be mixed:
+
+- `analysis-stats` `pct`: fraction 0..1 or `null` when there are no attempts. The client keeps the fraction; conversion to a percent happens only when formatting for display.
+- `players.stats` (the `stats` field of every `GET /players` item; canonical shape `games_played`, `points.total`, `field_goals.made_total` / `attempted_total` / `percentage`, etc.): integers; `percentage` is an integer 0..100 that is 0 when there are no attempts, so the frontend never displays it. The list row reads only `games_played`, `points.total`, and `field_goals.made_total` / `attempted_total` and computes the percent from made/attempted. Older backends may omit `stats`; a missing or malformed value maps to no summary ("Sin análisis").
+- `GET /players/{id}/stats` (not consumed by the frontend): same shape.
+- Match stats import preview (not consumed by the frontend): 0..100 with one decimal.
+
+`PUT /jobs/{job_id}/our-team` now returns `{ job, player_stats_sync }` (the `job` object is unchanged). `analysis-job-team-sides.client.ts` reads only `job` and ignores `player_stats_sync`.
 
 ## Known Standalone Helper
 

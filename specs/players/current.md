@@ -17,11 +17,18 @@ Current behavior documentation.
 - `src/pages/players/GlobalPlayerSheet.tsx`
 - `src/pages/players/global-player-list.ts`
 - `src/pages/players/player-form.ts`
+- `src/pages/players/PlayerAnalysisStatsSheet.tsx`
+- `src/pages/players/player-analysis-stats.ts`
 - `src/services/registry.ts`
 - `src/services/contracts/players.service.ts`
 - `src/services/api/players.api.ts`
 - `src/services/mock/players.mock.ts`
 - `src/services/contracts/teams.service.ts`
+- `src/services/contracts/player-analysis.service.ts`
+- `src/services/api/player-analysis.client.ts`
+- `src/services/api/player-analysis.api.ts`
+- `src/services/mock/player-analysis.mock.ts`
+- `tests/player-analysis-stats.test.ts`
 - `src/types/index.ts`
 - `src/lib/utils.ts`
 
@@ -46,6 +53,12 @@ Current behavior documentation.
   reject a future value before calling the player service.
 - Closing the `/jugadores/nuevo` compatibility sheet returns to `/jugadores`.
 - Toasts provide success and error feedback.
+- Each player row has an icon button ("Ver estadísticas") that opens a read-only right-side sheet with the player's aggregated stats measured in analyzed videos. Data is fetched only when the sheet opens (no per-row requests) from `GET /players/{id}/analysis-stats` and `GET /players/{id}/shot-chart`.
+- The stats sheet shows summary cards (analyzed videos, points, field goals, 2-pointers, 3-pointers, shots without result, time visible on screen, distance), a per-zone table, a read-only shot chart, a per-video list, and the list of stats not measured. It states that these are not official match statistics. No freshness or sync text is shown.
+- Each list row shows a compact summary from the `stats` field of `GET /players` (optional `analysisSummary`: games, points, field goals made/attempted): "3 PJ · 24 pts · TC 9/20 (45%)". Without a summary or with 0 games it shows a muted "Sin análisis" (never "0 pts"); with games but 0 attempts the percentage is "—". The backend's integer `percentage` is never displayed; a missing or malformed `stats` maps to no summary.
+- The sheet shows the row summary immediately and, when its fetch returns, patches the row's summary from its totals (`onTotals`), so row and sheet use the same `formatPct(made, attempted)` and cannot disagree. With 0 games the sheet shows the hint "Aparece cuando el dorsal del jugador está confirmado en un video analizado con el lado propio marcado."
+- Percentages are always computed from made/attempted with `formatPct` in `player-analysis-stats.ts` (rounded, "—" when there are no attempts); the `pct` fractions of `analysis-stats` are not displayed.
+- The stats sheet has loading, error with retry, and empty (no analyzed videos) states; a shot chart failure does not hide the stats.
 
 ## Service Selection
 
@@ -67,7 +80,11 @@ Current position codes are:
 
 - Player detail remains out of scope; no inert detail action is displayed.
 - Team roster management remains canonical under `/equipos/:teamId`.
-- The global registry does not display photos, age, status, stats, creator, or synthetic metadata.
+- The global registry list does not display photos, age, status, creator, or synthetic metadata.
+- Aggregated analysis stats are shown read-only only inside the sheet opened from the global players page; there is no player detail route.
+- The list row shows only the compact summary above; full stats live in the sheet. The team roster page (`/equipos/:teamId`) does not show player stats.
+- Minutes played, rebounds, assists, steals, blocks, turnovers, and free throws are not measured and are not displayed as numbers.
+- `GET /players/{id}/stats` is not consumed; `player_stats_sync` is not consumed. Only games, points and field goals of the `stats` field of `GET /players` are read.
 
 ## Verification
 
