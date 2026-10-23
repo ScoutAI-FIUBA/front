@@ -279,7 +279,6 @@ function PlayerShootingStatsSection({
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="truncate font-semibold text-foreground">{row.label}</h4>
                       {row.rosterLinked ? <Badge variant="analyzed">Plantel</Badge> : null}
-                      {row.onCourt ? <Badge variant="outline">Mayor presencia</Badge> : null}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {row.groupLabel}
@@ -342,12 +341,10 @@ function PlayerShootingStatsSection({
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-foreground">{row.label}</span>
                         {row.rosterLinked ? <Badge variant="analyzed">Plantel</Badge> : null}
-                        {row.onCourt ? <Badge variant="outline">Mayor presencia</Badge> : null}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {row.stablePlayerId ? `${row.observations} observaciones totales` : `Seguimiento ${row.key.split(':')[1]}`}
-                        {row.jerseyNumber ? ` · #${row.jerseyNumber}` : ''}
-                      </p>
+                        </div>
+                      {row.jerseyNumber ? (
+                        <p className="mt-1 text-xs text-muted-foreground">Dorsal #{row.jerseyNumber}</p>
+                      ) : null}
                       {row.zones.length > 0 ? (
                         <p className="mt-2 max-w-xl text-xs leading-relaxed text-muted-foreground">
                           Zonas: {playerZoneSummary(row.zones)}
@@ -439,9 +436,6 @@ export function AnalysisJobShotsWorkspace({
   }
 
   const ourTeam = currentStats?.teams.find((team) => team.teamSide === currentStats.ourTeamSide) ?? null
-  const ourTeamHighPresence = currentStats?.players.filter((player) => (
-    player.teamSide === currentStats.ourTeamSide && player.onCourt
-  )).length ?? 0
   const zones = [...new Set(chart?.shots.map((shot) => shot.zone) ?? [])].sort()
   const statsPlayersByKey = new Map(
     (playerIdentities ?? []).flatMap((player) => {
@@ -505,7 +499,7 @@ export function AnalysisJobShotsWorkspace({
       {statsState === 'success' && ourTeam && (
         <dl className={cn(
           'grid grid-cols-2 border-y sm:divide-x',
-          reportPresentation ? 'border-[#252B38] sm:grid-cols-3 sm:divide-[#252B38]' : 'border-white/10 sm:grid-cols-4 sm:divide-white/10',
+          reportPresentation ? 'border-[#252B38] sm:grid-cols-3 sm:divide-[#252B38]' : 'border-white/10 sm:grid-cols-3 sm:divide-white/10',
         )}>
           {(reportPresentation ? [
             ['Tiros de campo', `${ourTeam.fieldGoalsMade}/${ourTeam.fieldGoalsAttempted}`],
@@ -515,7 +509,6 @@ export function AnalysisJobShotsWorkspace({
             ['Puntos detectados', String(ourTeam.points)],
             ['Tiros de campo', `${ourTeam.fieldGoalsMade}/${ourTeam.fieldGoalsAttempted}`],
             ['Efectividad TC', formatPercentage(ourTeam.fieldGoalPercentage)],
-            [ourTeamHighPresence > 0 ? 'Mayor presencia observada' : 'Jugadores seguidos', String(ourTeamHighPresence || ourTeam.playersTracked)],
           ]).map(([label, value]) => (
             <div key={label} className={cn(reportPresentation ? 'px-1 py-4 sm:px-6 first:pl-0' : 'px-3 py-3 sm:px-4')}>
               <dd className={cn('tabular-nums text-foreground', reportPresentation ? 'scout-display text-5xl font-extrabold' : 'mt-1 text-2xl font-semibold')}>{value}</dd>

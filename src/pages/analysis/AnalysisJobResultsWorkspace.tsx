@@ -26,12 +26,13 @@ const MODULES: Array<{
   label: string
   icon: typeof BarChart3
   resultsOnly?: boolean
+  secondary?: boolean
 }> = [
   { id: 'overview', label: 'Resumen', icon: BarChart3 },
   { id: 'shots', label: 'Tiros', icon: Clock3, resultsOnly: true },
   { id: 'movement', label: 'Movimiento', icon: MapPinned, resultsOnly: true },
-  { id: 'similar', label: 'Similares', icon: GitCompareArrows, resultsOnly: true },
-  { id: 'details', label: 'Detalles', icon: FileSearch },
+  { id: 'similar', label: 'Similares', icon: GitCompareArrows, resultsOnly: true, secondary: true },
+  { id: 'details', label: 'Detalles', icon: FileSearch, secondary: true },
 ]
 
 interface AnalysisJobResultsWorkspaceProps {
@@ -152,7 +153,7 @@ export function AnalysisJobResultsWorkspace({
         {showNavigation ? (
           <nav className="relative mb-3 overflow-hidden rounded-xl border border-white/10 bg-surface p-1.5" aria-label="Secciones del análisis">
             <div className="flex min-w-max snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {availableModules.map(({ id, label, icon: Icon }) => (
+              {availableModules.map(({ id, label, icon: Icon, secondary }) => (
                 <button
                   type="button"
                   key={id}
@@ -161,7 +162,9 @@ export function AnalysisJobResultsWorkspace({
                     'inline-flex h-10 snap-start items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors motion-reduce:transition-none',
                     activeSection === id
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-surface-subtle hover:text-foreground',
+                      : secondary
+                        ? 'text-muted-foreground/70 hover:bg-surface-subtle hover:text-foreground'
+                        : 'text-muted-foreground hover:bg-surface-subtle hover:text-foreground',
                   )}
                   aria-current={activeSection === id ? 'page' : undefined}
                   onClick={() => onSectionChange(id)}

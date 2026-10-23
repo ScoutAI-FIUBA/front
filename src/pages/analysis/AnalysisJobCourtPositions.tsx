@@ -61,11 +61,6 @@ function formatMetres(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 2 })} m`
 }
 
-function formatAveragePosition(player: AnalysisJobCourtPositionsPlayer): string {
-  const { xM, yM } = player.movement.averagePosition
-  return `x ${xM.toLocaleString('es-AR', { maximumFractionDigits: 1 })} · y ${yM.toLocaleString('es-AR', { maximumFractionDigits: 1 })} m`
-}
-
 export function AnalysisJobCourtPositionsView({
   job,
   playerIdentities,
@@ -224,8 +219,8 @@ export function AnalysisJobCourtPositionsView({
             <h2 id="court-positions-title" className="scout-display mt-1 text-4xl font-extrabold text-[#F4F5F7]">Movimiento</h2>
             <p className="mt-1 text-sm text-[#A3ABBA]">
               {view === 'trajectories'
-                ? 'Recorrido ordenado de las muestras detectadas en cancha.'
-                : 'Frecuencia relativa de muestras para la selección actual.'}
+                ? 'Recorrido ordenado de las posiciones detectadas en cancha.'
+                : 'Frecuencia relativa de posiciones para la selección actual.'}
             </p>
           </div>
           <div className="flex shrink-0 gap-1" role="group" aria-label="Vista de movimiento">
@@ -282,23 +277,15 @@ export function AnalysisJobCourtPositionsView({
         </header>
 
         {selectedPlayer ? (
-          <dl className="grid border-y border-[#252B38] sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#252B38]">
+          <dl className="grid border-y border-[#252B38] sm:grid-cols-2 lg:grid-cols-2 lg:divide-x lg:divide-[#252B38]">
             <div className="py-3 lg:pr-6">
               <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Jugador</dt>
               <dd className="mt-1 text-lg font-semibold text-[#F4F5F7]">{analysisJobPlayerLabelFromMap(selectedPlayer, playerLabels)}</dd>
               <dd className="mt-0.5 text-xs text-[#A3ABBA]">{courtPositionSideLabel(selectedPlayer.teamSide)}</dd>
             </div>
-            <div className="py-3 lg:px-6">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Distancia</dt>
-              <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{formatMetres(selectedPlayer.movement.distanceM)}</dd>
-            </div>
-            <div className="py-3 lg:px-6">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Muestras</dt>
-              <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{selectedPlayer.movement.samples}</dd>
-            </div>
             <div className="py-3 lg:pl-6">
-              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Posición promedio</dt>
-              <dd className="mt-2 font-semibold tabular-nums text-[#F4F5F7]">{formatAveragePosition(selectedPlayer)}</dd>
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#788397]">Distancia aprox.</dt>
+              <dd className="scout-display mt-1 text-3xl font-bold tabular-nums text-[#F4F5F7]">{formatMetres(selectedPlayer.movement.distanceM)}</dd>
             </div>
           </dl>
         ) : (
@@ -307,13 +294,13 @@ export function AnalysisJobCourtPositionsView({
               <p className="font-semibold text-[#F4F5F7]">Vista comparativa</p>
               <p className="mt-1 text-xs text-[#A3ABBA]">Se superponen los recorridos completos de la selección.</p>
             </div>
-            <span className="text-sm tabular-nums text-[#A3ABBA]">{visiblePlayers.length} seguimientos</span>
+            <span className="text-sm tabular-nums text-[#A3ABBA]">{visiblePlayers.length} jugadores</span>
           </div>
         )}
 
         <div className="min-w-0">
           {visiblePlayers.length === 0 ? (
-            <div className="border-y border-[#252B38] py-10 text-center text-sm text-[#A3ABBA]">No hay seguimientos que coincidan con esta selección.</div>
+            <div className="border-y border-[#252B38] py-10 text-center text-sm text-[#A3ABBA]">No hay jugadores que coincidan con esta selección.</div>
           ) : view === 'heatmap' ? (
             heatmap.totalSamples > 0
               ? <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} presentation="match-report" />
@@ -323,7 +310,7 @@ export function AnalysisJobCourtPositionsView({
           ) : (
             <div className="space-y-3">
               <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} presentation="match-report" />
-              <p className="text-xs text-[#A3ABBA]">Elegí un jugador para reproducir una secuencia individual de muestras.</p>
+              <p className="text-xs text-[#A3ABBA]">Elegí un jugador para reproducir su recorrido individual.</p>
             </div>
           )}
         </div>
@@ -331,10 +318,9 @@ export function AnalysisJobCourtPositionsView({
         {!selectedPlayer && visibleIdentifiedPlayers.length > 0 ? (
           <div className="divide-y divide-[#252B38] border-y border-[#252B38]">
             {visibleIdentifiedPlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
-              <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-5 py-3 text-sm">
+              <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-5 py-3 text-sm">
                 <span className="font-medium text-[#F4F5F7]">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
-                <span className="tabular-nums text-[#A3ABBA]">{formatMetres(player.movement.distanceM)}</span>
-                <span className="tabular-nums text-[#A3ABBA]">{player.movement.samples} muestras</span>
+                <span className="tabular-nums text-[#A3ABBA]">aprox. {formatMetres(player.movement.distanceM)}</span>
               </div>
             ))}
           </div>
@@ -351,7 +337,7 @@ export function AnalysisJobCourtPositionsView({
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {view === 'trajectories'
               ? 'Seguí el recorrido espacial de un jugador o abrí una comparación secundaria.'
-              : 'Observá dónde se concentran las muestras del jugador o grupo seleccionado.'}
+              : 'Observá dónde se concentran las posiciones del jugador o grupo seleccionado.'}
           </p>
         </div>
         <div className="flex shrink-0 gap-2" role="group" aria-label="Vista de movimiento">
@@ -375,7 +361,7 @@ export function AnalysisJobCourtPositionsView({
                   {analysisJobPlayerLabelFromMap(player, playerLabels)}
                 </SelectItem>
               ))}
-              <SelectItem value="all">Comparar todos los seguimientos</SelectItem>
+              <SelectItem value="all">Comparar todos los jugadores</SelectItem>
               <SelectItem value="side-0">Comparar grupo A</SelectItem>
               <SelectItem value="side-1">Comparar grupo B</SelectItem>
             </SelectContent>
@@ -383,9 +369,8 @@ export function AnalysisJobCourtPositionsView({
         </div>
 
         {selectedPlayer ? (
-          <dl className="grid grid-cols-2 gap-x-6 border-l border-white/10 pl-4 text-sm">
-            <div><dt className="text-xs text-muted-foreground">Distancia detectada</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{formatMetres(selectedPlayer.movement.distanceM)}</dd></div>
-            <div><dt className="text-xs text-muted-foreground">Muestras</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{selectedPlayer.movement.samples}</dd></div>
+          <dl className="border-l border-white/10 pl-4 text-sm">
+            <div><dt className="text-xs text-muted-foreground">Distancia aprox.</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{formatMetres(selectedPlayer.movement.distanceM)}</dd></div>
           </dl>
         ) : (
           <p className="flex items-center gap-2 text-sm text-muted-foreground"><Users className="h-4 w-4" aria-hidden="true" /> Vista comparativa secundaria</p>
@@ -407,7 +392,7 @@ export function AnalysisJobCourtPositionsView({
 
       <div className="min-w-0">
         {visiblePlayers.length === 0 ? (
-          <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay seguimientos que coincidan con esta selección.</div>
+          <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay jugadores que coincidan con esta selección.</div>
         ) : view === 'heatmap' ? (
           heatmap.totalSamples > 0
             ? <CourtPositionsHeatmap court={positions.court} heatmap={heatmap} />
@@ -425,10 +410,9 @@ export function AnalysisJobCourtPositionsView({
       {!selectedPlayer && visibleIdentifiedPlayers.length > 0 && (
         <div className="divide-y divide-white/10 border-y border-white/10">
           {visibleIdentifiedPlayers.map((player: AnalysisJobCourtPositionsPlayer) => (
-            <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-3 text-sm">
+            <div key={analysisJobPlayerKey(player)} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 text-sm">
               <span className="font-medium text-foreground">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
-              <span className="tabular-nums text-muted-foreground">{formatMetres(player.movement.distanceM)}</span>
-              <span className="tabular-nums text-muted-foreground">{player.movement.samples} muestras</span>
+              <span className="tabular-nums text-muted-foreground">aprox. {formatMetres(player.movement.distanceM)}</span>
             </div>
           ))}
         </div>
