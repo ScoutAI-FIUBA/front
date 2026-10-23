@@ -134,8 +134,8 @@ export function AnalysisJobCourtPositionsView({
   }, [context, loadKey, onTechnicalSummaryChange, reloadKey])
 
   const groupedPlayers = useMemo(
-    () => filterGroupedCourtPositionPlayers(positions?.players ?? []),
-    [positions?.players],
+    () => filterGroupedCourtPositionPlayers(positions?.players ?? [], job.ourTeamSide),
+    [job.ourTeamSide, positions?.players],
   )
   const visiblePlayers = useMemo(
     () => filterCourtPositionPlayers(groupedPlayers, filter),
@@ -192,6 +192,20 @@ export function AnalysisJobCourtPositionsView({
             Reintentar
           </Button>
         </Alert>
+      </section>
+    )
+  }
+
+  if (job.ourTeamSide == null) {
+    return (
+      <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="court-positions-title">
+        <h2 id="court-positions-title" className="font-semibold text-foreground">Movimiento</h2>
+        <EmptyState
+          className="mt-4 py-8"
+          icon={<MapPinned className="h-5 w-5" aria-hidden="true" />}
+          title="Elegí qué grupo es tu equipo en Resumen para ver sus jugadores y tiros"
+          description="El movimiento se muestra sólo para el equipo analizado."
+        />
       </section>
     )
   }
@@ -269,8 +283,6 @@ export function AnalysisJobCourtPositionsView({
                   </SelectItem>
                 ))}
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="side-0">Lado 0</SelectItem>
-                <SelectItem value="side-1">Lado 1</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -362,8 +374,6 @@ export function AnalysisJobCourtPositionsView({
                 </SelectItem>
               ))}
               <SelectItem value="all">Comparar todos los jugadores</SelectItem>
-              <SelectItem value="side-0">Comparar grupo A</SelectItem>
-              <SelectItem value="side-1">Comparar grupo B</SelectItem>
             </SelectContent>
           </Select>
         </div>

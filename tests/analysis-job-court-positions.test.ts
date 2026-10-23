@@ -360,7 +360,6 @@ test('Movement filters player controls without removing aggregate position evide
   assert.match(detailSource, /filterIdentifiedCourtPositionPlayers/)
   assert.match(detailSource, /identifiedPlayers\.map/)
   assert.match(detailSource, /visibleIdentifiedPlayers\.map/)
-  assert.match(detailSource, /filterGroupedCourtPositionPlayers\(positions\?\.players/)
   assert.match(detailSource, /buildCourtPositionPlayerLabels\(groupedPlayers, playerIdentities\)/)
   assert.match(detailSource, /buildCourtPositionsHeatmap\(positions\.court, visiblePlayers\)/)
   assert.match(detailSource, /players=\{visiblePlayers\}/)
@@ -414,8 +413,9 @@ test('R3-B2 gives Partido Movement a flat editorial presentation without changin
   assert.match(detailSource, />\s*Recorrido\s*</)
   assert.match(detailSource, />\s*Mapa de calor\s*</)
   assert.match(detailSource, /<SelectItem value="all">Todos<\/SelectItem>/)
-  assert.match(detailSource, /<SelectItem value="side-0">Lado 0<\/SelectItem>/)
-  assert.match(detailSource, /<SelectItem value="side-1">Lado 1<\/SelectItem>/)
+  assert.doesNotMatch(detailSource, /value="side-[01]"|Lado [01]|Comparar grupo/)
+  assert.match(detailSource, /Elegí qué grupo es tu equipo en Resumen para ver sus jugadores y tiros/)
+  assert.match(detailSource, /filterGroupedCourtPositionPlayers\(positions\?\.players \?\? \[\], job\.ourTeamSide\)/)
   assert.doesNotMatch(detailSource, /Sin asignar|value="unassigned"/)
   assert.match(detailSource, /Distancia aprox\./)
   assert.match(detailSource, />Jugador</)
@@ -479,4 +479,13 @@ test('Movement labels ignore Stats roster names with duplicate keys', async () =
     ]).get('stable:stable-30'),
     '#30',
   )
+})
+
+test('Movement scopes players to the analysed side', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.deepEqual(filterGroupedCourtPositionPlayers(players, 0).map((player) => player.trackId), [7])
+  assert.deepEqual(filterGroupedCourtPositionPlayers(players, 1).map((player) => player.trackId), [9])
+  assert.deepEqual(filterGroupedCourtPositionPlayers(players, null).map((player) => player.trackId), [7, 9])
 })

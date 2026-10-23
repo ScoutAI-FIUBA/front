@@ -212,7 +212,7 @@ test('keeps the shot court responsive without changing its metre coordinate fram
     'utf8',
   )
 
-  assert.match(source, /style=\{\{ aspectRatio: `\$\{court\.lengthM\} \/ \$\{court\.widthM\}` \}\}/)
+  assert.match(source, /style=\{courtFrameStyle\(court\)\}/)
   assert.match(source, /viewBox=\{`0 0 \$\{court\.lengthM\} \$\{court\.widthM\}`\}/)
   assert.match(source, /className="absolute inset-0 h-full w-full"/)
   assert.doesNotMatch(source, /min-w-\[/)

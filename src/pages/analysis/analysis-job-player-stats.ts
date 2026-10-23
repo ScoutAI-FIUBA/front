@@ -1,6 +1,9 @@
 import type {
   AnalysisJobPlayerShootingStats,
   AnalysisJobShotChartPlayer,
+  AnalysisJobShotChartShot,
+  AnalysisJobShotStat,
+  AnalysisJobTeamSide,
 } from '../../types/index.ts'
 import {
   analysisJobPlayerKey,
@@ -46,9 +49,94 @@ export function formatAnalysisShootingMetric(
   return `${made}/${attempted} · ${formatAnalysisShootingPercentage(percentage)}`
 }
 
+export type AnalysisJobShooterSides = ReadonlyMap<AnalysisJobPlayerKey, ReadonlySet<AnalysisJobTeamSide | null>>
+
+interface ShooterSource {
+  stablePlayerId?: string | null
+  trackId?: number | null
+  teamSide?: AnalysisJobTeamSide | null
+}
+
+function shooterKeysOf(source: ShooterSource): AnalysisJobPlayerKey[] {
+  const keys: AnalysisJobPlayerKey[] = []
+  const stable = analysisJobPlayerKey({ stablePlayerId: source.stablePlayerId })
+  const track = analysisJobPlayerKey({ trackId: source.trackId })
+  if (stable) keys.push(stable)
+  if (track) keys.push(track)
+  return keys
+}
+
+// Players with at least one attributed shot (stats shots, chart shots, or chart player
+// shots, including unresolved results), with the team side each shot reports. Shots are
+// registered under both the stable and the track key so a stats player and a chart shot
+// keyed differently still match.
+export function analysisJobShooterSides(
+  statsShots: AnalysisJobShotStat[] = [],
+  chartShots: AnalysisJobShotChartShot[] = [],
+  chartPlayers: AnalysisJobShotChartPlayer[] = [],
+): Map<AnalysisJobPlayerKey, Set<AnalysisJobTeamSide | null>> {
+  const sides = new Map<AnalysisJobPlayerKey, Set<AnalysisJobTeamSide | null>>()
+  const add = (source: ShooterSource, side: AnalysisJobTeamSide | null) => {
+    shooterKeysOf(source).forEach((key) => {
+      const current = sides.get(key) ?? new Set<AnalysisJobTeamSide | null>()
+      current.add(side)
+      sides.set(key, current)
+    })
+  }
+  const shotSources = [
+    ...statsShots,
+    ...chartShots,
+    ...chartPlayers.flatMap((player) => player.shots.map((shot) => ({
+      stablePlayerId: shot.stablePlayerId ?? player.stablePlayerId,
+      trackId: shot.trackId ?? player.trackId,
+      teamSide: shot.teamSide ?? player.teamSide,
+    }))),
+  ]
+  shotSources.forEach((shot) => add(shot, shot.teamSide ?? null))
+  return sides
+}
+
+function shotSidesFor(
+  player: ShooterSource,
+  shooters: AnalysisJobShooterSides,
+): Set<AnalysisJobTeamSide | null> {
+  const sides = new Set<AnalysisJobTeamSide | null>()
+  shooterKeysOf(player).forEach((key) => shooters.get(key)?.forEach((side) => sides.add(side)))
+  return sides
+}
+
+// A player belongs to the scope by its own team side or by the side of a shot it took.
+function scopedSide(
+  player: ShooterSource,
+  scope: readonly AnalysisJobTeamSide[] | undefined,
+  shooters: AnalysisJobShooterSides | undefined,
+): AnalysisJobTeamSide | null {
+  if (scope == null) return hasAnalysisJobTeamSide(player) ? player.teamSide as AnalysisJobTeamSide : null
+  if (hasAnalysisJobTeamSide(player) && scope.includes(player.teamSide as AnalysisJobTeamSide)) {
+    return player.teamSide as AnalysisJobTeamSide
+  }
+  const fromShot = shooters
+    ? [...shotSidesFor(player, shooters)].find((side): side is AnalysisJobTeamSide => side != null && scope.includes(side))
+    : undefined
+  return fromShot ?? null
+}
+
+function playerHasShot(
+  player: AnalysisJobPlayerShootingStats,
+  shooters: AnalysisJobShooterSides,
+): boolean {
+  return shotSidesFor(player, shooters).size > 0
+    || player.fieldGoalsAttempted > 0
+    || player.twoPointAttempted > 0
+    || player.threePointAttempted > 0
+    || Object.values(player.byZone).some((zone) => zone.attempted > 0)
+}
+
 export function filterAnalysisJobIdentifiedShotChartPlayers(
   players: AnalysisJobShotChartPlayer[],
   playerIdentities: AnalysisJobPlayerShootingStats[] = [],
+  scope?: readonly AnalysisJobTeamSide[],
+  shooters?: AnalysisJobShooterSides,
 ): AnalysisJobShotChartPlayer[] {
   const identitiesByKey = new Map(
     playerIdentities.flatMap((player) => {
@@ -56,7 +144,9 @@ export function filterAnalysisJobIdentifiedShotChartPlayers(
       return key ? [[key, player] as const] : []
     }),
   )
-  return players.filter((player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
+  return players.filter((player) => scopedSide(player, scope, shooters) != null
+    && (shooters == null || player.shots.length > 0 || shotSidesFor(player, shooters).size > 0)
+    && isAnalysisJobPlayerIdentified({
     jerseyNumber: player.jerseyNumber,
     rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
   }))
@@ -64,9 +154,13 @@ export function filterAnalysisJobIdentifiedShotChartPlayers(
 
 export function buildAnalysisJobPlayerShootingRows(
   players: AnalysisJobPlayerShootingStats[],
+  scope?: readonly AnalysisJobTeamSide[],
+  shooters?: AnalysisJobShooterSides,
 ): AnalysisJobPlayerShootingRow[] {
   const orderedPlayers = players.filter(
-    (player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified(player),
+    (player) => scopedSide(player, scope, shooters) != null
+      && (shooters == null || playerHasShot(player, shooters))
+      && isAnalysisJobPlayerIdentified(player),
   ).sort(
     (left, right) => Number(right.onCourt) - Number(left.onCourt),
   )
@@ -79,7 +173,9 @@ export function buildAnalysisJobPlayerShootingRows(
     return [{
       key,
       label: analysisJobPlayerLabelFromMap(player, labels),
-      groupLabel: player.teamSide == null ? '—' : analysisJobTeamGroupLabel(player.teamSide),
+      groupLabel: scopedSide(player, scope, shooters) == null
+        ? '—'
+        : analysisJobTeamGroupLabel(scopedSide(player, scope, shooters) as AnalysisJobTeamSide),
       points: player.points,
       fieldGoals: formatAnalysisShootingMetric(
         player.fieldGoalsMade,

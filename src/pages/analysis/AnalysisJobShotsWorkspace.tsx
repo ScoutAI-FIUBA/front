@@ -24,6 +24,7 @@ import {
 import type {
   AnalysisJobPlayerShootingStats,
   AnalysisJobShotChartShot,
+  AnalysisJobTeamSide,
   ProcessingJob,
 } from '@/types'
 import { cn } from '@/lib/utils'
@@ -31,6 +32,9 @@ import {
   analysisShotKey,
   DEFAULT_SHOT_EVIDENCE_FILTERS,
   filterAnalysisJobShots,
+  analysisJobShotTeamScope,
+  filterAnalysisJobShotsByTeam,
+  otherAnalysisJobTeamSide,
   formatShotTimestamp,
   shotHasVideoEvidence,
   type ShotEvidenceFilters,
@@ -39,16 +43,17 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
-  hasAnalysisJobTeamSide,
-  isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity'
 import {
+  analysisJobShooterSides,
   buildAnalysisJobPlayerShootingRows,
   filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
   type AnalysisJobPlayerShootingRow,
+  type AnalysisJobShooterSides,
 } from './analysis-job-player-stats'
+import { analysisJobTeamGroupLabel } from './analysis-job-team-side'
 import type { AnalysisJobShootingDataController } from './use-analysis-job-shooting-data'
 
 interface AnalysisJobShotsWorkspaceProps {
@@ -220,13 +225,19 @@ function ShotMomentList({
 
 function PlayerShootingStatsSection({
   players,
+  scope,
+  scopeLabel,
+  shooters,
   presentation,
 }: {
   players: AnalysisJobPlayerShootingStats[]
+  scope: AnalysisJobTeamSide[]
+  scopeLabel: string
+  shooters: AnalysisJobShooterSides
   presentation: 'legacy' | 'match-report'
 }) {
   const reportPresentation = presentation === 'match-report'
-  const rows = buildAnalysisJobPlayerShootingRows(players)
+  const rows = buildAnalysisJobPlayerShootingRows(players, scope, shooters)
 
   return (
     <section
@@ -253,7 +264,7 @@ function PlayerShootingStatsSection({
             Por jugador
           </h3>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-            Métricas estimadas a partir de los tiros detectados en este análisis.
+            {scopeLabel}. Métricas estimadas a partir de los tiros detectados en este análisis.
           </p>
         </div>
         <BarChart3 className="mt-1 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
@@ -263,8 +274,8 @@ function PlayerShootingStatsSection({
         <EmptyState
           className={cn('mt-5 py-8', reportPresentation && 'border-y border-[#252B38]')}
           icon={<BarChart3 className="h-5 w-5" aria-hidden="true" />}
-          title="No hay estadísticas por jugador"
-          description="El análisis no devolvió jugadores con métricas de tiro para mostrar."
+          title={scope.length === 2 ? 'Ningún jugador tiene tiros detectados.' : 'Ningún jugador de este equipo tiene tiros detectados.'}
+          description="Cuando haya tiros atribuidos a jugadores de este grupo, aparecerán acá."
         />
       ) : (
         <>
@@ -395,26 +406,19 @@ export function AnalysisJobShotsWorkspace({
   }, [job.id, job.ourTeamSide])
 
   useEffect(() => {
-    if (filters.player === 'all') return
-    const statsPlayersByKey = new Map(
-      (playerIdentities ?? []).flatMap((player) => {
-        const key = analysisJobPlayerKey(player)
-        return key ? [[key, player] as const] : []
-      }),
-    )
-    const selectedPlayerIsVisible = chart?.players.some((player) => {
-      if (analysisJobPlayerKey(player) !== filters.player) return false
-      return hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
-        jerseyNumber: player.jerseyNumber,
-        rosterPlayerId: statsPlayersByKey.get(filters.player)?.rosterPlayerId,
-      })
-    }) ?? false
+    if (filters.player === 'all' || job.ourTeamSide == null) return
+    const selectedPlayerIsVisible = filterAnalysisJobIdentifiedShotChartPlayers(
+      chart?.players ?? [],
+      playerIdentities ?? [],
+      analysisJobShotTeamScope(filters.team, job.ourTeamSide),
+      analysisJobShooterSides(currentStats?.shots, chart?.shots, chart?.players),
+    ).some((player) => analysisJobPlayerKey(player) === filters.player)
     if (!selectedPlayerIsVisible) {
       setFilters((current) => current.player === filters.player
         ? { ...current, player: 'all' }
         : current)
     }
-  }, [chart, filters.player, playerIdentities])
+  }, [chart, currentStats, filters.player, filters.team, job.ourTeamSide, playerIdentities])
 
   const reportPresentation = presentation === 'match-report'
 
@@ -424,7 +428,7 @@ export function AnalysisJobShotsWorkspace({
     return (
       <section className={cn(reportPresentation ? 'border-y border-[#252B38] py-10 text-left' : 'rounded-xl border border-white/10 bg-surface p-6 text-center')}>
         <Target className="mx-auto h-7 w-7 text-primary" aria-hidden="true" />
-        <h2 className="mt-3 text-lg font-semibold text-foreground">Primero identificá tu equipo</h2>
+        <h2 className="mt-3 text-lg font-semibold text-foreground">Elegí qué grupo es tu equipo en Resumen para ver sus jugadores y tiros</h2>
         <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
           La confirmación persistida permite asociar correctamente jugadores, estadísticas y tiros.
         </p>
@@ -436,7 +440,15 @@ export function AnalysisJobShotsWorkspace({
   }
 
   const ourTeam = currentStats?.teams.find((team) => team.teamSide === currentStats.ourTeamSide) ?? null
-  const zones = [...new Set(chart?.shots.map((shot) => shot.zone) ?? [])].sort()
+  const ourSide = job.ourTeamSide
+  const rivalSide = otherAnalysisJobTeamSide(ourSide)
+  const teamScopedShots = chart ? filterAnalysisJobShotsByTeam(chart.shots, filters.team, ourSide) : []
+  const shotScope = analysisJobShotTeamScope(filters.team, ourSide)
+  const shooters = analysisJobShooterSides(currentStats?.shots, chart?.shots, chart?.players)
+  const scopeLabel = filters.team === 'both'
+    ? 'Jugadores de ambos equipos'
+    : `Jugadores de ${analysisJobTeamGroupLabel(shotScope[0])} (${filters.team === 'own' ? 'equipo analizado' : 'rival'})`
+  const zones = [...new Set(teamScopedShots.map((shot) => shot.zone))].sort()
   const statsPlayersByKey = new Map(
     (playerIdentities ?? []).flatMap((player) => {
       const key = analysisJobPlayerKey(player)
@@ -451,12 +463,14 @@ export function AnalysisJobShotsWorkspace({
   const identifiedChartPlayers = filterAnalysisJobIdentifiedShotChartPlayers(
     chartPlayers,
     playerIdentities,
+    shotScope,
+    shooters,
   )
   const playerLabels = buildAnalysisJobPlayerLabels(chartPlayers.map((player) => ({
     ...player,
     rosterName: statsPlayersByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterName ?? null,
   })))
-  const filteredShots = chart ? filterAnalysisJobShots(chart.shots, filters) : []
+  const filteredShots = chart ? filterAnalysisJobShots(chart.shots, filters, ourSide) : []
   const validShots = chart
     ? filteredShots.filter((shot) => shotChartPointToPercent(chart.court, shot) != null)
     : []
@@ -530,7 +544,15 @@ export function AnalysisJobShotsWorkspace({
 
       {chartState === 'success' && chart && (
         <>
-          <div className={cn('grid gap-2 border-y py-3 sm:grid-cols-2 lg:grid-cols-4', reportPresentation ? 'border-[#252B38]' : 'border-white/10')}>
+          <div className={cn('grid gap-2 border-y py-3 sm:grid-cols-2 lg:grid-cols-5', reportPresentation ? 'border-[#252B38]' : 'border-white/10')}>
+            <Select value={filters.team} onValueChange={(value) => setFilters((current) => ({ ...current, team: value as ShotEvidenceFilters['team'], player: 'all', zone: 'all' }))}>
+              <SelectTrigger className={cn(reportPresentation && 'h-9 rounded-full border-[#3A4254] bg-transparent text-xs')} aria-label="Filtrar por equipo"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="own">Equipo analizado ({analysisJobTeamGroupLabel(ourSide)})</SelectItem>
+                <SelectItem value="rival">Rival ({analysisJobTeamGroupLabel(rivalSide)})</SelectItem>
+                <SelectItem value="both">Ambos equipos</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={filters.result} onValueChange={(value) => setFilters((current) => ({ ...current, result: value as ShotEvidenceFilters['result'] }))}>
               <SelectTrigger className={cn(reportPresentation && 'h-9 rounded-full border-[#3A4254] bg-transparent text-xs')} aria-label="Filtrar por resultado"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -640,6 +662,9 @@ export function AnalysisJobShotsWorkspace({
       {statsState === 'success' && (
         <PlayerShootingStatsSection
           players={currentStats?.players ?? []}
+          scope={shotScope}
+          scopeLabel={scopeLabel}
+          shooters={shooters}
           presentation={presentation}
         />
       )}

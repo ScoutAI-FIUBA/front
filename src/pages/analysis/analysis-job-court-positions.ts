@@ -33,8 +33,10 @@ export type CourtPositionsFilter =
 
 export function filterGroupedCourtPositionPlayers(
   players: AnalysisJobCourtPositionsPlayer[],
+  teamSide?: AnalysisJobTeamSide | null,
 ): AnalysisJobCourtPositionsPlayer[] {
-  return players.filter(hasAnalysisJobTeamSide)
+  return players.filter((player) => hasAnalysisJobTeamSide(player)
+    && (teamSide == null || player.teamSide === teamSide))
 }
 
 export function buildCourtPositionPlayerLabels(

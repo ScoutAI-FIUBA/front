@@ -221,3 +221,18 @@ test('video failure uses a compact panel and expands the analysis column', () =>
   assert.match(pageSource, /videoState === 'error'/)
   assert.match(pageSource, /minmax\(340px,0\.72fr\)_minmax\(620px,1\.28fr\)/)
 })
+
+test('shot team filter defaults to the analysed side and only both teams keeps every shot', () => {
+  const base = { shotId: 1, trackId: 1, stablePlayerId: null, jerseyNumber: null, rosterPlayerId: null, rosterName: null, xM: 1, yM: 1, made: true, result: 'made', points: 2, zone: 'paint', distanceM: 1, shotType: null, timestampSeconds: null, attribution: null } as const
+  const shots = [
+    { ...base, shotId: 'own', teamSide: 1 },
+    { ...base, shotId: 'rival', teamSide: 0 },
+    { ...base, shotId: 'none', teamSide: null },
+  ]
+  const ids = (team: 'own' | 'rival' | 'both') => filterAnalysisJobShots(shots, { ...DEFAULT_SHOT_EVIDENCE_FILTERS, team }, 1).map((shot) => shot.shotId)
+
+  assert.equal(DEFAULT_SHOT_EVIDENCE_FILTERS.team, 'own')
+  assert.deepEqual(ids('own'), ['own'])
+  assert.deepEqual(ids('rival'), ['rival'])
+  assert.deepEqual(ids('both'), ['own', 'rival', 'none'])
+})

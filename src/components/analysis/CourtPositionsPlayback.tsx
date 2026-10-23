@@ -14,6 +14,7 @@ import type { AnalysisJobCourtPositions, AnalysisJobCourtPositionsPlayer } from 
 import { movementSequenceIndex } from '@/pages/analysis/analysis-job-court-positions'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabel,
@@ -125,7 +126,7 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative overflow-hidden rounded-xl border',
@@ -133,7 +134,7 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${court.lengthM} ${court.widthM}`} preserveAspectRatio="none" role="img" aria-label={`Recorrido espacial de ${playerLabel}`}>
           <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />

@@ -2,10 +2,16 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
+  analysisJobShooterSides,
   buildAnalysisJobPlayerShootingRows,
   filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
 } from '../src/pages/analysis/analysis-job-player-stats.ts'
+import {
+  mapAnalysisJobShootingStats,
+  type ApiAnalysisJobShootingStats,
+} from '../src/services/api/analysis-job-stats.client.ts'
+import { mapAnalysisJobShotChart, type ApiAnalysisJobShotChart } from '../src/services/api/analysis-job-shot-chart.client.ts'
 import type { AnalysisJobPlayerShootingStats, AnalysisJobShotChartPlayer } from '../src/types/index.ts'
 
 function player(
@@ -167,7 +173,7 @@ test('Tiros renders player stats responsively without requesting stats again', (
   assert.match(source, />TC</)
   assert.match(source, />2P</)
   assert.match(source, />3P</)
-  assert.match(source, /No hay estadísticas por jugador/)
+  assert.match(source, /Ningún jugador de este equipo tiene tiros detectados\./)
   assert.match(source, /md:hidden/)
   assert.match(source, /hidden overflow-x-auto rounded-xl border md:block/)
   assert.doesNotMatch(source, /analysisJobStatsService/)
@@ -180,13 +186,148 @@ test('player stats integration preserves the existing shot chart and filters', (
   )
 
   assert.match(source, /<ShotChartCourt/)
-  assert.match(source, /filterAnalysisJobShots\(chart\.shots, filters\)/)
+  assert.match(source, /filterAnalysisJobShots\(chart\.shots, filters, ourSide\)/)
   assert.match(source, /aria-label="Filtrar por jugador"/)
   assert.match(source, /identifiedChartPlayers\.map/)
   assert.match(source, /filterAnalysisJobIdentifiedShotChartPlayers/)
-  assert.match(source, /isAnalysisJobPlayerIdentified/)
-  assert.match(source, /hasAnalysisJobTeamSide\(player\) && isAnalysisJobPlayerIdentified/)
+  assert.match(source, /analysisJobShotTeamScope\(filters\.team, job\.ourTeamSide\)/)
   assert.match(source, /current\.player === filters\.player/)
   assert.match(source, /player: 'all'/)
   assert.match(source, /onSelectShot=\{selectShot\}/)
+})
+
+test('Tiros table lists only players of the analysed side', () => {
+  const players = [
+    player({ trackId: 1, stablePlayerId: 's-1', teamSide: 0, jerseyNumber: '1' }),
+    player({ trackId: 2, stablePlayerId: 's-2', teamSide: 1, jerseyNumber: '2' }),
+  ]
+
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(players, [1]).map((row) => row.key), ['stable:s-2'])
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(players, [0]).map((row) => row.key), ['stable:s-1'])
+})
+
+test('Tiros table and selector drop non-shooters and keep unresolved-only shooters', () => {
+  const zero = {
+    fieldGoalsMade: 0, fieldGoalsAttempted: 0, fieldGoalPercentage: null,
+    twoPointMade: 0, twoPointAttempted: 0, twoPointPercentage: null,
+    threePointMade: 0, threePointAttempted: 0, threePointPercentage: null,
+    points: 0, byZone: {},
+  }
+  const players = [
+    player({ trackId: 1, stablePlayerId: 's-1', teamSide: 0, jerseyNumber: '1', ...zero }),
+    player({ trackId: 2, stablePlayerId: 's-2', teamSide: 0, jerseyNumber: '2', ...zero }),
+    player({ trackId: 3, stablePlayerId: 's-3', teamSide: 0, jerseyNumber: '3' }),
+  ]
+  const unresolvedShot = {
+    shotId: 1, trackId: 2, stablePlayerId: 's-2', teamSide: 0, jerseyNumber: '2', rosterPlayerId: null,
+    rosterName: null, xM: 1, yM: 1, made: false, result: 'unknown', points: 2, zone: 'paint',
+    distanceM: 1, shotType: null, timestampSeconds: null, attribution: null,
+  } as const
+  const keys = analysisJobShooterSides([], [unresolvedShot], [])
+
+  assert.deepEqual(
+    buildAnalysisJobPlayerShootingRows(players, [0], keys).map((row) => row.key),
+    ['stable:s-2', 'stable:s-3'],
+  )
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(players.slice(0, 1), [0], keys), [])
+
+  const chartPlayers: AnalysisJobShotChartPlayer[] = [
+    { trackId: 1, stablePlayerId: 's-1', teamSide: 0, jerseyNumber: '1', displayName: '#1', shots: [] },
+    { trackId: 2, stablePlayerId: 's-2', teamSide: 0, jerseyNumber: '2', displayName: '#2', shots: [unresolvedShot] },
+    { trackId: 4, stablePlayerId: 's-4', teamSide: 1, jerseyNumber: '4', displayName: '#4', shots: [unresolvedShot] },
+  ]
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(chartPlayers, [], [0], analysisJobShooterSides([], [], chartPlayers))
+      .map((candidate) => candidate.trackId),
+    [2],
+  )
+})
+
+test('Tiros shows an empty message and a team filter scoped to the analysed side', () => {
+  const source = readFileSync(
+    new URL('../src/pages/analysis/AnalysisJobShotsWorkspace.tsx', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(source, /Ningún jugador de este equipo tiene tiros detectados\./)
+  assert.doesNotMatch(source, /No hay estadísticas por jugador/)
+  assert.match(source, /Equipo analizado \(\{analysisJobTeamGroupLabel\(ourSide\)\}\)/)
+  assert.match(source, /Rival \(\{analysisJobTeamGroupLabel\(rivalSide\)\}\)/)
+  assert.match(source, /Ambos equipos/)
+  assert.match(source, /Elegí qué grupo es tu equipo en Resumen para ver sus jugadores y tiros/)
+  assert.match(source, /\(\$\{filters\.team === 'own' \? 'equipo analizado' : 'rival'\}\)/)
+})
+
+// Shape taken from a saved job: one made three by jersey 7 (team_id 1, our_team_side 1).
+function savedJob(shotOverrides: Record<string, unknown> = {}) {
+  const totals = {
+    points: 0, field_goals_made: 0, field_goals_attempted: 0, field_goal_pct: null,
+    two_point_made: 0, two_point_attempted: 0, two_point_pct: null,
+    three_point_made: 0, three_point_attempted: 0, three_point_pct: null, by_zone: {},
+  }
+  const apiShot = {
+    shot_id: 1, track_id: 4000007, stable_player_id: 'player-010', team_id: 1, jersey_number: '7',
+    roster_player_id: 'ce3c070a-1a8f-4f9f-97b6-0fd8fa0bca74', roster_name: 'Jaylen Brown',
+    made: true, outcome: 'made', result: 'made', points: 3, zone: 'corner_three', distance_m: 7.41,
+    court_x_m: 23.82, court_y_m: 14.44, x_m: 23.82, y_m: 14.44, timestamp_seconds: 6.63,
+    shot_type: 'jump_shot', attribution: 'action_box_vote', ...shotOverrides,
+  }
+  const coverage = {
+    shots_detected: 1, shots_scored: 1, shots_without_court_position: 0, shots_without_shooter: 0,
+    players_tracked: 3, players_on_court: 2, players_with_jersey_number: 2, players_linked_to_roster: 1,
+    measures: [], not_measured: [], shots_charted: 1, filtered_to_track_id: null, filtered_to_stable_player_id: null,
+  }
+  const stats = mapAnalysisJobShootingStats({
+    job_id: 'job', video_id: 'video', our_team_side: 1, teams: [], shots: [apiShot], coverage,
+    players: [
+      { track_id: 4000007, stable_player_id: 'player-010', team_id: 1, jersey_number: '7', observations: 651, on_court: true,
+        roster_player_id: 'ce3c070a-1a8f-4f9f-97b6-0fd8fa0bca74', roster_name: 'Jaylen Brown', display_name: 'Jaylen Brown',
+        ...totals, points: 3, field_goals_made: 1, field_goals_attempted: 1, three_point_made: 1, three_point_attempted: 1,
+        by_zone: { corner_three: { made: 1, attempted: 1, pct: 1 } } },
+      { track_id: 0, stable_player_id: 'player-001', team_id: 1, jersey_number: '30', observations: 651, on_court: true,
+        roster_player_id: null, roster_name: null, display_name: '#30', ...totals },
+    ],
+  } as unknown as ApiAnalysisJobShootingStats)
+  const chart = mapAnalysisJobShotChart({
+    court: { length_m: 28, width_m: 15, hoop_inset_m: 1.575, hoops: { home: { x_m: 1.575, y_m: 7.5 }, away: { x_m: 26.425, y_m: 7.5 } }, three_point_radius_m: 6.75, corner_three_lateral_m: 6.6 },
+    shots: [apiShot],
+    players: [{ track_id: 4000007, stable_player_id: 'player-010', team_id: 1, jersey_number: '7', display_name: 'Jaylen Brown', shots: [apiShot] }],
+    coverage,
+  } as unknown as ApiAnalysisJobShotChart)
+  return { stats, chart }
+}
+
+test('a shooter from the saved job appears in the table and selector of its own side', () => {
+  const { stats, chart } = savedJob()
+  const shooters = analysisJobShooterSides(stats.shots, chart.shots, chart.players)
+
+  assert.deepEqual(
+    buildAnalysisJobPlayerShootingRows(stats.players, [1], shooters).map((row) => row.key),
+    ['stable:player-010'],
+  )
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(chart.players, stats.players, [1], shooters).map((p) => p.trackId),
+    [4000007],
+  )
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters), [])
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0, 1], shooters).map((row) => row.groupLabel), ['Grupo detectado B'])
+})
+
+test('the rival scope lists the rival shooter even when the analysed side has none', () => {
+  const { stats, chart } = savedJob({ team_id: 0 })
+  const shooters = analysisJobShooterSides(stats.shots, chart.shots, chart.players)
+
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters).map((row) => row.key), ['stable:player-010'])
+  assert.equal(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters)[0]?.groupLabel, 'Grupo detectado A')
+})
+
+test('a shooter matches by track key when the shot carries no stable id', () => {
+  const { stats, chart } = savedJob({ stable_player_id: null })
+  const shooters = analysisJobShooterSides(stats.shots, [], [])
+  const noCounters = stats.players.map((p) => ({
+    ...p, fieldGoalsAttempted: 0, threePointAttempted: 0, byZone: {},
+  }))
+  void chart
+
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(noCounters, [1], shooters).map((row) => row.key), ['stable:player-010'])
 })

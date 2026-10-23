@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 import type {
   AnalysisJobShotChartCourt,
   AnalysisJobShotChartPlayer,
@@ -55,7 +56,7 @@ export function ShotChartCourt({
   const resultStyles = presentation === 'match-report' ? REPORT_RESULT_STYLES : RESULT_STYLES
 
   return (
-    <div>
+    <div style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative w-full overflow-hidden rounded-lg border',
@@ -63,7 +64,7 @@ export function ShotChartCourt({
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
         aria-label="Cancha con ubicación de tiros"
       >
         <svg

@@ -11,6 +11,7 @@ import {
 } from '@/pages/analysis/analysis-job-player-identity'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 
 interface CourtPositionsCourtProps {
   court: AnalysisJobCourtPositions['court']
@@ -41,7 +42,7 @@ export function CourtPositionsCourt({
   const playerLabels = buildAnalysisJobPlayerLabels(players)
 
   return (
-    <div className="w-full max-w-full">
+    <div className="w-full max-w-full" style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative w-full max-w-full overflow-hidden rounded-lg border',
@@ -49,7 +50,7 @@ export function CourtPositionsCourt({
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
       >
         <svg
           className="absolute inset-0 h-full w-full"

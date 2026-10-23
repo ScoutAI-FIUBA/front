@@ -2,6 +2,7 @@ import type { AnalysisJobCourtPositions } from '@/types'
 import { cn } from '@/lib/utils'
 import type { CourtPositionsHeatmapData } from './court-positions-heatmap'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 
 interface CourtPositionsHeatmapProps {
   court: AnalysisJobCourtPositions['court']
@@ -15,7 +16,7 @@ export function CourtPositionsHeatmap({
   presentation = 'legacy',
 }: CourtPositionsHeatmapProps) {
   return (
-    <div className="w-full max-w-full">
+    <div className="w-full max-w-full" style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative w-full max-w-full overflow-hidden rounded-lg border',
@@ -23,7 +24,7 @@ export function CourtPositionsHeatmap({
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
       >
         <svg
           className="absolute inset-0 h-full w-full"
