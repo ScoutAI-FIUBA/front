@@ -1,6 +1,8 @@
 import type {
   AnalysisJobShotChartShot,
+  Player,
   PlayerAnalysisStats,
+  PlayerAnalysisSummary,
   PlayerShotChart,
   PlayerZoneLine,
 } from '../../types/index.ts'
@@ -34,10 +36,56 @@ const NOT_MEASURED_LABELS: Record<string, string> = {
   minutes: 'minutos jugados',
 }
 
-/** The only place a shooting fraction (0..1) is converted to a percentage. */
-export function formatShootingPct(pct: number | null): string {
-  if (pct === null || pct === undefined || Number.isNaN(pct)) return EMPTY
-  return `${Math.round(pct * 100)}%`
+/** The only place a shooting percentage is computed: from made/attempted, never from a stored value. */
+export function formatPct(made: number, attempted: number): string {
+  if (!(attempted > 0) || !Number.isFinite(made)) return EMPTY
+  return `${Math.round((100 * made) / attempted)}%`
+}
+
+export const NO_ANALYSIS_LABEL = 'Sin análisis'
+
+export function hasAnalysisSummary(
+  summary: PlayerAnalysisSummary | undefined,
+): summary is PlayerAnalysisSummary {
+  return summary !== undefined && summary.games > 0
+}
+
+/** "3 PJ · 24 pts · TC 9/20 (45%)", or "Sin análisis" when there is nothing to show. */
+export function formatRowSummary(summary: PlayerAnalysisSummary | undefined): string {
+  if (!hasAnalysisSummary(summary)) return NO_ANALYSIS_LABEL
+  return `${summary.games} PJ · ${summary.points} pts · TC ${summary.fgMade}/${summary.fgAttempted} (${formatPct(summary.fgMade, summary.fgAttempted)})`
+}
+
+export function summaryFromStats(stats: PlayerAnalysisStats): PlayerAnalysisSummary {
+  return {
+    games: stats.games,
+    points: stats.points,
+    fgMade: stats.fieldGoals.made,
+    fgAttempted: stats.fieldGoals.attempted,
+  }
+}
+
+/** Replaces one player's summary; returns the same array when nothing changes. */
+export function patchPlayerSummary(
+  players: Player[],
+  playerId: string,
+  summary: PlayerAnalysisSummary,
+): Player[] {
+  const current = players.find((player) => player.id === playerId)
+  if (!current) return players
+  const old = current.analysisSummary
+  if (
+    old &&
+    old.games === summary.games &&
+    old.points === summary.points &&
+    old.fgMade === summary.fgMade &&
+    old.fgAttempted === summary.fgAttempted
+  ) {
+    return players
+  }
+  return players.map((player) =>
+    player.id === playerId ? { ...player, analysisSummary: summary } : player,
+  )
 }
 
 export function formatSecondsOnScreen(seconds: number | null): string {

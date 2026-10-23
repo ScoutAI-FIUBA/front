@@ -36,6 +36,14 @@ export interface Team {
 
 export type PlayerStatus = 'pending' | 'active'
 
+/** Compact per-player totals from the `stats` field of GET /players. */
+export interface PlayerAnalysisSummary {
+  games: number
+  points: number
+  fgMade: number
+  fgAttempted: number
+}
+
 export interface Player {
   id: string
   firstName: string
@@ -49,6 +57,7 @@ export interface Player {
   jerseyNumber?: string
   photoUrl?: string
   status?: PlayerStatus
+  analysisSummary?: PlayerAnalysisSummary
 }
 
 export interface TeamMembership {

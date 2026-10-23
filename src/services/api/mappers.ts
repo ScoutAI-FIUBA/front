@@ -1,4 +1,4 @@
-import type { Player, Team, User, UserRole } from '@/types'
+import type { Player, PlayerAnalysisSummary, Team, User, UserRole } from '@/types'
 
 export interface ApiUser {
   id: string
@@ -27,6 +27,7 @@ export interface ApiPlayer {
   primary_position: string
   jersey_number?: string | null
   team_id?: string | null
+  stats?: unknown
 }
 
 const PROFILE_PREFIX = 'scoutai-profile-'
@@ -82,6 +83,32 @@ export function mapApiTeam(team: ApiTeam): Team {
   }
 }
 
+function asCount(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+/** Reads only games, points and field goals made/attempted; never the backend percentage. */
+export function mapPlayerStatsSummary(stats: unknown): PlayerAnalysisSummary | undefined {
+  const root = asRecord(stats)
+  if (!root) return undefined
+  const points = asRecord(root.points)
+  const fieldGoals = asRecord(root.field_goals)
+  const games = asCount(root.games_played)
+  const pointsTotal = asCount(points?.total)
+  const fgMade = asCount(fieldGoals?.made_total)
+  const fgAttempted = asCount(fieldGoals?.attempted_total)
+  if (games === null || pointsTotal === null || fgMade === null || fgAttempted === null) {
+    return undefined
+  }
+  return { games, points: pointsTotal, fgMade, fgAttempted }
+}
+
 export function mapApiPlayer(player: ApiPlayer): Player {
   return {
     id: player.id,
@@ -95,6 +122,7 @@ export function mapApiPlayer(player: ApiPlayer): Player {
     teamId: player.team_id ?? null,
     createdAt: new Date().toISOString(),
     status: 'active',
+    analysisSummary: mapPlayerStatsSummary(player.stats),
   }
 }
 

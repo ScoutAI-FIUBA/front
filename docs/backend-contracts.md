@@ -105,7 +105,8 @@ Bearer auth, ownership from the token. Used by the stats sheet on `/jugadores`. 
 Percentage conventions differ by endpoint and must not be mixed:
 
 - `analysis-stats` `pct`: fraction 0..1 or `null` when there are no attempts. The client keeps the fraction; conversion to a percent happens only when formatting for display.
-- `GET /players/{id}/stats` (`players.stats`, not consumed by the frontend): integer 0..100.
+- `players.stats` (the `stats` field of every `GET /players` item; canonical shape `games_played`, `points.total`, `field_goals.made_total` / `attempted_total` / `percentage`, etc.): integers; `percentage` is an integer 0..100 that is 0 when there are no attempts, so the frontend never displays it. The list row reads only `games_played`, `points.total`, and `field_goals.made_total` / `attempted_total` and computes the percent from made/attempted. Older backends may omit `stats`; a missing or malformed value maps to no summary ("Sin análisis").
+- `GET /players/{id}/stats` (not consumed by the frontend): same shape.
 - Match stats import preview (not consumed by the frontend): 0..100 with one decimal.
 
 `PUT /jobs/{job_id}/our-team` now returns `{ job, player_stats_sync }` (the `job` object is unchanged). `analysis-job-team-sides.client.ts` reads only `job` and ignores `player_stats_sync`.

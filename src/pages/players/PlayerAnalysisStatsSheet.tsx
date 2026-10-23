@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3 } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -15,17 +15,21 @@ import { playerAnalysisService } from '@/services/registry'
 import type {
   Player,
   PlayerAnalysisStats,
+  PlayerAnalysisSummary,
   PlayerShootingLine,
   PlayerShotChart,
 } from '@/types'
 import {
   formatDistance,
   formatSecondsOnScreen,
-  formatShootingPct,
+  formatPct,
+  formatRowSummary,
+  hasAnalysisSummary,
   hasPlayerAnalysisStats,
   notMeasuredLabel,
   playerShotsToCourtShots,
   sortedZones,
+  summaryFromStats,
   zoneLabel,
 } from './player-analysis-stats'
 
@@ -33,6 +37,7 @@ interface PlayerAnalysisStatsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   player: Player | null
+  onTotals?: (playerId: string, summary: PlayerAnalysisSummary) => void
 }
 
 type StatsState =
@@ -63,7 +68,7 @@ function shootingCard(label: string, line: PlayerShootingLine) {
       key={label}
       label={label}
       value={`${line.made}/${line.attempted}`}
-      detail={formatShootingPct(line.pct)}
+      detail={formatPct(line.made, line.attempted)}
     />
   )
 }
@@ -72,10 +77,15 @@ export function PlayerAnalysisStatsSheet({
   open,
   onOpenChange,
   player,
+  onTotals,
 }: PlayerAnalysisStatsSheetProps) {
   const [state, setState] = useState<StatsState>(LOADING)
   const [retry, setRetry] = useState(0)
   const playerId = player?.id ?? null
+  const onTotalsRef = useRef(onTotals)
+  useEffect(() => {
+    onTotalsRef.current = onTotals
+  })
 
   useEffect(() => {
     if (!open || !playerId) return
@@ -93,6 +103,7 @@ export function PlayerAnalysisStatsSheet({
         })
         return
       }
+      onTotalsRef.current?.(playerId, summaryFromStats(statsResult.value))
       setState({
         status: 'ready',
         stats: statsResult.value,
@@ -119,6 +130,11 @@ export function PlayerAnalysisStatsSheet({
           <SheetDescription>
             Estadísticas medidas en los videos analizados. No son estadísticas oficiales del partido.
           </SheetDescription>
+          <p
+            className={`text-sm font-medium ${hasAnalysisSummary(player?.analysisSummary) ? '' : 'text-muted-foreground'}`}
+          >
+            {formatRowSummary(player?.analysisSummary)}
+          </p>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-7">
@@ -148,17 +164,13 @@ export function PlayerAnalysisStatsSheet({
             <EmptyState
               className="py-6 sm:py-8"
               title="Todavía no hay estadísticas"
-              description="Aparecen cuando un video analizado del equipo tiene el lado propio confirmado y el dorsal del jugador coincide con el plantel."
+              description="Aparece cuando el dorsal del jugador está confirmado en un video analizado con el lado propio marcado."
               icon={<BarChart3 className="h-5 w-5" />}
             />
           )}
 
           {state.status === 'ready' && hasPlayerAnalysisStats(state.stats) && (
             <div className="space-y-8">
-              <p className="text-xs leading-5 text-muted-foreground">
-                Puede tardar unos minutos en actualizarse tras cambios en el plantel.
-              </p>
-
               <section aria-label="Resumen" className="grid grid-cols-2 gap-3">
                 <SummaryCard label="Videos analizados" value={String(state.stats.games)} />
                 <SummaryCard label="Puntos" value={String(state.stats.points)} />
@@ -194,7 +206,7 @@ export function PlayerAnalysisStatsSheet({
                           <tr key={zone} className="border-b last:border-b-0">
                             <th scope="row" className="px-3 py-2 text-left font-medium">{zoneLabel(zone)}</th>
                             <td className="px-3 py-2 text-right">{line.made}/{line.attempted}</td>
-                            <td className="px-3 py-2 text-right">{formatShootingPct(line.pct)}</td>
+                            <td className="px-3 py-2 text-right">{formatPct(line.made, line.attempted)}</td>
                             <td className="px-3 py-2 text-right text-muted-foreground">{line.unresolvedAttempts}</td>
                           </tr>
                         ))}

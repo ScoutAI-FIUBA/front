@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/select'
 import { positionLabel } from '@/lib/positions'
 import { playerService, teamService } from '@/services/registry'
-import type { Player, Team } from '@/types'
+import type { Player, PlayerAnalysisSummary, Team } from '@/types'
 import { GlobalPlayerSheet, type GlobalPlayerSheetIntent } from './GlobalPlayerSheet'
 import { PlayerAnalysisStatsSheet } from './PlayerAnalysisStatsSheet'
+import { formatRowSummary, hasAnalysisSummary, patchPlayerSummary } from './player-analysis-stats'
 import {
   filterGlobalPlayers,
   sortGlobalPlayers,
@@ -38,7 +39,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
   const [teamFilter, setTeamFilter] = useState('all')
   const [sheetOpen, setSheetOpen] = useState(openCreateOnMount)
   const [sheetIntent, setSheetIntent] = useState<GlobalPlayerSheetIntent>({ kind: 'create' })
-  const [statsPlayer, setStatsPlayer] = useState<Player | null>(null)
+  const [statsPlayerId, setStatsPlayerId] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
 
   const refreshData = useCallback(async () => {
@@ -85,8 +86,17 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
     setSheetOpen(true)
   }
 
+  const statsPlayer = useMemo(
+    () => players.find((player) => player.id === statsPlayerId) ?? null,
+    [players, statsPlayerId],
+  )
+
+  const handleTotals = useCallback((playerId: string, summary: PlayerAnalysisSummary) => {
+    setPlayers((current) => patchPlayerSummary(current, playerId, summary))
+  }, [])
+
   const openStats = (player: Player) => {
-    setStatsPlayer(player)
+    setStatsPlayerId(player.id)
     setStatsOpen(true)
   }
 
@@ -190,12 +200,16 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
             <span className="min-w-48 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
               Equipo
             </span>
+            <span className="hidden min-w-44 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70 md:block">
+              Análisis
+            </span>
             <div className="hidden min-w-36 lg:block" />
             <div className="h-8 w-8 shrink-0" />
             <div className="h-8 w-8 shrink-0" />
           </div>
           {filteredPlayers.map((player) => {
             const teamName = player.teamId ? teamNames.get(player.teamId) : null
+            const summaryClass = hasAnalysisSummary(player.analysisSummary) ? '' : 'text-muted-foreground'
             return (
               <article key={player.id} className="group flex items-center gap-4 border-b px-4 py-2.5 last:border-b-0 hover:bg-surface-subtle/40">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-sm font-bold text-foreground">
@@ -204,6 +218,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate text-sm font-semibold">{player.firstName} {player.lastName}</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">{positionLabel(player.primaryPosition)}</p>
+                  <p className={`mt-0.5 text-xs md:hidden ${summaryClass}`}>{formatRowSummary(player.analysisSummary)}</p>
                 </div>
                 <div className="hidden min-w-48 text-sm sm:block">
                   {player.teamId && teamName ? (
@@ -211,6 +226,9 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
                   ) : (
                     <span className="text-muted-foreground">Sin equipo</span>
                   )}
+                </div>
+                <div className={`hidden min-w-44 text-xs md:block ${summaryClass}`}>
+                  {formatRowSummary(player.analysisSummary)}
                 </div>
                 <div className="hidden min-w-36 text-xs text-muted-foreground lg:block">
                   {[player.heightCm ? `${player.heightCm} cm` : null, player.weightKg ? `${player.weightKg} kg` : null]
@@ -251,7 +269,13 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
         onDataChanged={refreshData}
       />
 
-      <PlayerAnalysisStatsSheet key={statsPlayer?.id ?? 'none'} open={statsOpen} onOpenChange={setStatsOpen} player={statsPlayer} />
+      <PlayerAnalysisStatsSheet
+        key={statsPlayerId ?? 'none'}
+        open={statsOpen}
+        onOpenChange={setStatsOpen}
+        player={statsPlayer}
+        onTotals={handleTotals}
+      />
     </div>
   )
 }

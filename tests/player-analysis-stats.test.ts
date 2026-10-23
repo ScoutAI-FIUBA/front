@@ -8,9 +8,13 @@ import {
   type ApiPlayerAnalysisStats,
   type ApiPlayerShotChart,
 } from '../src/services/api/player-analysis.client.ts'
+import { mapApiPlayer, mapPlayerStatsSummary, type ApiPlayer } from '../src/services/api/mappers.ts'
 import type { AnalysisJobRequest } from '../src/services/api/analysis-jobs.client.ts'
 import {
-  formatShootingPct,
+  formatPct,
+  formatRowSummary,
+  patchPlayerSummary,
+  summaryFromStats,
   hasPlayerAnalysisStats,
   playerShotsToCourtShots,
 } from '../src/pages/players/player-analysis-stats.ts'
@@ -189,10 +193,114 @@ test('mapPlayerShotChart keeps result and has no made property', () => {
   }
 })
 
-test('formatShootingPct converts a fraction to a rounded percentage', () => {
-  assert.equal(formatShootingPct(0.667), '67%')
-  assert.equal(formatShootingPct(null), '—')
-  assert.equal(formatShootingPct(0), '0%')
+test('formatPct rounds made/attempted and shows a dash without attempts', () => {
+  assert.equal(formatPct(2, 3), '67%')
+  assert.equal(formatPct(0, 5), '0%')
+  assert.equal(formatPct(1, 8), '13%')
+  assert.equal(formatPct(0, 0), '—')
+})
+
+const SUMMARY = { games: 3, points: 24, fgMade: 9, fgAttempted: 20 }
+
+test('formatRowSummary formats games, points and field goals', () => {
+  assert.equal(formatRowSummary(SUMMARY), '3 PJ · 24 pts · TC 9/20 (45%)')
+})
+
+test('formatRowSummary shows Sin análisis for no summary or 0 games, never 0 pts', () => {
+  assert.equal(formatRowSummary(undefined), 'Sin análisis')
+  assert.equal(formatRowSummary({ games: 0, points: 0, fgMade: 0, fgAttempted: 0 }), 'Sin análisis')
+})
+
+test('formatRowSummary shows a dash percentage with games but 0 attempts', () => {
+  assert.equal(
+    formatRowSummary({ games: 2, points: 0, fgMade: 0, fgAttempted: 0 }),
+    '2 PJ · 0 pts · TC 0/0 (—)',
+  )
+})
+
+test('row and sheet give the same percentage for made 1 / attempted 8', () => {
+  const stats = mapPlayerAnalysisStats({
+    ...apiStats(),
+    field_goals: { made: 1, attempted: 8, pct: 0.125 },
+  })
+  assert.match(formatRowSummary(summaryFromStats(stats)), /\(13%\)/)
+  assert.equal(formatPct(stats.fieldGoals.made, stats.fieldGoals.attempted), '13%')
+  assert.equal(formatPct(stats.fieldGoals.made, stats.fieldGoals.attempted), formatPct(1, 8))
+})
+
+test('the row is patched with the totals of the sheet and unchanged totals keep the list', () => {
+  const players = [
+    mapApiPlayer({ ...apiPlayer(), id: 'p-1' }),
+    mapApiPlayer({ ...apiPlayer(), id: 'p-2' }),
+  ]
+  assert.equal(formatRowSummary(players[0].analysisSummary), 'Sin análisis')
+  const totals = summaryFromStats(mapPlayerAnalysisStats(apiStats()))
+  const patched = patchPlayerSummary(players, 'p-1', totals)
+  assert.equal(formatRowSummary(patched[0].analysisSummary), '2 PJ · 11 pts · TC 5/9 (56%)')
+  assert.equal(patched[1], players[1])
+  assert.equal(patchPlayerSummary(patched, 'p-1', totals), patched)
+  assert.equal(patchPlayerSummary(patched, 'missing', totals), patched)
+})
+
+function apiPlayer(): ApiPlayer {
+  return {
+    id: 'p-1',
+    first_name: 'Ana',
+    last_name: 'Pérez',
+    birth_date: '2000-01-01',
+    height_cm: 180,
+    weight_kg: 75,
+    primary_position: 'PG',
+  }
+}
+
+function apiPlayerStats() {
+  return {
+    games_played: 3,
+    points: { total: 24, per_game: 8 },
+    field_goals: { made_total: 9, attempted_total: 20, per_game: { made: 3, attempted: 7 }, percentage: 45 },
+  }
+}
+
+test('mapApiPlayer maps a valid stats field to analysisSummary', () => {
+  const player = mapApiPlayer({ ...apiPlayer(), stats: apiPlayerStats() })
+  assert.deepEqual(player.analysisSummary, SUMMARY)
+})
+
+test('mapApiPlayer leaves analysisSummary undefined when stats is missing or malformed', () => {
+  assert.equal(mapApiPlayer(apiPlayer()).analysisSummary, undefined)
+  for (const stats of [
+    null,
+    'x',
+    42,
+    [],
+    {},
+    { games_played: '3' },
+    { ...apiPlayerStats(), points: null },
+    { ...apiPlayerStats(), field_goals: { made_total: 'a', attempted_total: 2 } },
+    { ...apiPlayerStats(), games_played: -1 },
+  ]) {
+    assert.equal(mapPlayerStatsSummary(stats), undefined)
+    assert.equal(mapApiPlayer({ ...apiPlayer(), stats }).analysisSummary, undefined)
+  }
+})
+
+test('the players page, sheet and mapper never read the backend percentage', () => {
+  for (const path of [
+    '../src/pages/players/PlayersPage.tsx',
+    '../src/pages/players/PlayerAnalysisStatsSheet.tsx',
+    '../src/pages/players/player-analysis-stats.ts',
+    '../src/services/api/mappers.ts',
+  ]) {
+    const code = readSource(path).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+    assert.equal(/percentage/.test(code), false, path)
+  }
+})
+
+test('the sheet shows the no-games hint and no freshness text', () => {
+  const sheet = readSource('../src/pages/players/PlayerAnalysisStatsSheet.tsx')
+  assert.match(sheet, /Aparece cuando el dorsal del jugador está confirmado en un video analizado con el lado propio marcado\./)
+  assert.equal(/actualizarse|minutos en/i.test(sheet), false)
 })
 
 test('playerShotsToCourtShots keeps unknown as not made and uses shotValue and shotKey', () => {

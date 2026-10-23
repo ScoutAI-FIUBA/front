@@ -79,7 +79,7 @@ src/
 - `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
 - The legacy `matchService` and `analysisService` currently use mocks; no real Match page consumes `matchService`.
 - `playerAnalysisService` (`contracts/player-analysis.service.ts`, `api/player-analysis.client.ts` for request paths and mappers, `api/player-analysis.api.ts`, `mock/player-analysis.mock.ts` with the backend's empty shape) provides aggregated player stats and shot chart; it follows `VITE_USE_MOCK_API`.
-- `src/pages/players/PlayerAnalysisStatsSheet.tsx`: read-only player stats sheet opened from `/jugadores`; `src/pages/players/player-analysis-stats.ts` holds its pure formatting and adapter helpers (covered by `tests/player-analysis-stats.test.ts`).
+- `src/pages/players/PlayerAnalysisStatsSheet.tsx`: read-only player stats sheet opened from `/jugadores`; `src/pages/players/player-analysis-stats.ts` holds its pure formatting, row summary (`formatPct`, `formatRowSummary`) and adapter helpers (covered by `tests/player-analysis-stats.test.ts`).
 - `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, `analysisJobShotChartService`, `analysisJobCourtPositionsService`, and `analysisJobSimilarService` always use the real processing-job backend.
 
 ## Mocks
