@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import {
-  analysisJobShooterSides,
+  analysisJobShooterKeys,
   buildAnalysisJobPlayerShootingRows,
   filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
@@ -223,7 +223,7 @@ test('Tiros table and selector drop non-shooters and keep unresolved-only shoote
     rosterName: null, xM: 1, yM: 1, made: false, result: 'unknown', points: 2, zone: 'paint',
     distanceM: 1, shotType: null, timestampSeconds: null, attribution: null,
   } as const
-  const keys = analysisJobShooterSides([], [unresolvedShot], [])
+  const keys = analysisJobShooterKeys([], [unresolvedShot], [])
 
   assert.deepEqual(
     buildAnalysisJobPlayerShootingRows(players, [0], keys).map((row) => row.key),
@@ -237,7 +237,7 @@ test('Tiros table and selector drop non-shooters and keep unresolved-only shoote
     { trackId: 4, stablePlayerId: 's-4', teamSide: 1, jerseyNumber: '4', displayName: '#4', shots: [unresolvedShot] },
   ]
   assert.deepEqual(
-    filterAnalysisJobIdentifiedShotChartPlayers(chartPlayers, [], [0], analysisJobShooterSides([], [], chartPlayers))
+    filterAnalysisJobIdentifiedShotChartPlayers(chartPlayers, [], [0], analysisJobShooterKeys([], [], chartPlayers))
       .map((candidate) => candidate.trackId),
     [2],
   )
@@ -299,7 +299,7 @@ function savedJob(shotOverrides: Record<string, unknown> = {}) {
 
 test('a shooter from the saved job appears in the table and selector of its own side', () => {
   const { stats, chart } = savedJob()
-  const shooters = analysisJobShooterSides(stats.shots, chart.shots, chart.players)
+  const shooters = analysisJobShooterKeys(stats.shots, chart.shots, chart.players)
 
   assert.deepEqual(
     buildAnalysisJobPlayerShootingRows(stats.players, [1], shooters).map((row) => row.key),
@@ -313,17 +313,45 @@ test('a shooter from the saved job appears in the table and selector of its own 
   assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0, 1], shooters).map((row) => row.groupLabel), ['Grupo detectado B'])
 })
 
-test('the rival scope lists the rival shooter even when the analysed side has none', () => {
+test('a shooter is listed only under its own team side, whatever side the shot reports', () => {
   const { stats, chart } = savedJob({ team_id: 0 })
-  const shooters = analysisJobShooterSides(stats.shots, chart.shots, chart.players)
+  const shooters = analysisJobShooterKeys(stats.shots, chart.shots, chart.players)
 
-  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters).map((row) => row.key), ['stable:player-010'])
-  assert.equal(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters)[0]?.groupLabel, 'Grupo detectado A')
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0], shooters), [])
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [1], shooters).map((row) => row.key), ['stable:player-010'])
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows(stats.players, [0, 1], shooters).map((row) => row.groupLabel), ['Grupo detectado B'])
+})
+
+test('a player without a team side stays hidden even when a shot reports a side', () => {
+  const nullSide = player({ trackId: 1, stablePlayerId: null, teamSide: null, jerseyNumber: '7', fieldGoalsAttempted: 1 })
+  const shot = { shotId: 1, trackId: 1, stablePlayerId: null, teamSide: 0, jerseyNumber: null, rosterPlayerId: null, rosterName: null, xM: 1, yM: 1, made: true, result: 'made', points: 2, zone: 'paint', distanceM: 1, shotType: null, timestampSeconds: null, attribution: null } as const
+  const keys = analysisJobShooterKeys([], [shot], [])
+
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows([nullSide], [0], keys), [])
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows([nullSide], [0, 1], keys), [])
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(
+      [{ trackId: 1, stablePlayerId: null, teamSide: null, jerseyNumber: '7', displayName: '#7', shots: [] }],
+      [], [0, 1], keys,
+    ),
+    [],
+  )
+})
+
+test('a shot only matches a player with a stable id by the stable key, not a shared track id', () => {
+  const other = player({ trackId: 5, stablePlayerId: 'sA', teamSide: 0, jerseyNumber: '5', fieldGoalsAttempted: 0, twoPointAttempted: 0, threePointAttempted: 0, byZone: {} })
+  const shot = { shotId: 1, trackId: 5, stablePlayerId: 'sB', teamSide: 0, jerseyNumber: null, rosterPlayerId: null, rosterName: null, xM: 1, yM: 1, made: true, result: 'made', points: 2, zone: 'paint', distanceM: 1, shotType: null, timestampSeconds: null, attribution: null } as const
+
+  assert.deepEqual(buildAnalysisJobPlayerShootingRows([other], [0], analysisJobShooterKeys([], [shot], [])), [])
+  assert.equal(
+    buildAnalysisJobPlayerShootingRows([other], [0], analysisJobShooterKeys([], [{ ...shot, stablePlayerId: 'sA' }], [])).length,
+    1,
+  )
 })
 
 test('a shooter matches by track key when the shot carries no stable id', () => {
   const { stats, chart } = savedJob({ stable_player_id: null })
-  const shooters = analysisJobShooterSides(stats.shots, [], [])
+  const shooters = analysisJobShooterKeys(stats.shots, [], [])
   const noCounters = stats.players.map((p) => ({
     ...p, fieldGoalsAttempted: 0, threePointAttempted: 0, byZone: {},
   }))

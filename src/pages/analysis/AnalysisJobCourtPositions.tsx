@@ -114,7 +114,11 @@ export function AnalysisJobCourtPositionsView({
       (loaded) => {
         if (!active || !loaded) return
         setPositions(loaded)
-        setFilter(defaultCourtPositionFilter(loaded.players, ourTeamSideRef.current, playerIdentitiesRef.current))
+        setFilter(defaultCourtPositionFilter(
+          filterGroupedCourtPositionPlayers(loaded.players, ourTeamSideRef.current),
+          ourTeamSideRef.current,
+          playerIdentitiesRef.current,
+        ))
         setLoadState('success')
         onTechnicalSummaryChange?.({
           coverage: loaded.coverage,
@@ -152,8 +156,8 @@ export function AnalysisJobCourtPositionsView({
   useEffect(() => {
     if (!isCourtPositionPlayerFilter(filter)) return
     if (identifiedPlayers.some((player) => analysisJobPlayerKey(player) === filter)) return
-    setFilter('all')
-  }, [filter, identifiedPlayers])
+    setFilter(defaultCourtPositionFilter(groupedPlayers, job.ourTeamSide, playerIdentities))
+  }, [filter, groupedPlayers, identifiedPlayers, job.ourTeamSide, playerIdentities])
   const heatmap = useMemo(
     () => positions
       ? buildCourtPositionsHeatmap(positions.court, visiblePlayers)
@@ -306,7 +310,7 @@ export function AnalysisJobCourtPositionsView({
               <p className="font-semibold text-[#F4F5F7]">Vista comparativa</p>
               <p className="mt-1 text-xs text-[#A3ABBA]">Se superponen los recorridos completos de la selección.</p>
             </div>
-            <span className="text-sm tabular-nums text-[#A3ABBA]">{visiblePlayers.length} jugadores</span>
+            <span className="text-sm tabular-nums text-[#A3ABBA]">{visibleIdentifiedPlayers.length} jugadores</span>
           </div>
         )}
 
@@ -321,7 +325,7 @@ export function AnalysisJobCourtPositionsView({
             <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} presentation="match-report" />
           ) : (
             <div className="space-y-3">
-              <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} presentation="match-report" />
+              <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} presentation="match-report" />
               <p className="text-xs text-[#A3ABBA]">Elegí un jugador para reproducir su recorrido individual.</p>
             </div>
           )}
@@ -411,7 +415,7 @@ export function AnalysisJobCourtPositionsView({
           <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} />
         ) : (
           <div className="space-y-3">
-            <CourtPositionsCourt court={positions.court} players={visiblePlayers} ourTeamSide={job.ourTeamSide} />
+            <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} />
             <p className="text-xs text-muted-foreground">La comparación superpone recorridos completos. Elegí un jugador para reproducir una secuencia individual.</p>
           </div>
         )}

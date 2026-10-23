@@ -46,12 +46,12 @@ import {
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity'
 import {
-  analysisJobShooterSides,
+  analysisJobShooterKeys,
   buildAnalysisJobPlayerShootingRows,
   filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
   type AnalysisJobPlayerShootingRow,
-  type AnalysisJobShooterSides,
+  type AnalysisJobShooterKeys,
 } from './analysis-job-player-stats'
 import { analysisJobTeamGroupLabel } from './analysis-job-team-side'
 import type { AnalysisJobShootingDataController } from './use-analysis-job-shooting-data'
@@ -233,7 +233,7 @@ function PlayerShootingStatsSection({
   players: AnalysisJobPlayerShootingStats[]
   scope: AnalysisJobTeamSide[]
   scopeLabel: string
-  shooters: AnalysisJobShooterSides
+  shooters: AnalysisJobShooterKeys
   presentation: 'legacy' | 'match-report'
 }) {
   const reportPresentation = presentation === 'match-report'
@@ -352,7 +352,7 @@ function PlayerShootingStatsSection({
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-semibold text-foreground">{row.label}</span>
                         {row.rosterLinked ? <Badge variant="analyzed">Plantel</Badge> : null}
-                        </div>
+                      </div>
                       {row.jerseyNumber ? (
                         <p className="mt-1 text-xs text-muted-foreground">Dorsal #{row.jerseyNumber}</p>
                       ) : null}
@@ -411,7 +411,7 @@ export function AnalysisJobShotsWorkspace({
       chart?.players ?? [],
       playerIdentities ?? [],
       analysisJobShotTeamScope(filters.team, job.ourTeamSide),
-      analysisJobShooterSides(currentStats?.shots, chart?.shots, chart?.players),
+      analysisJobShooterKeys(currentStats?.shots, chart?.shots, chart?.players),
     ).some((player) => analysisJobPlayerKey(player) === filters.player)
     if (!selectedPlayerIsVisible) {
       setFilters((current) => current.player === filters.player
@@ -444,7 +444,7 @@ export function AnalysisJobShotsWorkspace({
   const rivalSide = otherAnalysisJobTeamSide(ourSide)
   const teamScopedShots = chart ? filterAnalysisJobShotsByTeam(chart.shots, filters.team, ourSide) : []
   const shotScope = analysisJobShotTeamScope(filters.team, ourSide)
-  const shooters = analysisJobShooterSides(currentStats?.shots, chart?.shots, chart?.players)
+  const shooters = analysisJobShooterKeys(currentStats?.shots, chart?.shots, chart?.players)
   const scopeLabel = filters.team === 'both'
     ? 'Jugadores de ambos equipos'
     : `Jugadores de ${analysisJobTeamGroupLabel(shotScope[0])} (${filters.team === 'own' ? 'equipo analizado' : 'rival'})`

@@ -8,6 +8,7 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  type AnalysisJobPlayerKey,
 } from '@/pages/analysis/analysis-job-player-identity'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
@@ -17,6 +18,7 @@ interface CourtPositionsCourtProps {
   court: AnalysisJobCourtPositions['court']
   players: AnalysisJobCourtPositionsPlayer[]
   ourTeamSide: AnalysisJobTeamSide | null
+  playerLabels?: Map<AnalysisJobPlayerKey, string>
   presentation?: 'legacy' | 'match-report'
 }
 
@@ -37,9 +39,10 @@ export function CourtPositionsCourt({
   court,
   players,
   ourTeamSide,
+  playerLabels: providedLabels,
   presentation = 'legacy',
 }: CourtPositionsCourtProps) {
-  const playerLabels = buildAnalysisJobPlayerLabels(players)
+  const playerLabels = providedLabels ?? buildAnalysisJobPlayerLabels(players)
 
   return (
     <div className="w-full max-w-full" style={courtColumnStyle(court)}>
@@ -107,7 +110,7 @@ export function CourtPositionsCourt({
         </svg>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Seguimientos visibles">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Jugadores visibles">
         {players.map((player) => (
           <span key={analysisJobPlayerKey(player)} className="inline-flex items-center gap-1.5">
             <span

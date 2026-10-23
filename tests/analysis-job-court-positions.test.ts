@@ -212,14 +212,11 @@ test('does not request positions before the job is DONE', async () => {
   assert.equal(calls, 0)
 })
 
-test('filters locally by side, unassigned tracks, and individual track', async () => {
+test('filters locally by all tracks and individual track', async () => {
   const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
   const players = (await service.get('job-1', 'team-1')).players
 
   assert.deepEqual(filterCourtPositionPlayers(players, 'all').map((player) => player.trackId), [7, 9, 11])
-  assert.deepEqual(filterCourtPositionPlayers(players, 'side-0').map((player) => player.trackId), [7])
-  assert.deepEqual(filterCourtPositionPlayers(players, 'side-1').map((player) => player.trackId), [9])
-  assert.deepEqual(filterCourtPositionPlayers(players, 'unassigned').map((player) => player.trackId), [11])
   assert.deepEqual(filterCourtPositionPlayers(players, 'track:9').map((player) => player.trackId), [9])
 })
 
@@ -362,7 +359,10 @@ test('Movement filters player controls without removing aggregate position evide
   assert.match(detailSource, /visibleIdentifiedPlayers\.map/)
   assert.match(detailSource, /buildCourtPositionPlayerLabels\(groupedPlayers, playerIdentities\)/)
   assert.match(detailSource, /buildCourtPositionsHeatmap\(positions\.court, visiblePlayers\)/)
-  assert.match(detailSource, /players=\{visiblePlayers\}/)
+  assert.equal(detailSource.match(/players=\{visibleIdentifiedPlayers\} ourTeamSide=\{job\.ourTeamSide\} playerLabels=\{playerLabels\}/g)?.length, 2)
+  assert.doesNotMatch(detailSource, /players=\{visiblePlayers\}/)
+  assert.match(detailSource, /\{visibleIdentifiedPlayers\.length\} jugadores/)
+  assert.match(detailSource, /setFilter\(defaultCourtPositionFilter\(groupedPlayers, job\.ourTeamSide, playerIdentities\)\)/)
   assert.match(workspaceSource, /analysisJobPlayerIdentitiesForJob\(job\.id, shootingData\)/)
   assert.equal(workspaceSource.match(/playerIdentities=\{playerIdentities\}/g)?.length, 2)
 })
@@ -488,4 +488,25 @@ test('Movement scopes players to the analysed side', async () => {
   assert.deepEqual(filterGroupedCourtPositionPlayers(players, 0).map((player) => player.trackId), [7])
   assert.deepEqual(filterGroupedCourtPositionPlayers(players, 1).map((player) => player.trackId), [9])
   assert.deepEqual(filterGroupedCourtPositionPlayers(players, null).map((player) => player.trackId), [7, 9])
+})
+
+test('Movement court legend uses the shared labels and the heat map wording has no jargon', () => {
+  const court = readFileSync(new URL('../src/components/analysis/CourtPositionsCourt.tsx', import.meta.url), 'utf8')
+  const heatmap = readFileSync(new URL('../src/components/analysis/CourtPositionsHeatmap.tsx', import.meta.url), 'utf8')
+
+  assert.match(court, /playerLabels\?: Map<AnalysisJobPlayerKey, string>/)
+  assert.match(court, /providedLabels \?\? buildAnalysisJobPlayerLabels\(players\)/)
+  assert.match(court, /aria-label="Jugadores visibles"/)
+  assert.doesNotMatch(court, /Seguimientos visibles/)
+  assert.doesNotMatch(heatmap, /muestra/i)
+})
+
+test('Movement default player is recomputed for the confirmed side when the first choice becomes invalid', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+
+  assert.equal(defaultCourtPositionFilter(filterGroupedCourtPositionPlayers(players, 0), 0), 'track:7')
+  assert.equal(defaultCourtPositionFilter(filterGroupedCourtPositionPlayers(players, 1), 1), 'all')
+  // a player of the other side is never the default for the confirmed side
+  assert.notEqual(defaultCourtPositionFilter(filterGroupedCourtPositionPlayers(players, 1), 1), 'track:7')
 })

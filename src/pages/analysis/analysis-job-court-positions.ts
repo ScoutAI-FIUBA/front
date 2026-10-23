@@ -26,9 +26,6 @@ export interface AnalysisJobCourtPositionsLoadContext {
 
 export type CourtPositionsFilter =
   | 'all'
-  | 'side-0'
-  | 'side-1'
-  | 'unassigned'
   | AnalysisJobPlayerKey
 
 export function filterGroupedCourtPositionPlayers(
@@ -113,9 +110,6 @@ export function filterCourtPositionPlayers(
   filter: CourtPositionsFilter,
 ): AnalysisJobCourtPositionsPlayer[] {
   if (filter === 'all') return players
-  if (filter === 'side-0') return players.filter((player) => player.teamSide === 0)
-  if (filter === 'side-1') return players.filter((player) => player.teamSide === 1)
-  if (filter === 'unassigned') return players.filter((player) => player.teamSide == null)
 
   return players.filter((player) => analysisJobPlayerKey(player) === filter)
 }

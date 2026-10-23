@@ -31,9 +31,9 @@ export function CourtPositionsHeatmap({
           viewBox={`0 0 ${court.lengthM} ${court.widthM}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={`Mapa de calor de concentración relativa construido con ${heatmap.totalSamples} muestras válidas`}
+          aria-label={`Mapa de calor de concentración relativa construido con ${heatmap.totalSamples} posiciones válidas`}
         >
-          <title>Concentración relativa de muestras espaciales</title>
+          <title>Concentración relativa de posiciones</title>
 
           {heatmap.cells.map((cell) => (
             <rect
@@ -45,7 +45,7 @@ export function CourtPositionsHeatmap({
               fill={presentation === 'match-report' ? '#b91c1c' : '#dc2626'}
               fillOpacity={0.18 + cell.intensity * 0.72}
             >
-              <title>{cell.samples} {cell.samples === 1 ? 'muestra' : 'muestras'}</title>
+              <title>{cell.samples} {cell.samples === 1 ? 'posición' : 'posiciones'}</title>
             </rect>
           ))}
 
@@ -54,7 +54,7 @@ export function CourtPositionsHeatmap({
       </div>
 
       <div className="mt-3 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>{heatmap.totalSamples.toLocaleString('es-AR')} muestras válidas utilizadas</span>
+        <span>{heatmap.totalSamples.toLocaleString('es-AR')} posiciones válidas utilizadas</span>
         <div className="flex items-center gap-2" aria-label="Escala de concentración relativa">
           <span>Menor</span>
           <span

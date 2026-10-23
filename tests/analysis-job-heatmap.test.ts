@@ -157,7 +157,7 @@ test('renormalizes density against the active local filter', () => {
   ]
 
   const allTracks = buildCourtPositionsHeatmap(court, filterCourtPositionPlayers(players, 'all'))
-  const sideZero = buildCourtPositionsHeatmap(court, filterCourtPositionPlayers(players, 'side-0'))
+  const sideZero = buildCourtPositionsHeatmap(court, players.filter((player) => player.teamSide === 0))
   const allCellZero = allTracks.cells.find((cell) => cell.column === 0 && cell.row === 0)
   const sideZeroCellZero = sideZero.cells.find((cell) => cell.column === 0 && cell.row === 0)
 
@@ -218,7 +218,7 @@ test('changing the local filter rebuilds the heatmap without another request', a
   )
 
   assert.ok(loaded)
-  const sideZero = filterCourtPositionPlayers(loaded.players, 'side-0')
+  const sideZero = loaded.players.filter((player) => player.teamSide === 0)
   const oneTrack = filterCourtPositionPlayers(loaded.players, 'track:2')
 
   assert.equal(buildCourtPositionsHeatmap(loaded.court, sideZero).totalSamples, 1)
