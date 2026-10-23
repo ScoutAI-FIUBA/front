@@ -14,6 +14,7 @@ import type { AnalysisJobCourtPositions, AnalysisJobCourtPositionsPlayer } from 
 import { movementSequenceIndex } from '@/pages/analysis/analysis-job-court-positions'
 import { validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabel,
@@ -125,7 +126,7 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative overflow-hidden rounded-xl border',
@@ -133,7 +134,7 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
       >
         <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${court.lengthM} ${court.widthM}`} preserveAspectRatio="none" role="img" aria-label={`Recorrido espacial de ${playerLabel}`}>
           <BasketballCourtLines lengthM={court.lengthM} widthM={court.widthM} />
@@ -162,7 +163,6 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
       {reduceMotion ? (
         <div className="flex items-center justify-between gap-4 border-t border-white/10 pt-3 text-sm text-muted-foreground">
           <span>Movimiento reducido activo: mostramos el recorrido completo.</span>
-          <span className="shrink-0 tabular-nums">{positions.length} muestras</span>
         </div>
       ) : (
         <div className="space-y-3 border-t border-white/10 pt-3">
@@ -180,11 +180,11 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
               <RotateCcw className="h-4 w-4" aria-hidden="true" /> Reiniciar
             </Button>
             <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-              Muestra {sampleIndex + 1} de {positions.length}
+              Paso {sampleIndex + 1} de {positions.length}
             </span>
           </div>
           <label className="block">
-            <span className="sr-only">Progreso del recorrido por secuencia de muestras</span>
+            <span className="sr-only">Progreso del recorrido</span>
             <input
               type="range"
               min="0"
@@ -193,10 +193,10 @@ export function CourtPositionsPlayback({ court, player, presentation = 'legacy' 
               value={Math.round(displayProgress * 100)}
               onChange={(event) => scrubTo(Number(event.currentTarget.value) / 100)}
               className="h-2 w-full cursor-pointer accent-primary"
-              aria-valuetext={`Muestra ${sampleIndex + 1} de ${positions.length}`}
+              aria-valuetext={`Paso ${sampleIndex + 1} de ${positions.length}`}
             />
           </label>
-          <p className="text-xs text-muted-foreground">Avance por secuencia de muestras. No representa tiempo real ni está sincronizado con el video.</p>
+          <p className="text-xs text-muted-foreground">Avance por orden de posiciones. No representa tiempo real ni está sincronizado con el video.</p>
         </div>
       )}
     </div>

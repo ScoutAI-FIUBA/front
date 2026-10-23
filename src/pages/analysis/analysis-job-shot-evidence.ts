@@ -1,4 +1,4 @@
-import type { AnalysisJobShotChartShot, ShotChartResult } from '../../types/index.ts'
+import type { AnalysisJobShotChartShot, AnalysisJobTeamSide, ShotChartResult } from '../../types/index.ts'
 import {
   analysisJobPlayerKey,
   type AnalysisJobPlayerKey,
@@ -7,7 +7,10 @@ import {
 export type ShotEvidenceResultFilter = 'all' | ShotChartResult
 export type ShotEvidencePointsFilter = 'all' | '2' | '3'
 
+export type ShotEvidenceTeamFilter = 'own' | 'rival' | 'both'
+
 export interface ShotEvidenceFilters {
+  team: ShotEvidenceTeamFilter
   result: ShotEvidenceResultFilter
   points: ShotEvidencePointsFilter
   player: 'all' | AnalysisJobPlayerKey
@@ -15,6 +18,7 @@ export interface ShotEvidenceFilters {
 }
 
 export const DEFAULT_SHOT_EVIDENCE_FILTERS: ShotEvidenceFilters = {
+  team: 'own',
   result: 'all',
   points: 'all',
   player: 'all',
@@ -35,11 +39,35 @@ export function analysisShotKey(shot: AnalysisJobShotChartShot, index: number): 
   ].join(':')
 }
 
+export function otherAnalysisJobTeamSide(side: AnalysisJobTeamSide): AnalysisJobTeamSide {
+  return side === 0 ? 1 : 0
+}
+
+export function analysisJobShotTeamScope(
+  team: ShotEvidenceTeamFilter,
+  ourTeamSide: AnalysisJobTeamSide,
+): AnalysisJobTeamSide[] {
+  if (team === 'both') return [0, 1]
+  return [team === 'own' ? ourTeamSide : otherAnalysisJobTeamSide(ourTeamSide)]
+}
+
+export function filterAnalysisJobShotsByTeam(
+  shots: AnalysisJobShotChartShot[],
+  team: ShotEvidenceTeamFilter,
+  ourTeamSide: AnalysisJobTeamSide,
+): AnalysisJobShotChartShot[] {
+  if (team === 'both') return shots
+  const side = team === 'own' ? ourTeamSide : otherAnalysisJobTeamSide(ourTeamSide)
+  return shots.filter((shot) => shot.teamSide === side)
+}
+
 export function filterAnalysisJobShots(
   shots: AnalysisJobShotChartShot[],
   filters: ShotEvidenceFilters,
+  ourTeamSide?: AnalysisJobTeamSide,
 ): AnalysisJobShotChartShot[] {
-  return shots.filter((shot) => (
+  const scoped = ourTeamSide == null ? shots : filterAnalysisJobShotsByTeam(shots, filters.team, ourTeamSide)
+  return scoped.filter((shot) => (
     (filters.result === 'all' || shot.result === filters.result)
     && (filters.points === 'all' || shot.points === Number(filters.points))
     && (filters.player === 'all' || analysisJobPlayerKey(shot) === filters.player)

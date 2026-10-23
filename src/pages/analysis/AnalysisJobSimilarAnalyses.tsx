@@ -268,7 +268,7 @@ export function AnalysisJobSimilarAnalysesView({
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#788397]">Comparación del equipo</p>
             <h2 id="similar-analyses-title" className="scout-display mt-2 text-4xl font-extrabold text-[#F4F5F7]">Análisis similares</h2>
-            <p className="mt-2 max-w-2xl text-sm text-[#A3ABBA]">Similitud general, de tiros y de movimiento según el análisis disponible.</p>
+            <p className="mt-2 max-w-2xl text-sm text-[#A3ABBA]">Qué tan parecido es este análisis a otros del equipo, según dónde tiran y cómo se mueven. La similitud general combina la de tiros y la de movimiento.</p>
           </div>
           <p className="text-xs text-[#788397]">{similar.candidatesCompared} análisis comparados</p>
         </header>

@@ -10,6 +10,8 @@ import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabel,
+  buildAnalysisJobPlayerLabels,
+  hasAnalysisJobTeamSide,
   isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerIdentification,
   type AnalysisJobPlayerIdentity,
@@ -24,10 +26,37 @@ export interface AnalysisJobCourtPositionsLoadContext {
 
 export type CourtPositionsFilter =
   | 'all'
-  | 'side-0'
-  | 'side-1'
-  | 'unassigned'
   | AnalysisJobPlayerKey
+
+export function filterGroupedCourtPositionPlayers(
+  players: AnalysisJobCourtPositionsPlayer[],
+  teamSide?: AnalysisJobTeamSide | null,
+): AnalysisJobCourtPositionsPlayer[] {
+  return players.filter((player) => hasAnalysisJobTeamSide(player)
+    && (teamSide == null || player.teamSide === teamSide))
+}
+
+export function buildCourtPositionPlayerLabels(
+  players: AnalysisJobCourtPositionsPlayer[],
+  playerIdentities: Array<AnalysisJobPlayerIdentity & { rosterName?: string | null }> = [],
+): Map<AnalysisJobPlayerKey, string> {
+  const namesByKey = new Map<AnalysisJobPlayerKey, string | null>()
+  const ambiguousKeys = new Set<AnalysisJobPlayerKey>()
+  playerIdentities.forEach((player) => {
+    const key = analysisJobPlayerKey(player)
+    if (!key || ambiguousKeys.has(key)) return
+    if (namesByKey.has(key)) {
+      namesByKey.delete(key)
+      ambiguousKeys.add(key)
+      return
+    }
+    namesByKey.set(key, player.rosterName ?? null)
+  })
+  return buildAnalysisJobPlayerLabels(players.map((player) => ({
+    ...player,
+    rosterName: namesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey) ?? null,
+  })))
+}
 
 export function filterIdentifiedCourtPositionPlayers(
   players: AnalysisJobCourtPositionsPlayer[],
@@ -45,7 +74,7 @@ export function filterIdentifiedCourtPositionPlayers(
     }
     identitiesByKey.set(key, player)
   })
-  return players.filter((player) => isAnalysisJobPlayerIdentified({
+  return players.filter((player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
     jerseyNumber: player.jerseyNumber,
     rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
   }))
@@ -81,9 +110,6 @@ export function filterCourtPositionPlayers(
   filter: CourtPositionsFilter,
 ): AnalysisJobCourtPositionsPlayer[] {
   if (filter === 'all') return players
-  if (filter === 'side-0') return players.filter((player) => player.teamSide === 0)
-  if (filter === 'side-1') return players.filter((player) => player.teamSide === 1)
-  if (filter === 'unassigned') return players.filter((player) => player.teamSide == null)
 
   return players.filter((player) => analysisJobPlayerKey(player) === filter)
 }

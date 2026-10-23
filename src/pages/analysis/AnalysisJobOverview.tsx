@@ -275,12 +275,11 @@ export function AnalysisJobOverview({
       <AnalysisJobTeamSideSelector job={job} onJobUpdated={onJobUpdated} />
 
       {job.ourTeamSide != null && teamStats && (
-        <dl className="grid grid-cols-2 border-y border-white/10 sm:grid-cols-4 sm:divide-x sm:divide-white/10">
+        <dl className="grid grid-cols-2 border-y border-white/10 sm:grid-cols-3 sm:divide-x sm:divide-white/10">
           {[
             ['Puntos detectados', teamStats.points],
             ['Tiros de campo', `${teamStats.fieldGoalsMade}/${teamStats.fieldGoalsAttempted}`],
             ['Tiros detectados', shootingSummary.coverage.shotsDetected],
-            ['Seguimientos', shootingSummary.coverage.playersTracked],
           ].map(([label, value]) => (
             <div key={label} className="px-3 py-4 sm:px-4">
               <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>

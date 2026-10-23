@@ -2,6 +2,7 @@ import type { AnalysisJobCourtPositions } from '@/types'
 import { cn } from '@/lib/utils'
 import type { CourtPositionsHeatmapData } from './court-positions-heatmap'
 import { BasketballCourtLines } from './BasketballCourtLines'
+import { courtColumnStyle, courtFrameStyle } from './court-size'
 
 interface CourtPositionsHeatmapProps {
   court: AnalysisJobCourtPositions['court']
@@ -15,7 +16,7 @@ export function CourtPositionsHeatmap({
   presentation = 'legacy',
 }: CourtPositionsHeatmapProps) {
   return (
-    <div className="w-full max-w-full">
+    <div className="w-full max-w-full" style={courtColumnStyle(court)}>
       <div
         className={cn(
           'relative w-full max-w-full overflow-hidden rounded-lg border',
@@ -23,16 +24,16 @@ export function CourtPositionsHeatmap({
             ? 'border-[#3A4254] bg-[#11151D]'
             : 'border-border-strong bg-[#d7b985]',
         )}
-        style={{ aspectRatio: `${court.lengthM} / ${court.widthM}` }}
+        style={courtFrameStyle(court)}
       >
         <svg
           className="absolute inset-0 h-full w-full"
           viewBox={`0 0 ${court.lengthM} ${court.widthM}`}
           preserveAspectRatio="none"
           role="img"
-          aria-label={`Mapa de calor de concentración relativa construido con ${heatmap.totalSamples} muestras válidas`}
+          aria-label={`Mapa de calor de concentración relativa construido con ${heatmap.totalSamples} posiciones válidas`}
         >
-          <title>Concentración relativa de muestras espaciales</title>
+          <title>Concentración relativa de posiciones</title>
 
           {heatmap.cells.map((cell) => (
             <rect
@@ -44,7 +45,7 @@ export function CourtPositionsHeatmap({
               fill={presentation === 'match-report' ? '#b91c1c' : '#dc2626'}
               fillOpacity={0.18 + cell.intensity * 0.72}
             >
-              <title>{cell.samples} {cell.samples === 1 ? 'muestra' : 'muestras'}</title>
+              <title>{cell.samples} {cell.samples === 1 ? 'posición' : 'posiciones'}</title>
             </rect>
           ))}
 
@@ -53,7 +54,7 @@ export function CourtPositionsHeatmap({
       </div>
 
       <div className="mt-3 flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>{heatmap.totalSamples.toLocaleString('es-AR')} muestras válidas utilizadas</span>
+        <span>{heatmap.totalSamples.toLocaleString('es-AR')} posiciones válidas utilizadas</span>
         <div className="flex items-center gap-2" aria-label="Escala de concentración relativa">
           <span>Menor</span>
           <span

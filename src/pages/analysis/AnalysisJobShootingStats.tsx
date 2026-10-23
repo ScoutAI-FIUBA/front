@@ -118,7 +118,7 @@ function TeamStatsCard({
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold text-foreground">{analysisJobTeamGroupLabel(team.teamSide)}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">{team.playersTracked} seguimientos de jugadores</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{team.playersTracked} jugadores detectados</p>
         </div>
         {isOurTeam && <Badge variant="analyzed">Tu equipo</Badge>}
       </div>
@@ -148,7 +148,6 @@ function CoverageSummary({ stats }: { stats: AnalysisJobShootingStats }) {
       <dl className="mt-3 grid gap-2 text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
         <div><dt>Tiros detectados</dt><dd className="font-semibold text-foreground">{coverage.shotsDetected}</dd></div>
         <div><dt>Tiros contabilizados</dt><dd className="font-semibold text-foreground">{coverage.shotsScored}</dd></div>
-        {coverage.playersOnCourt > 0 && <div><dt>Mayor presencia observada</dt><dd className="font-semibold text-foreground">{coverage.playersOnCourt}</dd></div>}
         <div><dt>Camisetas identificadas</dt><dd className="font-semibold text-foreground">{coverage.playersWithJerseyNumber}/{coverage.playersTracked}</dd></div>
         <div><dt>Jugadores vinculados al plantel</dt><dd className="font-semibold text-foreground">{coverage.playersLinkedToRoster}/{coverage.playersTracked}</dd></div>
       </dl>
@@ -312,21 +311,10 @@ export function AnalysisJobShootingStatsView({ job }: AnalysisJobShootingStatsPr
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">{analysisJobPlayerLabelFromMap(player, playerLabels)}</span>
                             {player.rosterName && <Badge variant="analyzed">Plantel</Badge>}
-                            {player.onCourt && (
-                              <Badge
-                                variant="outline"
-                                title="Identificado por el backend según su cantidad total de observaciones"
-                              >
-                                Mayor presencia
-                              </Badge>
-                            )}
                           </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {player.stablePlayerId
-                              ? `${player.observations} observaciones totales`
-                              : `Seguimiento ${player.trackId}`}
-                            {player.jerseyNumber ? ` · #${player.jerseyNumber}` : ''}
-                          </p>
+                          {player.jerseyNumber && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">Dorsal #{player.jerseyNumber}</p>
+                          )}
                           {Object.keys(player.byZone).length > 0 && (
                             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
                               Zonas: {Object.entries(player.byZone).map(([zone, zoneStats]) => (

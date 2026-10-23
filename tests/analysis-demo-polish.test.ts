@@ -86,14 +86,17 @@ test('analysis copy explains detected shooting metrics without claiming an offic
   assert.doesNotMatch(courtSource, /`Track \$\{shot\.trackId\}`/)
 })
 
-test('on_court copy describes total observed presence instead of a current lineup', () => {
+test('on_court is not presented as presence, observations, or a current lineup', () => {
   const statsSource = readSource('../src/pages/analysis/AnalysisJobShootingStats.tsx')
   const shotsSource = readSource('../src/pages/analysis/AnalysisJobShotsWorkspace.tsx')
   const detailsSource = readSource('../src/pages/analysis/AnalysisJobDetails.tsx')
   const combinedSource = [statsSource, shotsSource, detailsSource].join('\n')
 
-  assert.match(combinedSource, /Mayor presencia observada/)
-  assert.match(statsSource, /observaciones totales/)
+  assert.doesNotMatch(combinedSource, /Mayor presencia/)
+  assert.doesNotMatch(combinedSource, /observaciones totales/)
+  assert.doesNotMatch(combinedSource, /Jugadores seguidos/)
+  assert.match(shotsSource, /Dorsal #\{row\.jerseyNumber\}/)
+  assert.match(shotsSource, /Zonas: \{playerZoneSummary\(row\.zones\)\}/)
   assert.doesNotMatch(combinedSource, /Jugadores (?:identificados )?en cancha/)
   assert.doesNotMatch(statsSource, />En cancha</)
 })
@@ -111,4 +114,34 @@ test('analysis modules replace raw failures with local product errors and retry'
     assert.match(source, /Reintent/)
     assert.doesNotMatch(source, /error instanceof Error \? error\.message/)
   }
+})
+
+test('Resumen no longer presents the raw tracked-object count as players', () => {
+  const source = readSource('../src/pages/analysis/AnalysisJobOverview.tsx')
+  assert.doesNotMatch(source, /'Seguimientos'/)
+  assert.doesNotMatch(source, /playersTracked/)
+})
+
+test('workspace keeps Resumen, Tiros and Movimiento primary and Similares and Detalles secondary after them', () => {
+  const source = readSource('../src/pages/analysis/AnalysisJobResultsWorkspace.tsx')
+  const order = ['overview', 'shots', 'movement', 'similar', 'details']
+    .map((id) => source.indexOf(`{ id: '${id}'`))
+  assert.ok(order.every((index) => index >= 0))
+  assert.deepEqual([...order].sort((a, b) => a - b), order)
+  assert.match(source, /id: 'similar', label: 'Similares'[^}]*secondary: true/)
+  assert.match(source, /id: 'details', label: 'Detalles'[^}]*secondary: true/)
+  assert.doesNotMatch(source, /id: '(?:overview|shots|movement)'[^}]*secondary/)
+})
+
+test('technical Details live in a collapsed disclosure and Similares explains its scores', () => {
+  const details = readSource('../src/pages/analysis/AnalysisJobDetails.tsx')
+  const similar = readSource('../src/pages/analysis/AnalysisJobSimilarAnalyses.tsx')
+  const disclosure = details.slice(details.indexOf('<details'), details.indexOf('</details>'))
+
+  assert.doesNotMatch(details, /<details[^>]*\bopen\b/)
+  assert.match(disclosure, /Ver datos técnicos/)
+  for (const label of ['Registros leídos', 'Registros fuera de cancha', 'Muestreo', 'ID técnico del análisis', 'Creado']) {
+    assert.match(disclosure, new RegExp(label))
+  }
+  assert.match(similar, /Qué tan parecido es este análisis a otros del equipo/)
 })
