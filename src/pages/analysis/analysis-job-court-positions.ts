@@ -10,6 +10,8 @@ import { analysisJobTeamGroupLabel } from './analysis-job-team-side.ts'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabel,
+  buildAnalysisJobPlayerLabels,
+  hasAnalysisJobTeamSide,
   isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerIdentification,
   type AnalysisJobPlayerIdentity,
@@ -29,6 +31,34 @@ export type CourtPositionsFilter =
   | 'unassigned'
   | AnalysisJobPlayerKey
 
+export function filterGroupedCourtPositionPlayers(
+  players: AnalysisJobCourtPositionsPlayer[],
+): AnalysisJobCourtPositionsPlayer[] {
+  return players.filter(hasAnalysisJobTeamSide)
+}
+
+export function buildCourtPositionPlayerLabels(
+  players: AnalysisJobCourtPositionsPlayer[],
+  playerIdentities: Array<AnalysisJobPlayerIdentity & { rosterName?: string | null }> = [],
+): Map<AnalysisJobPlayerKey, string> {
+  const namesByKey = new Map<AnalysisJobPlayerKey, string | null>()
+  const ambiguousKeys = new Set<AnalysisJobPlayerKey>()
+  playerIdentities.forEach((player) => {
+    const key = analysisJobPlayerKey(player)
+    if (!key || ambiguousKeys.has(key)) return
+    if (namesByKey.has(key)) {
+      namesByKey.delete(key)
+      ambiguousKeys.add(key)
+      return
+    }
+    namesByKey.set(key, player.rosterName ?? null)
+  })
+  return buildAnalysisJobPlayerLabels(players.map((player) => ({
+    ...player,
+    rosterName: namesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey) ?? null,
+  })))
+}
+
 export function filterIdentifiedCourtPositionPlayers(
   players: AnalysisJobCourtPositionsPlayer[],
   playerIdentities: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification> = [],
@@ -45,7 +75,7 @@ export function filterIdentifiedCourtPositionPlayers(
     }
     identitiesByKey.set(key, player)
   })
-  return players.filter((player) => isAnalysisJobPlayerIdentified({
+  return players.filter((player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
     jerseyNumber: player.jerseyNumber,
     rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
   }))

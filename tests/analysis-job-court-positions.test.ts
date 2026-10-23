@@ -13,6 +13,8 @@ import {
   courtPositionPlayerLabel,
   defaultCourtPositionFilter,
   filterCourtPositionPlayers,
+  buildCourtPositionPlayerLabels,
+  filterGroupedCourtPositionPlayers,
   filterIdentifiedCourtPositionPlayers,
   loadAnalysisJobCourtPositions,
   movementSequenceIndex,
@@ -357,6 +359,8 @@ test('Movement filters player controls without removing aggregate position evide
   assert.match(detailSource, /filterIdentifiedCourtPositionPlayers/)
   assert.match(detailSource, /identifiedPlayers\.map/)
   assert.match(detailSource, /visibleIdentifiedPlayers\.map/)
+  assert.match(detailSource, /filterGroupedCourtPositionPlayers\(positions\?\.players/)
+  assert.match(detailSource, /buildCourtPositionPlayerLabels\(groupedPlayers, playerIdentities\)/)
   assert.match(detailSource, /buildCourtPositionsHeatmap\(positions\.court, visiblePlayers\)/)
   assert.match(detailSource, /players=\{visiblePlayers\}/)
   assert.match(workspaceSource, /analysisJobPlayerIdentitiesForJob\(job\.id, shootingData\)/)
@@ -411,7 +415,7 @@ test('R3-B2 gives Partido Movement a flat editorial presentation without changin
   assert.match(detailSource, /<SelectItem value="all">Todos<\/SelectItem>/)
   assert.match(detailSource, /<SelectItem value="side-0">Lado 0<\/SelectItem>/)
   assert.match(detailSource, /<SelectItem value="side-1">Lado 1<\/SelectItem>/)
-  assert.match(detailSource, /<SelectItem value="unassigned">Sin asignar<\/SelectItem>/)
+  assert.doesNotMatch(detailSource, /Sin asignar|value="unassigned"/)
   assert.match(detailSource, /Distancia/)
   assert.match(detailSource, /Muestras/)
   assert.match(detailSource, /Posición promedio/)
@@ -421,4 +425,55 @@ test('R3-B2 gives Partido Movement a flat editorial presentation without changin
   assert.match(workspaceSource, /<AnalysisJobCourtPositionsView[\s\S]*?presentation=\{presentation\}/)
   assert.match(workspaceSource, /activeSection === 'movement' \|\| activeSection === 'similar'/)
   assert.match(workspaceSource, /reportContentOnlySection \? 'hidden'/)
+})
+
+test('Movement drops tracks without a team side from lists and the identified set', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const players = (await service.get('job-1', 'team-1')).players
+  const withUngroupedJersey = players.map((player) => player.trackId === 11 ? { ...player, jerseyNumber: '30' } : player)
+
+  assert.deepEqual(filterGroupedCourtPositionPlayers(withUngroupedJersey).map((player) => player.trackId), [7, 9])
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(withUngroupedJersey, undefined).map((player) => player.trackId),
+    [7],
+  )
+  assert.deepEqual(
+    filterIdentifiedCourtPositionPlayers(
+      withUngroupedJersey.map((player) => ({ ...player, jerseyNumber: null })),
+      [{ trackId: 11, rosterPlayerId: 'roster-11' }],
+    ),
+    [],
+  )
+})
+
+test('Movement labels prefer the Stats roster name and fall back to the jersey number', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const [first] = (await service.get('job-1', 'team-1')).players
+  const player = { ...first!, jerseyNumber: '30', stablePlayerId: 'stable-30' }
+  const key = 'stable:stable-30'
+
+  assert.equal(buildCourtPositionPlayerLabels([player], undefined).get(key), '#30')
+  assert.equal(buildCourtPositionPlayerLabels([player], []).get(key), '#30')
+  assert.equal(
+    buildCourtPositionPlayerLabels([player], [{ stablePlayerId: 'stable-30', rosterName: 'Ana Pérez' }]).get(key),
+    'Ana Pérez',
+  )
+  assert.equal(
+    buildCourtPositionPlayerLabels([player], [{ stablePlayerId: 'stable-30', rosterName: null }]).get(key),
+    '#30',
+  )
+})
+
+test('Movement labels ignore Stats roster names with duplicate keys', async () => {
+  const service = createAnalysisJobCourtPositionsService(async <T>() => apiPositions() as T)
+  const [first] = (await service.get('job-1', 'team-1')).players
+  const player = { ...first!, jerseyNumber: '30', stablePlayerId: 'stable-30' }
+
+  assert.equal(
+    buildCourtPositionPlayerLabels([player], [
+      { stablePlayerId: 'stable-30', rosterName: 'Ana Pérez' },
+      { stablePlayerId: 'stable-30', rosterName: 'Otra Persona' },
+    ]).get('stable:stable-30'),
+    '#30',
+  )
 })

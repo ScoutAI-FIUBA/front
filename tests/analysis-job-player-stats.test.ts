@@ -91,6 +91,30 @@ test('builds visible player rows from the already-loaded analysis stats', () => 
   assert.equal(rows.some((row) => row.key === 'track:3'), false)
 })
 
+test('hides jersey-only players without a team group from the table and keeps grouped ones', () => {
+  const rows = buildAnalysisJobPlayerShootingRows([
+    player({ trackId: 30, stablePlayerId: 'stable-30', teamSide: null, jerseyNumber: '30', rosterPlayerId: null, rosterName: null }),
+    player({ trackId: 31, stablePlayerId: 'stable-31', teamSide: 0, jerseyNumber: '31', rosterPlayerId: null, rosterName: null }),
+    player(),
+  ])
+
+  assert.deepEqual(rows.map((row) => row.key), ['stable:stable-31', 'stable:stable-9'])
+})
+
+test('Shot Chart selector hides players without a team group even with a roster link', () => {
+  const chartPlayers: AnalysisJobShotChartPlayer[] = [
+    { trackId: 30, stablePlayerId: 'stable-30', teamSide: null, jerseyNumber: '30', displayName: '#30', shots: [] },
+    { trackId: 31, stablePlayerId: 'stable-31', teamSide: 0, jerseyNumber: '31', displayName: '#31', shots: [] },
+    { trackId: 32, stablePlayerId: 'stable-32', teamSide: null, jerseyNumber: null, displayName: 'x', shots: [] },
+  ]
+
+  assert.deepEqual(
+    filterAnalysisJobIdentifiedShotChartPlayers(chartPlayers, [player({ trackId: 32, stablePlayerId: 'stable-32' })])
+      .map((candidate) => candidate.trackId),
+    [31],
+  )
+})
+
 test('keeps missing percentages explicit and empty player stats empty', () => {
   assert.equal(formatAnalysisShootingMetric(0, 0, null), '0/0 · —')
   assert.deepEqual(buildAnalysisJobPlayerShootingRows([]), [])
@@ -161,6 +185,7 @@ test('player stats integration preserves the existing shot chart and filters', (
   assert.match(source, /identifiedChartPlayers\.map/)
   assert.match(source, /filterAnalysisJobIdentifiedShotChartPlayers/)
   assert.match(source, /isAnalysisJobPlayerIdentified/)
+  assert.match(source, /hasAnalysisJobTeamSide\(player\) && isAnalysisJobPlayerIdentified/)
   assert.match(source, /current\.player === filters\.player/)
   assert.match(source, /player: 'all'/)
   assert.match(source, /onSelectShot=\{selectShot\}/)

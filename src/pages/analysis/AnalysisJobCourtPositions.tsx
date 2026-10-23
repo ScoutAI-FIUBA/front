@@ -25,8 +25,10 @@ import type {
 import {
   analysisJobCourtPositionsContextForJob,
   analysisJobCourtPositionsLoadKey,
+  buildCourtPositionPlayerLabels,
   courtPositionSideLabel,
   defaultCourtPositionFilter,
+  filterGroupedCourtPositionPlayers,
   filterIdentifiedCourtPositionPlayers,
   filterCourtPositionPlayers,
   isCourtPositionPlayerFilter,
@@ -36,14 +38,13 @@ import {
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
-  buildAnalysisJobPlayerLabels,
   type AnalysisJobPlayerIdentification,
   type AnalysisJobPlayerIdentity,
 } from './analysis-job-player-identity'
 
 interface AnalysisJobCourtPositionsProps {
   job: ProcessingJob
-  playerIdentities?: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification>
+  playerIdentities?: Array<AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification & { rosterName?: string | null }>
   onTechnicalSummaryChange?: (summary: AnalysisMovementTechnicalSummary | null) => void
   presentation?: 'legacy' | 'match-report'
 }
@@ -137,13 +138,17 @@ export function AnalysisJobCourtPositionsView({
     }
   }, [context, loadKey, onTechnicalSummaryChange, reloadKey])
 
+  const groupedPlayers = useMemo(
+    () => filterGroupedCourtPositionPlayers(positions?.players ?? []),
+    [positions?.players],
+  )
   const visiblePlayers = useMemo(
-    () => filterCourtPositionPlayers(positions?.players ?? [], filter),
-    [filter, positions?.players],
+    () => filterCourtPositionPlayers(groupedPlayers, filter),
+    [filter, groupedPlayers],
   )
   const identifiedPlayers = useMemo(
-    () => filterIdentifiedCourtPositionPlayers(positions?.players ?? [], playerIdentities),
-    [playerIdentities, positions?.players],
+    () => filterIdentifiedCourtPositionPlayers(groupedPlayers, playerIdentities),
+    [playerIdentities, groupedPlayers],
   )
   const visibleIdentifiedPlayers = useMemo(
     () => filterIdentifiedCourtPositionPlayers(visiblePlayers, playerIdentities),
@@ -163,7 +168,7 @@ export function AnalysisJobCourtPositionsView({
   const selectedPlayer = isCourtPositionPlayerFilter(filter) && visiblePlayers.length === 1
     ? visiblePlayers[0]
     : null
-  const playerLabels = buildAnalysisJobPlayerLabels(positions?.players ?? [])
+  const playerLabels = buildCourtPositionPlayerLabels(groupedPlayers, playerIdentities)
 
   if (jobStatus !== 'DONE') return null
 
@@ -196,7 +201,7 @@ export function AnalysisJobCourtPositionsView({
     )
   }
 
-  if (positions.players.length === 0) {
+  if (groupedPlayers.length === 0) {
     return (
       <section className="rounded-lg border bg-surface p-5 sm:p-6" aria-labelledby="court-positions-title">
         <h2 id="court-positions-title" className="font-semibold text-foreground">Posiciones en cancha</h2>
@@ -271,7 +276,6 @@ export function AnalysisJobCourtPositionsView({
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="side-0">Lado 0</SelectItem>
                 <SelectItem value="side-1">Lado 1</SelectItem>
-                <SelectItem value="unassigned">Sin asignar</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -374,7 +378,6 @@ export function AnalysisJobCourtPositionsView({
               <SelectItem value="all">Comparar todos los seguimientos</SelectItem>
               <SelectItem value="side-0">Comparar grupo A</SelectItem>
               <SelectItem value="side-1">Comparar grupo B</SelectItem>
-              <SelectItem value="unassigned">Comparar sin grupo</SelectItem>
             </SelectContent>
           </Select>
         </div>

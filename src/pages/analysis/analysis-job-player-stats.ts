@@ -6,6 +6,7 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  hasAnalysisJobTeamSide,
   isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity.ts'
@@ -55,7 +56,7 @@ export function filterAnalysisJobIdentifiedShotChartPlayers(
       return key ? [[key, player] as const] : []
     }),
   )
-  return players.filter((player) => isAnalysisJobPlayerIdentified({
+  return players.filter((player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
     jerseyNumber: player.jerseyNumber,
     rosterPlayerId: identitiesByKey.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey)?.rosterPlayerId,
   }))
@@ -64,7 +65,9 @@ export function filterAnalysisJobIdentifiedShotChartPlayers(
 export function buildAnalysisJobPlayerShootingRows(
   players: AnalysisJobPlayerShootingStats[],
 ): AnalysisJobPlayerShootingRow[] {
-  const orderedPlayers = players.filter(isAnalysisJobPlayerIdentified).sort(
+  const orderedPlayers = players.filter(
+    (player) => hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified(player),
+  ).sort(
     (left, right) => Number(right.onCourt) - Number(left.onCourt),
   )
   const labels = buildAnalysisJobPlayerLabels(orderedPlayers)

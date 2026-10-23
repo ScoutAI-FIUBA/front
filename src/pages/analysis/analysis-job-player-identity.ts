@@ -45,6 +45,10 @@ export function isAnalysisJobPlayerIdentified(
   )
 }
 
+export function hasAnalysisJobTeamSide(player: { teamSide?: number | null }): boolean {
+  return player.teamSide === 0 || player.teamSide === 1
+}
+
 export function analysisJobPlayerIdentitiesForJob<
   TPlayer extends AnalysisJobPlayerIdentity & AnalysisJobPlayerIdentification,
 >(

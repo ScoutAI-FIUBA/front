@@ -39,6 +39,7 @@ import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
+  hasAnalysisJobTeamSide,
   isAnalysisJobPlayerIdentified,
   type AnalysisJobPlayerKey,
 } from './analysis-job-player-identity'
@@ -406,7 +407,7 @@ export function AnalysisJobShotsWorkspace({
     )
     const selectedPlayerIsVisible = chart?.players.some((player) => {
       if (analysisJobPlayerKey(player) !== filters.player) return false
-      return isAnalysisJobPlayerIdentified({
+      return hasAnalysisJobTeamSide(player) && isAnalysisJobPlayerIdentified({
         jerseyNumber: player.jerseyNumber,
         rosterPlayerId: statsPlayersByKey.get(filters.player)?.rosterPlayerId,
       })
