@@ -200,7 +200,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
             <span className="min-w-48 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
               Equipo
             </span>
-            <span className="hidden min-w-44 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70 md:block">
+            <span className="hidden w-52 shrink-0 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70 md:block">
               Análisis
             </span>
             <div className="hidden min-w-36 lg:block" />
@@ -227,7 +227,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
                     <span className="text-muted-foreground">Sin equipo</span>
                   )}
                 </div>
-                <div className={`hidden min-w-44 text-xs md:block ${summaryClass}`}>
+                <div className={`hidden w-52 shrink-0 whitespace-nowrap text-xs tabular-nums md:block ${summaryClass}`}>
                   {formatRowSummary(player.analysisSummary)}
                 </div>
                 <div className="hidden min-w-36 text-xs text-muted-foreground lg:block">

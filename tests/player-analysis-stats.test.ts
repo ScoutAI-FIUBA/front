@@ -225,7 +225,8 @@ test('row and sheet give the same percentage for made 1 / attempted 8', () => {
   })
   assert.match(formatRowSummary(summaryFromStats(stats)), /\(13%\)/)
   assert.equal(formatPct(stats.fieldGoals.made, stats.fieldGoals.attempted), '13%')
-  assert.equal(formatPct(stats.fieldGoals.made, stats.fieldGoals.attempted), formatPct(1, 8))
+  const sheetSource = readFileSync(new URL('../src/pages/players/PlayerAnalysisStatsSheet.tsx', import.meta.url), 'utf8')
+  assert.ok(sheetSource.includes('formatPct('), 'the sheet must format percentages with formatPct')
 })
 
 test('the row is patched with the totals of the sheet and unchanged totals keep the list', () => {
@@ -363,3 +364,14 @@ test(
     assert.equal(/minutos jugados/i.test(readFileSync(sheetPath, 'utf8')), false)
   },
 )
+
+test('mapPlayerStatsSummary drops counts that cannot be real', () => {
+  const stats = (made: number, attempted: number, games = 2) => ({
+    games_played: games,
+    points: { total: 4 },
+    field_goals: { made_total: made, attempted_total: attempted },
+  })
+  assert.equal(mapPlayerStatsSummary(stats(5, 3)), undefined)
+  assert.equal(mapPlayerStatsSummary(stats(1, 2, 2.5)), undefined)
+  assert.deepEqual(mapPlayerStatsSummary(stats(3, 5)), { games: 2, points: 4, fgMade: 3, fgAttempted: 5 })
+})

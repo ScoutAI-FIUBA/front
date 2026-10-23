@@ -84,7 +84,7 @@ export function mapApiTeam(team: ApiTeam): Team {
 }
 
 function asCount(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -106,6 +106,7 @@ export function mapPlayerStatsSummary(stats: unknown): PlayerAnalysisSummary | u
   if (games === null || pointsTotal === null || fgMade === null || fgAttempted === null) {
     return undefined
   }
+  if (fgMade > fgAttempted) return undefined
   return { games, points: pointsTotal, fgMade, fgAttempted }
 }
 
