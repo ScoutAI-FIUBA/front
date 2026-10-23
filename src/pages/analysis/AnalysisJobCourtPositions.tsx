@@ -153,6 +153,8 @@ export function AnalysisJobCourtPositionsView({
     () => filterIdentifiedCourtPositionPlayers(visiblePlayers, playerIdentities),
     [playerIdentities, visiblePlayers],
   )
+  // The heat map uses every position of the analysed side; the trajectory views only draw identified players.
+  const nothingToShow = view === 'heatmap' ? visiblePlayers.length === 0 : visibleIdentifiedPlayers.length === 0
   useEffect(() => {
     if (!isCourtPositionPlayerFilter(filter)) return
     if (identifiedPlayers.some((player) => analysisJobPlayerKey(player) === filter)) return
@@ -315,7 +317,7 @@ export function AnalysisJobCourtPositionsView({
         )}
 
         <div className="min-w-0">
-          {visiblePlayers.length === 0 ? (
+          {nothingToShow ? (
             <div className="border-y border-[#252B38] py-10 text-center text-sm text-[#A3ABBA]">No hay jugadores que coincidan con esta selección.</div>
           ) : view === 'heatmap' ? (
             heatmap.totalSamples > 0
@@ -405,7 +407,7 @@ export function AnalysisJobCourtPositionsView({
       )}
 
       <div className="min-w-0">
-        {visiblePlayers.length === 0 ? (
+        {nothingToShow ? (
           <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">No hay jugadores que coincidan con esta selección.</div>
         ) : view === 'heatmap' ? (
           heatmap.totalSamples > 0
