@@ -36,9 +36,14 @@ import {
   filterAnalysisJobShotsByTeam,
   otherAnalysisJobTeamSide,
   formatShotTimestamp,
+  countShotsToReview,
+  SHOT_REVIEW_EXPLANATION,
   shotHasVideoEvidence,
+  shotNeedsReview,
+  shotOutcomeEvidenceLabel,
   type ShotEvidenceFilters,
 } from './analysis-job-shot-evidence'
+import { summarizeShotsByZone } from './analysis-job-zone-summary'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
@@ -50,6 +55,7 @@ import {
   buildAnalysisJobPlayerShootingRows,
   filterAnalysisJobIdentifiedShotChartPlayers,
   formatAnalysisShootingMetric,
+  formatAnalysisShootingPercentage,
   type AnalysisJobPlayerShootingRow,
   type AnalysisJobShooterKeys,
 } from './analysis-job-player-stats'
@@ -121,6 +127,8 @@ function SelectedShotDetail({
 
   const hasEvidence = shotHasVideoEvidence(shot)
   const reportPresentation = presentation === 'match-report'
+  const outcomeEvidence = shotOutcomeEvidenceLabel(shot.outcomeConfidence)
+  const needsReview = shotNeedsReview(shot)
   return (
     <aside className={cn(
       'min-w-0',
@@ -151,8 +159,16 @@ function SelectedShotDetail({
         <div><dt className="text-xs text-muted-foreground">Distancia</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{shot.distanceM.toLocaleString('es-AR', { maximumFractionDigits: 1 })} m</dd></div>
         {reportPresentation ? <div><dt className="text-xs text-muted-foreground">Zona</dt><dd className="mt-1 font-semibold text-foreground">{ZONE_LABELS[shot.zone] ?? shot.zone}</dd></div> : null}
         {reportPresentation && shot.shotType ? <div><dt className="text-xs text-muted-foreground">Tipo</dt><dd className="mt-1 font-semibold text-foreground">{shot.shotType}</dd></div> : null}
+        {outcomeEvidence ? <div className="col-span-2"><dt className="text-xs text-muted-foreground">Evidencia del resultado</dt><dd className="mt-1 font-semibold text-foreground">{outcomeEvidence}</dd></div> : null}
         <div className="col-span-2"><dt className="text-xs text-muted-foreground">Momento de video</dt><dd className="mt-1 font-semibold tabular-nums text-foreground">{hasEvidence ? formatShotTimestamp(shot.timestampSeconds as number) : 'No vinculado'}</dd></div>
       </dl>
+
+      {needsReview ? (
+        <div className="mt-4 flex items-start gap-2 text-sm text-foreground" role="note">
+          <Badge variant="outline" className="shrink-0 border-amber-400 text-amber-400">Revisar</Badge>
+          <p className="text-xs text-muted-foreground">{SHOT_REVIEW_EXPLANATION}</p>
+        </div>
+      ) : null}
 
       {hasEvidence ? (
         <Button type="button" className={cn('mt-4 w-full', reportPresentation && 'h-11 rounded-full bg-[#FF6A1F] text-white hover:bg-[#ff7b38]')} onClick={() => onViewPlay(shot)}>
@@ -203,7 +219,10 @@ function ShotMomentList({
           >
             {reportPresentation && selected ? <span className="absolute inset-y-2 left-0 w-0.5 bg-[#FF6A1F]" aria-hidden="true" /> : null}
             <span className="min-w-0">
-              <span className="block truncate font-medium">{reportPresentation ? `Tiro ${index + 1} · ` : ''}{shotPlayerLabel(shot, playerLabels)}</span>
+              <span className="flex items-center gap-2">
+                <span className="truncate font-medium">{reportPresentation ? `Tiro ${index + 1} · ` : ''}{shotPlayerLabel(shot, playerLabels)}</span>
+                {shotNeedsReview(shot) ? <Badge variant="outline" className="shrink-0 border-amber-400 px-1.5 py-0 text-[10px] text-amber-400">Revisar</Badge> : null}
+              </span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{shot.points}P · {ZONE_LABELS[shot.zone] ?? shot.zone}</span>
             </span>
             <span className="text-right">
@@ -220,6 +239,77 @@ function ShotMomentList({
         )
       })}
     </div>
+  )
+}
+
+function ZoneSummaryTable({
+  shots,
+  scopeLabel,
+  selectedZone,
+  onSelectZone,
+  presentation,
+}: {
+  shots: AnalysisJobShotChartShot[]
+  scopeLabel: string
+  selectedZone: string
+  onSelectZone: (zone: string) => void
+  presentation: 'legacy' | 'match-report'
+}) {
+  const reportPresentation = presentation === 'match-report'
+  const summary = summarizeShotsByZone(shots)
+  const border = reportPresentation ? 'border-[#252B38]' : 'border-white/10'
+
+  return (
+    <section className={cn('mt-5 border-t pt-4', border)} aria-labelledby="zone-summary-title">
+      <h3 id="zone-summary-title" className="font-semibold text-foreground">Tiros por zona</h3>
+      <p className="mt-1 text-xs text-muted-foreground">{scopeLabel}. Los tiros sin resultado no cuentan como intentos.</p>
+      {summary.rows.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No hay tiros detectados para este equipo.</p>
+      ) : (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="py-2 pr-3 font-semibold">Zona</th>
+                <th className="px-2 py-2 text-right font-semibold">Intentos</th>
+                <th className="px-2 py-2 text-right font-semibold">Convertidos</th>
+                <th className="px-2 py-2 text-right font-semibold">%</th>
+                <th className="py-2 pl-2 text-right font-semibold">Sin resultado</th>
+              </tr>
+            </thead>
+            <tbody className={cn('divide-y', reportPresentation ? 'divide-[#252B38]' : 'divide-white/10')}>
+              {summary.rows.map((row) => (
+                <tr key={row.zone}>
+                  <td className="py-2 pr-3">
+                    <button
+                      type="button"
+                      className={cn('text-left font-medium hover:text-primary', selectedZone === row.zone ? 'text-primary' : 'text-foreground')}
+                      aria-pressed={selectedZone === row.zone}
+                      onClick={() => onSelectZone(row.zone)}
+                    >
+                      {ZONE_LABELS[row.zone] ?? row.zone}
+                    </button>
+                  </td>
+                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{row.attempted}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{row.made}</td>
+                  <td className="px-2 py-2 text-right tabular-nums text-foreground">{formatAnalysisShootingPercentage(row.percentage)}</td>
+                  <td className="py-2 pl-2 text-right tabular-nums text-muted-foreground">{row.unknown}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className={cn('border-t font-semibold', border)}>
+              <tr>
+                <td className="py-2 pr-3 text-foreground">Total</td>
+                <td className="px-2 py-2 text-right tabular-nums text-foreground">{summary.total.attempted}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-foreground">{summary.total.made}</td>
+                <td className="px-2 py-2 text-right tabular-nums text-foreground">{formatAnalysisShootingPercentage(summary.total.percentage)}</td>
+                <td className="py-2 pl-2 text-right tabular-nums text-muted-foreground">{summary.total.unknown}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -448,6 +538,9 @@ export function AnalysisJobShotsWorkspace({
   const scopeLabel = filters.team === 'both'
     ? 'Jugadores de ambos equipos'
     : `Jugadores de ${analysisJobTeamGroupLabel(shotScope[0])} (${filters.team === 'own' ? 'equipo analizado' : 'rival'})`
+  const zoneScopeLabel = filters.team === 'both'
+    ? 'Ambos equipos'
+    : `${filters.team === 'own' ? 'Equipo analizado' : 'Rival'} (${analysisJobTeamGroupLabel(shotScope[0])})`
   const zones = [...new Set(teamScopedShots.map((shot) => shot.zone))].sort()
   const statsPlayersByKey = new Map(
     (playerIdentities ?? []).flatMap((player) => {
@@ -475,6 +568,8 @@ export function AnalysisJobShotsWorkspace({
     ? filteredShots.filter((shot) => shotChartPointToPercent(chart.court, shot) != null)
     : []
   const invalidVisibleShots = filteredShots.length - validShots.length
+  const reviewCandidates = chart ? filterAnalysisJobShots(chart.shots, { ...filters, reviewOnly: false }, ourSide) : []
+  const shotsToReview = countShotsToReview(reviewCandidates)
   const selectedShot = filteredShots.find((shot, index) => analysisShotKey(shot, index) === selectedShotKey)
     ?? filteredShots[0]
     ?? null
@@ -544,7 +639,7 @@ export function AnalysisJobShotsWorkspace({
 
       {chartState === 'success' && chart && (
         <>
-          <div className={cn('grid gap-2 border-y py-3 sm:grid-cols-2 lg:grid-cols-5', reportPresentation ? 'border-[#252B38]' : 'border-white/10')}>
+          <div className={cn('grid gap-2 border-y py-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6', reportPresentation ? 'border-[#252B38]' : 'border-white/10')}>
             <Select value={filters.team} onValueChange={(value) => setFilters((current) => ({ ...current, team: value as ShotEvidenceFilters['team'], player: 'all', zone: 'all' }))}>
               <SelectTrigger className={cn(reportPresentation && 'h-9 rounded-full border-[#3A4254] bg-transparent text-xs')} aria-label="Filtrar por equipo"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -588,6 +683,18 @@ export function AnalysisJobShotsWorkspace({
                 {zones.map((zone) => <SelectItem key={zone} value={zone}>{ZONE_LABELS[zone] ?? zone}</SelectItem>)}
               </SelectContent>
             </Select>
+            <button
+              type="button"
+              className={cn(
+                'flex h-10 items-center justify-center rounded-md border px-3 text-sm transition-colors motion-reduce:transition-none',
+                reportPresentation && 'h-9 rounded-full border-[#3A4254] text-xs',
+                filters.reviewOnly ? 'border-amber-400 text-amber-400' : 'border-input text-muted-foreground hover:text-foreground',
+              )}
+              aria-pressed={filters.reviewOnly}
+              onClick={() => setFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}
+            >
+              Solo tiros a revisar
+            </button>
           </div>
 
           <div className={cn(
@@ -604,6 +711,9 @@ export function AnalysisJobShotsWorkspace({
                 </div>
                 <MapPinned className="h-5 w-5 text-primary" aria-hidden="true" />
               </div>
+              {shotsToReview > 0 && (
+                <p className="mb-3 text-xs text-amber-400">{shotsToReview} de {reviewCandidates.length} tiros conviene revisarlos</p>
+              )}
               {validShots.length > 0 ? (
                 <ShotChartCourt
                   court={chart.court}
@@ -625,6 +735,13 @@ export function AnalysisJobShotsWorkspace({
               {invalidVisibleShots > 0 && (
                 <p className="mt-3 text-xs text-muted-foreground">{invalidVisibleShots} tiros de esta selección no tienen coordenadas válidas y no se dibujan.</p>
               )}
+              <ZoneSummaryTable
+                shots={teamScopedShots}
+                scopeLabel={zoneScopeLabel}
+                selectedZone={filters.zone}
+                onSelectZone={(zone) => setFilters((current) => ({ ...current, zone: current.zone === zone ? 'all' : zone }))}
+                presentation={presentation}
+              />
             </div>
 
             <div className={cn(reportPresentation && 'min-w-0 space-y-3')}>

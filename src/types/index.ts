@@ -229,6 +229,8 @@ export interface AnalysisJobShotStat {
   timestampSeconds: number | null
   shotType: string | null
   attribution: string | null
+  outcomeConfidence: PlayerShotOutcomeConfidence | null
+  needsReview: boolean | null
 }
 
 export interface AnalysisJobStatsCoverage {
@@ -291,6 +293,8 @@ export interface AnalysisJobShotChartShot {
   shotType: string | null
   timestampSeconds: number | null
   attribution: string | null
+  outcomeConfidence: PlayerShotOutcomeConfidence | null
+  needsReview: boolean | null
 }
 
 export interface AnalysisJobShotChartPlayer {

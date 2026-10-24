@@ -142,6 +142,8 @@ export function playerShotsToCourtShots(
     shotType: shot.shotType,
     timestampSeconds: shot.timestampSeconds,
     attribution: null,
+    outcomeConfidence: shot.outcomeConfidence,
+    needsReview: shot.needsReview,
   }))
 }
 

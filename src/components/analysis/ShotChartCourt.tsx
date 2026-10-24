@@ -36,6 +36,9 @@ const REPORT_RESULT_STYLES: Record<ShotChartResult, string> = {
   unknown: 'border-[#788397] border-dashed bg-[#11151D] text-[#A3ABBA]',
 }
 
+// Thin dashed outer ring: the system is not sure about this shot.
+const REVIEW_RING = 'outline outline-1 outline-offset-2 outline-dashed outline-amber-400'
+
 function shotPlayerLabel(
   shot: AnalysisJobShotChartShot,
   playerLabels: Map<AnalysisJobPlayerKey, string>,
@@ -87,7 +90,8 @@ export function ShotChartCourt({
           if (!point) return null
           const player = shotPlayerLabel(shot, playerLabels)
           const result = shotChartResultLabel(shot.result)
-          const description = `${player} · ${shot.points}P · ${result} · ${shot.zone}`
+          const needsReview = shot.needsReview === true
+          const description = `${player} · ${shot.points}P · ${result} · ${shot.zone}${needsReview ? ' · Conviene revisar' : ''}`
           const markerKey = shotKey?.(shot, index) ?? `${shot.shotId ?? 'shot'}-${index}`
           const selected = markerKey === selectedShotKey
 
@@ -99,6 +103,7 @@ export function ShotChartCourt({
                 className={cn(
                   'absolute flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow-sm transition-[transform,box-shadow] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 motion-reduce:transition-none',
                   resultStyles[shot.result],
+                  needsReview && REVIEW_RING,
                   selected && presentation === 'match-report'
                     ? 'z-10 scale-125 border-[#FF6A1F] bg-[#FF6A1F] text-white ring-2 ring-[#FF6A1F] ring-offset-2 ring-offset-[#0B0D12]'
                     : selected && 'z-10 scale-125 ring-2 ring-white ring-offset-2 ring-offset-black/40',
@@ -120,6 +125,7 @@ export function ShotChartCourt({
               className={cn(
                 'absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[10px] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
                 resultStyles[shot.result],
+                needsReview && REVIEW_RING,
               )}
               style={{ left: `${point.leftPercent}%`, top: `${point.topPercent}%` }}
               title={description}
@@ -140,6 +146,10 @@ export function ShotChartCourt({
             {shotChartResultLabel(result)}
           </span>
         ))}
+        <span className="inline-flex items-center gap-1.5">
+          <span className={cn('h-3 w-3 rounded-full border-2', resultStyles.made, REVIEW_RING)} aria-hidden="true" />
+          Conviene revisar
+        </span>
         <span>El número del marcador indica 2P o 3P.</span>
       </div>
     </div>
