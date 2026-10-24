@@ -21,10 +21,10 @@ export interface ApiPlayer {
   id: string
   first_name: string
   last_name: string
-  birth_date: string
-  height_cm: number
-  weight_kg: number
-  primary_position: string
+  birth_date: string | null
+  height_cm: number | null
+  weight_kg: number | null
+  primary_position: string | null
   jersey_number?: string | null
   team_id?: string | null
   stats?: unknown
@@ -115,10 +115,10 @@ export function mapApiPlayer(player: ApiPlayer): Player {
     id: player.id,
     firstName: player.first_name,
     lastName: player.last_name,
-    birthDate: player.birth_date,
-    heightCm: player.height_cm,
-    weightKg: player.weight_kg,
-    primaryPosition: player.primary_position as Player['primaryPosition'],
+    birthDate: player.birth_date ?? null,
+    heightCm: player.height_cm ?? null,
+    weightKg: player.weight_kg ?? null,
+    primaryPosition: (player.primary_position ?? null) as Player['primaryPosition'],
     jerseyNumber: player.jersey_number ?? undefined,
     teamId: player.team_id ?? null,
     createdAt: new Date().toISOString(),
@@ -144,19 +144,19 @@ export function toTeamPayload(dto: {
 export function toPlayerPayload(dto: {
   firstName: string
   lastName: string
-  birthDate: string
-  primaryPosition: string
+  birthDate?: string | null
+  primaryPosition?: string | null
   jerseyNumber?: string
-  heightCm?: number
-  weightKg?: number
+  heightCm?: number | null
+  weightKg?: number | null
 }) {
   return {
     first_name: dto.firstName,
     last_name: dto.lastName,
-    birth_date: dto.birthDate,
-    height_cm: dto.heightCm ?? 180,
-    weight_kg: dto.weightKg ?? 75,
-    primary_position: dto.primaryPosition,
+    birth_date: dto.birthDate ?? null,
+    height_cm: dto.heightCm ?? null,
+    weight_kg: dto.weightKg ?? null,
+    primary_position: dto.primaryPosition ?? null,
     jersey_number: dto.jerseyNumber ?? null,
   }
 }

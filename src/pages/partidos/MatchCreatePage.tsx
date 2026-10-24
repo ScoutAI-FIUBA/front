@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import { isMatchApiError, teamMismatchDetails } from '@/services/api/matches.client'
-import { matchService, teamService } from '@/services/registry'
+import { matchService, playerService, teamService } from '@/services/registry'
 import type { MatchSide, MatchStatsImportPreview, Team, TeamMismatchDetail } from '@/types'
 import {
   MATCH_DESCRIPTION_MAX,
@@ -27,7 +27,18 @@ import {
   matchFormToCreateInput,
   type MatchFormValues,
 } from './match-form'
-import { type MatchErrorCopy, matchErrorCopy, runCreateWithStats } from './match-import'
+import {
+  NO_ROSTER_CHOICE,
+  type MatchErrorCopy,
+  type RosterChoice,
+  anyRosterChoice,
+  buildRosterRequest,
+  createRostersThenRepreview,
+  matchErrorCopy,
+  mismatchAccepted,
+  rosterCreatedMessage,
+  runCreateWithStats,
+} from './match-import'
 import { MATCHES_PATH, matchDetailPath } from './match-routes'
 import { ImportErrorAlert, MatchImportPreview, TeamMismatchAlerts } from './MatchImportPreview'
 import { StatsFileDropzone } from './StatsFileDropzone'
@@ -71,6 +82,7 @@ export function MatchCreatePage() {
   const [error, setError] = useState<MatchErrorCopy | null>(null)
   const [mismatch, setMismatch] = useState<MismatchState | null>(null)
   const [snapshot, setSnapshot] = useState<PreviewSnapshot | null>(null)
+  const [rosterChoice, setRosterChoice] = useState<RosterChoice>(NO_ROSTER_CHOICE)
   const [createdMatchId, setCreatedMatchId] = useState<string | null>(null)
   const [focusFormTick, setFocusFormTick] = useState(0)
   // Team names read from the chosen file (no ids sent), used only to suggest teams.
@@ -182,6 +194,7 @@ export function MatchCreatePage() {
           awayTeamId: values.awayTeamId,
           allowTeamMismatch: allowTeamMismatch || undefined,
         })
+        setRosterChoice(NO_ROSTER_CHOICE)
         setSnapshot({ preview, values })
       } catch (previewError) {
         if (isMatchApiError(previewError, 'TEAM_MISMATCH')) {
@@ -211,10 +224,40 @@ export function MatchCreatePage() {
     if (!snapshot) return Promise.resolve()
     return withLock('saving', async () => {
       setError(null)
+      let payload = snapshot.preview.savePayload
+      if (anyRosterChoice(rosterChoice)) {
+        const { values } = snapshot
+        const teamBySide = {
+          HOME: { id: values.homeTeamId, name: homeTeam?.name ?? 'Equipo local' },
+          AWAY: { id: values.awayTeamId, name: awayTeam?.name ?? 'Equipo visitante' },
+        }
+        try {
+          const created = await createRostersThenRepreview({
+            playerService,
+            rosters: buildRosterRequest(snapshot.preview, rosterChoice, teamBySide),
+            repreview: () => matchService.previewStatsImport({
+              file: file as File,
+              fileName: (file as File).name,
+              homeTeamId: values.homeTeamId,
+              awayTeamId: values.awayTeamId,
+              allowTeamMismatch: mismatchAccepted(snapshot.preview) || undefined,
+            }),
+          })
+          payload = created.preview.savePayload
+          setRosterChoice(NO_ROSTER_CHOICE)
+          setSnapshot({ preview: created.preview, values })
+          const message = rosterCreatedMessage(created.createdBySide)
+          if (message) toast.success(message)
+        } catch (rosterError) {
+          // Players already created stay; retrying skips them on the server.
+          setError(matchErrorCopy(rosterError))
+          return
+        }
+      }
       const result = await runCreateWithStats({
         service: matchService,
         input: matchFormToCreateInput(snapshot.values),
-        payload: snapshot.preview.savePayload,
+        payload,
         createdMatchId,
       })
       if (result.matchId) setCreatedMatchId(result.matchId)
@@ -361,6 +404,8 @@ export function MatchCreatePage() {
             replacing={false}
             confirmLabel={createdMatchId ? 'Reintentar guardar las estadísticas' : 'Guardar partido y estadísticas'}
             canGoBack={createdMatchId === null}
+            rosterChoice={rosterChoice}
+            onRosterChoiceChange={(side, on) => setRosterChoice((current) => ({ ...current, [side]: on }))}
           />
           <div aria-live="polite" className="mt-4 space-y-3">
             {createdMatchId ? (

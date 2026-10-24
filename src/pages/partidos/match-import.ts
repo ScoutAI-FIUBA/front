@@ -1,4 +1,11 @@
-import type { MatchSide, MatchStatsSavePayload, TeamMismatchDetail, UnlinkedReason } from '../../types/index.ts'
+import type {
+  MatchSide,
+  MatchStatsImportPreview,
+  MatchStatsSavePayload,
+  TeamMismatchDetail,
+  UnlinkedReason,
+} from '../../types/index.ts'
+import type { RosterPlayerInput, TeamRosterResult } from '../../services/contracts/players.service.ts'
 import type { CreateMatchInput, IMatchService } from '../../services/contracts/matches.service.ts'
 import {
   ApiNetworkError,
@@ -256,4 +263,141 @@ export async function runCreateWithStats({
   } catch (error) {
     return { matchId, statsSaved: false, error }
   }
+}
+
+export const ROSTER_CONFIRM_LABEL = 'Crear jugadores y guardar'
+export const ROSTER_FIELDS_NOTE = 'Fecha de nacimiento, altura, peso y posición quedan vacías; podés completarlas después en Jugadores.'
+const NAME_MAX = 120
+const LOWER_PARTICLES = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'da', 'di', 'van', 'von'])
+
+function collapse(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+function capitalize(word: string): string {
+  return word.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (_match, sep: string, letter: string) => sep + letter.toUpperCase())
+}
+
+/** Re-cases only an all-upper-case name; particles stay lower unless they are the first word. */
+function recase(name: string): string {
+  if (name !== name.toUpperCase() || name === name.toLowerCase()) return name
+  return name
+    .split(' ')
+    .map((word, index) => (index > 0 && LOWER_PARTICLES.has(word.toLowerCase()) ? word.toLowerCase() : capitalize(word)))
+    .join(' ')
+}
+
+/** Splits a name from the stats file into first and last name; null when it cannot be split (single word). */
+export function splitFileName(name: string): { firstName: string; lastName: string } | null {
+  const clean = collapse(name)
+  let first: string
+  let last: string
+  const comma = clean.indexOf(',')
+  if (comma >= 0) {
+    last = collapse(clean.slice(0, comma))
+    first = collapse(clean.slice(comma + 1))
+  } else {
+    const words = clean.split(' ')
+    if (words.length < 2) return null
+    last = words[words.length - 1]
+    first = words.slice(0, -1).join(' ')
+  }
+  if (!first || !last) return null
+  const firstName = recase(first).slice(0, NAME_MAX).trim()
+  const lastName = recase(last).slice(0, NAME_MAX).trim()
+  return firstName && lastName ? { firstName, lastName } : null
+}
+
+export interface RosterCandidate extends RosterPlayerInput {
+  /** Name as written in the file, for display. */
+  fileName: string
+}
+
+/** Players of one side that "Crear plantel" would create; empty when none qualifies. */
+export function rosterCandidates(preview: MatchStatsImportPreview, side: MatchSide): RosterCandidate[] {
+  const check = preview.report.teams.find((entry) => entry.side === side)
+  if (check?.matchesSelectedTeam === false) return []
+  const inFile = preview.boxScore?.players.filter((player) => player.teamSide === side) ?? []
+  const counts = new Map<string, number>()
+  for (const player of inFile) {
+    const jersey = player.jerseyNumber
+    if (jersey) counts.set(jersey, (counts.get(jersey) ?? 0) + 1)
+  }
+  const result: RosterCandidate[] = []
+  for (const player of preview.report.unlinkedPlayers) {
+    if (player.teamSide !== side || player.reason !== 'no_roster_player' || !player.jerseyNumber) continue
+    if (!/^[0-9]{1,2}$/.test(player.jerseyNumber)) continue
+    if ((counts.get(player.jerseyNumber) ?? 0) > 1) continue
+    const split = splitFileName(player.name)
+    if (!split) continue
+    result.push({ ...split, jerseyNumber: player.jerseyNumber, fileName: player.name })
+  }
+  return result
+}
+
+export interface CreateRostersParams {
+  playerService: { createTeamRoster: (teamId: string, players: RosterPlayerInput[]) => Promise<TeamRosterResult> }
+  repreview: () => Promise<MatchStatsImportPreview>
+  /** Per side: the team and the candidates to create; sides left out (or empty) are skipped. */
+  rosters: Partial<Record<MatchSide, { teamId: string; teamName: string; players: RosterPlayerInput[] }>>
+}
+
+export interface CreateRostersResult {
+  preview: MatchStatsImportPreview
+  /** One entry per created side, for the toast. */
+  createdBySide: { side: MatchSide; teamName: string; count: number }[]
+}
+
+/** Creates the rosters side by side and previews the same file again so the new players get linked. */
+export async function createRostersThenRepreview({
+  playerService,
+  repreview,
+  rosters,
+}: CreateRostersParams): Promise<CreateRostersResult> {
+  const createdBySide: CreateRostersResult['createdBySide'] = []
+  for (const side of ['HOME', 'AWAY'] as MatchSide[]) {
+    const roster = rosters[side]
+    if (!roster || roster.players.length === 0) continue
+    const result = await playerService.createTeamRoster(roster.teamId, roster.players)
+    createdBySide.push({ side, teamName: roster.teamName, count: result.created.length })
+  }
+  return { preview: await repreview(), createdBySide }
+}
+
+export function rosterCreatedMessage(createdBySide: CreateRostersResult['createdBySide']): string | null {
+  const parts = createdBySide
+    .filter((entry) => entry.count > 0)
+    .map((entry) => `${entry.count === 1 ? 'Se creó 1 jugador' : `Se crearon ${entry.count} jugadores`} en ${entry.teamName}`)
+  return parts.length > 0 ? parts.join('. ') : null
+}
+
+export type RosterChoice = Record<MatchSide, boolean>
+export const NO_ROSTER_CHOICE: RosterChoice = { HOME: false, AWAY: false }
+
+export function anyRosterChoice(choice: RosterChoice): boolean {
+  return choice.HOME || choice.AWAY
+}
+
+/** The rosters to create: only sides the owner turned on, with the candidates of the current preview. */
+export function buildRosterRequest(
+  preview: MatchStatsImportPreview,
+  choice: RosterChoice,
+  teams: Record<MatchSide, { id: string; name: string }>,
+): CreateRostersParams['rosters'] {
+  const rosters: CreateRostersParams['rosters'] = {}
+  for (const side of ['HOME', 'AWAY'] as MatchSide[]) {
+    if (!choice[side]) continue
+    const players = rosterCandidates(preview, side).map(({ firstName, lastName, jerseyNumber }) => ({
+      firstName,
+      lastName,
+      jerseyNumber,
+    }))
+    if (players.length > 0) rosters[side] = { teamId: teams[side].id, teamName: teams[side].name, players }
+  }
+  return rosters
+}
+
+/** True when this preview was only possible by accepting a team mismatch, so a re-preview must allow it too. */
+export function mismatchAccepted(preview: MatchStatsImportPreview): boolean {
+  return preview.report.teams.some((entry) => entry.matchesSelectedTeam === false)
 }

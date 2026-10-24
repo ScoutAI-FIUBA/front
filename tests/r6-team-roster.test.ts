@@ -35,10 +35,11 @@ const validForm = {
 
 test('player validation accepts real fields and rejects future or invalid measurements', () => {
   assert.equal(playerFormSchema.safeParse(validForm).success, true)
-  assert.equal(playerFormSchema.safeParse({ ...validForm, primaryPosition: '' }).success, false)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, primaryPosition: '' }).success, true)
   assert.equal(playerFormSchema.safeParse({ ...validForm, birthDate: '2999-01-01' }).success, false)
   assert.equal(playerFormSchema.safeParse({ ...validForm, heightCm: '0' }).success, false)
-  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '' }).success, false)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '' }).success, true)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '-3' }).success, false)
   assert.equal(playerFormSchema.safeParse({ ...validForm, jerseyNumber: '123' }).success, false)
 })
 

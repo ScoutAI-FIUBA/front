@@ -87,6 +87,15 @@
 - Roster names come from `playerService.filterByTeam` for both teams; a failure there is tolerated.
 - Match pages contain no estimated or detected numbers and no `Análisis IA` content.
 
+## Create roster from the file (optional, per team)
+
+- In the import preview (new match and import on an existing match), each side whose file players cannot be linked shows a checkbox "Crear plantel para {equipo} con los jugadores de la planilla". It is OFF by default and nothing is created unless the owner turns it on; with it off the import behaves exactly as before.
+- Candidates for a side (`rosterCandidates` in `match-import.ts`): unlinked players with reason `no_roster_player`, everyone in the file (played or not), excluding jerseys that appear twice in the file, players without jersey, ambiguous jerseys, single-word names, and the whole side when that team was accepted as a mismatch (`matches_selected_team === false`). The checkbox is shown only when candidates exist.
+- Under the checkbox the list `#{n} Nombre Apellido` and the note: "Se van a crear {k} jugadores en {equipo}. Fecha de nacimiento, altura, peso y posición quedan vacías; podés completarlas después en Jugadores."
+- Names are split by `splitFileName`: with a comma, last name is before the first comma and first name the rest (`BELIZAN, LAUTARO MARTÍN` becomes Lautaro Martín / Belizan); without a comma, the last word is the last name (`JAYLEN BROWN` becomes Jaylen / Brown). Re-casing happens only when the input is all upper case (particles de, del, la, las, los, y, da, di, van, von stay lower unless first).
+- The confirm button reads "Crear jugadores y guardar" when any checkbox is on. Sequence (`createRostersThenRepreview`, inside the saving lock): for each side on, `createTeamRoster`; then the same file is previewed again with the same teams and `allowTeamMismatch`; the NEW `savePayload` is the one saved (so the new players are linked); toast "Se crearon {k} jugadores en {equipo}".
+- If a step fails the already created players stay, the error is shown and the preview is kept. Retrying is safe: the server skips jerseys the team already has and the new preview links them. The checkbox state resets on every new preview, file, or team change.
+
 ## Errors
 
 - Error codes are mapped to Spanish copy; the backend message (English) is kept as a secondary `Detalle técnico`. Codes: `MATCH_NOT_FOUND`, `TEAM_NOT_FOUND`, `PLAYER_NOT_FOUND`, `VIDEO_NOT_FOUND`, `VIDEO_TEAM_NOT_IN_MATCH`, `INVALID_MATCH_TEAMS`, `INVALID_WINNER_TEAM`, `INVALID_STATS_FILE`, `STATS_FILE_TOO_LARGE`, `TEAM_MISMATCH`, `VALIDATION_ERROR`.
@@ -108,7 +117,7 @@
 
 - No combining of video and match numbers (no totals, no comparison, no detected stats on match pages).
 - No deleting of a match, no changing its teams, and no manual stats entry.
-- No roster endpoints; participants are saved only through the stats import.
+- No manual roster editing here; participants are saved only through the stats import, and players are created only through the explicit "Crear plantel" option above.
 - No pagination or filters beyond what the list needs; `GET /matches` returns every match with its stats.
 - This repo makes no backend change; the link and the edit need the backend PR (back#33).
 

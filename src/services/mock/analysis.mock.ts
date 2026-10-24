@@ -37,7 +37,7 @@ function buildDetail(sessionId: string): AnalysisDetail | null {
       playerId: p.id,
       name: `${p.firstName.charAt(0)}. ${p.lastName}`,
       jerseyNumber: p.jerseyNumber ?? '',
-      position: p.primaryPosition,
+      position: p.primaryPosition ?? '',
     }))
 
   return { session, match, video, homeTeam, awayTeam, manualAnalysis, events, detectedPlayers }

@@ -44,7 +44,7 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Posición</Label>
+          <Label>Posición <span className="font-normal text-muted-foreground">(opcional)</span></Label>
           <Controller
             name="primaryPosition"
             control={control}
@@ -89,7 +89,7 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
       </div>
 
       <div>
-        <Label htmlFor="player-birth-date">Fecha de nacimiento</Label>
+        <Label htmlFor="player-birth-date">Fecha de nacimiento <span className="font-normal text-muted-foreground">(opcional)</span></Label>
         <Input
           id="player-birth-date"
           type="date"
@@ -102,12 +102,12 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="player-height">Altura (cm)</Label>
+          <Label htmlFor="player-height">Altura (cm) <span className="font-normal text-muted-foreground">(opcional)</span></Label>
           <Input id="player-height" type="number" min="1" className="mt-1" {...register('heightCm')} />
           <FieldError message={errors.heightCm?.message} />
         </div>
         <div>
-          <Label htmlFor="player-weight">Peso (kg)</Label>
+          <Label htmlFor="player-weight">Peso (kg) <span className="font-normal text-muted-foreground">(opcional)</span></Label>
           <Input id="player-weight" type="number" min="1" className="mt-1" {...register('weightKg')} />
           <FieldError message={errors.weightKg?.message} />
         </div>

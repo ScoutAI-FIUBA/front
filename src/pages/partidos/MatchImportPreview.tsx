@@ -14,7 +14,12 @@ import {
   fileCountsSummary,
   linkedSummary,
   playedSummary,
+  ROSTER_CONFIRM_LABEL,
+  ROSTER_FIELDS_NOTE,
+  anyRosterChoice,
+  rosterCandidates,
   type MatchErrorCopy,
+  type RosterChoice,
 } from './match-import'
 
 export interface PreviewTeam {
@@ -35,13 +40,16 @@ interface MatchImportPreviewProps {
   confirmLabel?: string
   /** Hides 'Volver' once something was already created and cannot be undone from here. */
   canGoBack?: boolean
+  /** Per side: the owner chose to create the roster from the file. Off by default. */
+  rosterChoice: RosterChoice
+  onRosterChoiceChange: (side: MatchSide, on: boolean) => void
 }
 
 const SIDES: MatchSide[] = ['HOME', 'AWAY']
 
 export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPreviewProps>(
   function MatchImportPreview(
-    { preview, homeTeam, awayTeam, onConfirm, onBack, saving, replacing, confirmLabel, canGoBack = true },
+    { preview, homeTeam, awayTeam, onConfirm, onBack, saving, replacing, confirmLabel, canGoBack = true, rosterChoice, onRosterChoiceChange },
     headingRef,
   ) {
     const { boxScore, report, savePayload } = preview
@@ -52,6 +60,11 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
       return names
     }, [report.linkedPlayers])
 
+    const candidatesBySide = useMemo(
+      () => ({ HOME: rosterCandidates(preview, 'HOME'), AWAY: rosterCandidates(preview, 'AWAY') }),
+      [preview],
+    )
+
     const winner = preview.winnerTeamId === homeTeam.id
       ? homeTeam
       : preview.winnerTeamId === awayTeam.id
@@ -59,7 +72,9 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
         : null
     const winnerText = winner ? `Ganó ${winner.name}` : 'Empate'
     const playedCount = savePayload.participants.length
-    const label = confirmLabel ?? (replacing ? 'Reemplazar estadísticas' : 'Guardar estadísticas')
+    const label = anyRosterChoice(rosterChoice)
+      ? ROSTER_CONFIRM_LABEL
+      : confirmLabel ?? (replacing ? 'Reemplazar estadísticas' : 'Guardar estadísticas')
 
     return (
       <div className="space-y-8">
@@ -172,6 +187,33 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
                     ))}
                   </ul>
                 </div>
+              ) : null}
+
+              {candidatesBySide[side].length > 0 ? (
+                <label className="flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4"
+                    checked={rosterChoice[side]}
+                    disabled={saving}
+                    onChange={(event) => onRosterChoiceChange(side, event.target.checked)}
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-medium">
+                      Crear plantel para {team.name} con los jugadores de la planilla
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Se van a crear {candidatesBySide[side].length === 1 ? '1 jugador' : `${candidatesBySide[side].length} jugadores`} en {team.name}. {ROSTER_FIELDS_NOTE}
+                    </span>
+                    <ul className="mt-2 space-y-0.5 text-xs">
+                      {candidatesBySide[side].map((candidate) => (
+                        <li key={candidate.jerseyNumber}>
+                          #{candidate.jerseyNumber} {candidate.firstName} {candidate.lastName}
+                        </li>
+                      ))}
+                    </ul>
+                  </span>
+                </label>
               ) : null}
 
               {boxScore ? (

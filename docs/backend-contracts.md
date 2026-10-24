@@ -65,6 +65,11 @@ Endpoints under `/matches` require bearer auth; ownership comes from the token. 
 - Player link is by jersey number only. `participants` holds only players who played; players with 0 minutes exist only in `stats.players` with `played: false`.
 - The preview request uses a 60-second timeout instead of the 20-second default.
 
+## Players: optional profile and bulk roster
+
+- `birth_date`, `height_cm`, `weight_kg`, and `primary_position` are nullable in `POST/PUT /players` and in every player response. `PUT` is a full replace, so an omitted optional field becomes `null`. The frontend sends `null` (no fake 180 cm / 75 kg defaults) and renders `null` as empty ("Sin posición").
+- `POST /players/bulk` with `{team_id, players:[{first_name, last_name, jersey_number}]}` (1 to 30 players, jersey required `^[0-9]{1,2}$`, duplicate jerseys in the payload are `422`) creates the players in one transaction directly in the team and skips jerseys the team already has. Returns `{created:[player...], skipped:[{jersey_number, reason:"jersey_taken"}]}`. Error: `404 TEAM_NOT_FOUND`. Used only by the match import when the owner turns on "Crear plantel" for a team.
+
 Two error envelopes exist: `{"error":{"code","message","details"?}}` and FastAPI `{"detail":[...]|"..."}` (mapped to `VALIDATION_ERROR` only for status 422; other statuses such as 404/405 keep a null code). Messages and warnings are English strings, so the frontend maps codes to Spanish copy and keeps the backend message as a secondary technical detail.
 
 Percentage convention: the match preview and stored stats use `pct` as 0..100 with one decimal, or `null` without attempts. The frontend displays it as is and never recomputes it.
