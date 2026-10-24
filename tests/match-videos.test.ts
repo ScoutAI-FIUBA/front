@@ -53,7 +53,8 @@ test('linkCandidates offers home and away videos with their link state', () => {
     video('h-free', { uploadedAt: '2026-10-01T10:00:00Z' }),
     video('stranger', { teamId: 'third' }),
     video('failed', { status: 'failed' }),
-    video('preparing', { status: 'processing', uploadedAt: '2026-09-01T10:00:00Z' }),
+    video('pending-upload', { status: 'processing', uploadedAt: '2026-09-01T10:00:00Z' }),
+    video('analyzed', { status: 'analyzed', uploadedAt: '2026-09-01T10:00:00Z' }),
   ])
   assert.deepEqual(
     result.map((c) => [c.video.id, c.side, c.state]),
@@ -61,7 +62,7 @@ test('linkCandidates offers home and away videos with their link state', () => {
       ['h-other', 'HOME', 'other-match'],
       ['h-this', 'HOME', 'this-match'],
       ['h-free', 'HOME', 'free'],
-      ['preparing', 'HOME', 'free'],
+      ['analyzed', 'HOME', 'free'],
       ['a-free', 'AWAY', 'free'],
     ],
   )

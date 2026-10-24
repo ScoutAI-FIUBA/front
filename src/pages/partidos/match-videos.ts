@@ -29,15 +29,16 @@ export function linkedVideos(match: Pick<MatchRecord, 'id'>, videos: readonly Vi
 }
 
 /**
- * Videos that can be linked: they belong to the home or the away team and are neither deleted nor failed.
+ * Videos that can be linked: they belong to the home or the away team and are finished uploading (not pending, failed or deleted).
  * Home team first, then away; newest first inside each team.
  */
 export function linkCandidates(
   match: Pick<MatchRecord, 'id' | 'homeTeamId' | 'awayTeamId'>,
   videos: readonly Video[],
 ): LinkCandidate[] {
-  // Deleted videos never reach the frontend: the backend list omits them.
-  const usable = videos.filter((video) => video.status !== 'failed')
+  // Deleted videos never reach the frontend: the backend list omits them. The mapper turns
+  // PENDING_UPLOAD into 'processing', so only finished uploads ('uploaded' or 'analyzed') are offered.
+  const usable = videos.filter((video) => video.status === 'uploaded' || video.status === 'analyzed')
   const forSide = (side: MatchSide, teamId: string): LinkCandidate[] =>
     usable
       .filter((video) => video.teamId === teamId)
