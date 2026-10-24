@@ -1,6 +1,7 @@
 import type {
   AnalysisJobCourtPosition,
   AnalysisJobCourtPositions,
+  AnalysisJobCourtPositionsPlayer,
 } from '../../types/index.ts'
 
 export interface CourtPositionUiPoint {
@@ -29,4 +30,17 @@ export function validCourtPositions(
   positions: AnalysisJobCourtPosition[],
 ): AnalysisJobCourtPosition[] {
   return positions.filter((position) => courtPositionPointToPercent(court, position) != null)
+}
+
+export function playerColor(player: AnalysisJobCourtPositionsPlayer): string {
+  if (!player.stablePlayerId) {
+    const hue = ((player.trackId * 137.508) % 360 + 360) % 360
+    return `hsl(${hue.toFixed(1)} 72% 38%)`
+  }
+  const hash = [...player.stablePlayerId].reduce(
+    (value, character) => ((value * 31) + character.charCodeAt(0)) | 0,
+    0,
+  )
+  const hue = ((hash * 137.508) % 360 + 360) % 360
+  return `hsl(${hue.toFixed(1)} 72% 38%)`
 }
