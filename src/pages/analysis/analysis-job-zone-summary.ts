@@ -64,3 +64,7 @@ export function summarizeShotsByZone(
     }),
   }
 }
+
+export function zoneSummaryEmptyText(team: 'own' | 'rival' | 'both'): string {
+  return team === 'both' ? 'No hay tiros detectados.' : 'No hay tiros detectados para este equipo.'
+}

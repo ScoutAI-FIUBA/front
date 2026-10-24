@@ -38,12 +38,14 @@ import {
   formatShotTimestamp,
   countShotsToReview,
   SHOT_REVIEW_EXPLANATION,
+  reviewToggleDisabled,
   shotHasVideoEvidence,
+  shotMapEmptyKind,
   shotNeedsReview,
   shotOutcomeEvidenceLabel,
   type ShotEvidenceFilters,
 } from './analysis-job-shot-evidence'
-import { summarizeShotsByZone } from './analysis-job-zone-summary'
+import { summarizeShotsByZone, zoneSummaryEmptyText } from './analysis-job-zone-summary'
 import {
   analysisJobPlayerKey,
   analysisJobPlayerLabelFromMap,
@@ -243,12 +245,14 @@ function ShotMomentList({
 }
 
 function ZoneSummaryTable({
+  team,
   shots,
   scopeLabel,
   selectedZone,
   onSelectZone,
   presentation,
 }: {
+  team: ShotEvidenceFilters['team']
   shots: AnalysisJobShotChartShot[]
   scopeLabel: string
   selectedZone: string
@@ -264,7 +268,7 @@ function ZoneSummaryTable({
       <h3 id="zone-summary-title" className="font-semibold text-foreground">Tiros por zona</h3>
       <p className="mt-1 text-xs text-muted-foreground">{scopeLabel}. Los tiros sin resultado no cuentan como intentos.</p>
       {summary.rows.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">No hay tiros detectados para este equipo.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{zoneSummaryEmptyText(team)}</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -570,6 +574,7 @@ export function AnalysisJobShotsWorkspace({
   const invalidVisibleShots = filteredShots.length - validShots.length
   const reviewCandidates = chart ? filterAnalysisJobShots(chart.shots, { ...filters, reviewOnly: false }, ourSide) : []
   const shotsToReview = countShotsToReview(reviewCandidates)
+  const emptyKind = shotMapEmptyKind(filters.reviewOnly, filteredShots.length, validShots.length)
   const selectedShot = filteredShots.find((shot, index) => analysisShotKey(shot, index) === selectedShotKey)
     ?? filteredShots[0]
     ?? null
@@ -688,9 +693,12 @@ export function AnalysisJobShotsWorkspace({
               className={cn(
                 'flex h-10 items-center justify-center rounded-md border px-3 text-sm transition-colors motion-reduce:transition-none',
                 reportPresentation && 'h-9 rounded-full border-[#3A4254] text-xs',
-                filters.reviewOnly ? 'border-amber-400 text-amber-400' : 'border-input text-muted-foreground hover:text-foreground',
+                filters.reviewOnly
+                  ? 'border-amber-400 text-amber-400'
+                  : 'border-input text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:text-muted-foreground',
               )}
               aria-pressed={filters.reviewOnly}
+              disabled={reviewToggleDisabled(filters.reviewOnly, countShotsToReview(teamScopedShots))}
               onClick={() => setFilters((current) => ({ ...current, reviewOnly: !current.reviewOnly }))}
             >
               Solo tiros a revisar
@@ -728,14 +736,17 @@ export function AnalysisJobShotsWorkspace({
                 <EmptyState
                   className="py-10"
                   icon={<MapPinned className="h-5 w-5" aria-hidden="true" />}
-                  title="No hay tiros visibles"
-                  description="La selección actual no contiene tiros con coordenadas válidas en cancha."
+                  title={emptyKind === 'review' ? 'No hay tiros para revisar en esta selección' : 'No hay tiros visibles'}
+                  description={emptyKind === 'review'
+                    ? 'Ningún tiro de la selección actual está marcado para revisar. Desactivá «Solo tiros a revisar» para ver todos.'
+                    : 'La selección actual no contiene tiros con coordenadas válidas en cancha.'}
                 />
               )}
               {invalidVisibleShots > 0 && (
                 <p className="mt-3 text-xs text-muted-foreground">{invalidVisibleShots} tiros de esta selección no tienen coordenadas válidas y no se dibujan.</p>
               )}
               <ZoneSummaryTable
+                team={filters.team}
                 shots={teamScopedShots}
                 scopeLabel={zoneScopeLabel}
                 selectedZone={filters.zone}

@@ -14,11 +14,14 @@ import {
   countShotsToReview,
   DEFAULT_SHOT_EVIDENCE_FILTERS,
   filterAnalysisJobShots,
+  reviewToggleDisabled,
+  shotMapEmptyKind,
   shotNeedsReview,
   shotOutcomeEvidenceLabel,
 } from '../src/pages/analysis/analysis-job-shot-evidence.ts'
-import { summarizeShotsByZone } from '../src/pages/analysis/analysis-job-zone-summary.ts'
+import { summarizeShotsByZone, zoneSummaryEmptyText } from '../src/pages/analysis/analysis-job-zone-summary.ts'
 import { filterAnalysisJobShotsByTeam } from '../src/pages/analysis/analysis-job-shot-evidence.ts'
+import { shotChartHasReviewShots, shotChartZoneLabel } from '../src/components/analysis/shot-chart-court.ts'
 import type { AnalysisJobShotChartShot } from '../src/types/index.ts'
 
 const readSource = (relativePath: string) => readFileSync(new URL(relativePath, import.meta.url), 'utf8')
@@ -122,7 +125,7 @@ test('stats mapper carries the same two fields', () => {
 test('evidence labels are plain Spanish and null when unknown', () => {
   assert.equal(shotOutcomeEvidenceLabel('detected'), 'Se vio entrar el balón')
   assert.equal(shotOutcomeEvidenceLabel('inferred'), 'Inferido por la trayectoria del balón')
-  assert.equal(shotOutcomeEvidenceLabel('timeout'), 'No se vio el aro: se asume fallado')
+  assert.equal(shotOutcomeEvidenceLabel('timeout'), 'No se vio entrar el balón: se cuenta como fallado')
   assert.equal(shotOutcomeEvidenceLabel('unresolved'), 'Sin resolver')
   assert.equal(shotOutcomeEvidenceLabel(null), null)
   assert.equal(shotOutcomeEvidenceLabel(undefined), null)
@@ -196,24 +199,52 @@ test('zone summary handles an empty scope and unrecognised zones', () => {
   assert.deepEqual(odd.rows.map((r) => r.zone), ['paint', 'zz_other'])
 })
 
+test('map empty state: review text only when the review filter emptied the selection', () => {
+  assert.equal(shotMapEmptyKind(false, 3, 2), null)
+  assert.equal(shotMapEmptyKind(true, 1, 1), null)
+  assert.equal(shotMapEmptyKind(true, 0, 0), 'review')
+  assert.equal(shotMapEmptyKind(false, 0, 0), 'coordinates')
+  assert.equal(shotMapEmptyKind(true, 2, 0), 'coordinates')
+})
+
+test('review toggle is disabled only when off and nothing is flagged', () => {
+  assert.equal(reviewToggleDisabled(false, 0), true)
+  assert.equal(reviewToggleDisabled(false, 2), false)
+  assert.equal(reviewToggleDisabled(true, 0), false)
+})
+
+test('legend and ring condition, zone labels and zone-table empty text', () => {
+  assert.equal(shotChartHasReviewShots([]), false)
+  assert.equal(shotChartHasReviewShots([{ needsReview: false }, { needsReview: null }]), false)
+  assert.equal(shotChartHasReviewShots([{ needsReview: false }, { needsReview: true }]), true)
+  assert.equal(shotChartZoneLabel('corner_three'), 'Triple de esquina')
+  assert.equal(shotChartZoneLabel('Pintura'), 'Pintura')
+  assert.equal(zoneSummaryEmptyText('both'), 'No hay tiros detectados.')
+  assert.equal(zoneSummaryEmptyText('own'), 'No hay tiros detectados para este equipo.')
+})
+
 test('UI exposes the legend, badges, toggle and zone table without jargon', () => {
   const workspace = readSource('../src/pages/analysis/AnalysisJobShotsWorkspace.tsx')
   const court = readSource('../src/components/analysis/ShotChartCourt.tsx')
   const evidence = readSource('../src/pages/analysis/analysis-job-shot-evidence.ts')
   const zones = readSource('../src/pages/analysis/analysis-job-zone-summary.ts')
   assert.match(court, /Conviene revisar/)
-  assert.match(court, /outline-dashed/)
+  assert.match(court, /border-dashed border-amber-400/)
+  assert.match(court, /hasReviewShots &&/)
   assert.match(workspace, />Revisar</)
   assert.match(workspace, /Solo tiros a revisar/)
   assert.match(workspace, /tiros conviene revisarlos/)
   assert.match(workspace, /Tiros por zona/)
-  assert.match(workspace, /Sin resultado/)
+  assert.match(workspace, /No hay tiros para revisar en esta selección/)
   assert.match(workspace, /Evidencia del resultado/)
   assert.match(evidence, /El sistema no está seguro de este tiro\. Conviene verlo en el video\./)
   // The auto-reset guard must not depend on the review toggle.
   assert.doesNotMatch(workspace, /filters\.reviewOnly\]/)
   assert.match(workspace, /\[job\.id, job\.ourTeamSide\]/)
+  // The jargon check must be able to fail.
+  const jargon = /observaciones|muestras/i
+  assert.match('3 muestras', jargon)
   for (const text of [workspace, court, evidence, zones]) {
-    assert.doesNotMatch(text, /observaciones|muestras/i)
+    assert.doesNotMatch(text, jargon)
   }
 })

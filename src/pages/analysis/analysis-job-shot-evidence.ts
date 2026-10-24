@@ -107,11 +107,28 @@ export function shotOutcomeEvidenceLabel(
 ): string | null {
   if (confidence === 'detected') return 'Se vio entrar el balón'
   if (confidence === 'inferred') return 'Inferido por la trayectoria del balón'
-  if (confidence === 'timeout') return 'No se vio el aro: se asume fallado'
+  if (confidence === 'timeout') return 'No se vio entrar el balón: se cuenta como fallado'
   if (confidence === 'unresolved') return 'Sin resolver'
   return null
 }
 
 export function countShotsToReview(shots: Array<Pick<AnalysisJobShotChartShot, 'needsReview'>>): number {
   return shots.filter(shotNeedsReview).length
+}
+
+export type ShotMapEmptyKind = 'review' | 'coordinates'
+
+/** Why the shot map has nothing to draw; null when at least one shot is drawable. */
+export function shotMapEmptyKind(
+  reviewOnly: boolean,
+  filteredShotCount: number,
+  drawableShotCount: number,
+): ShotMapEmptyKind | null {
+  if (drawableShotCount > 0) return null
+  return reviewOnly && filteredShotCount === 0 ? 'review' : 'coordinates'
+}
+
+/** The review toggle is usable when something is flagged, or when already on so it can be turned off. */
+export function reviewToggleDisabled(reviewOnly: boolean, flaggedInTeamScope: number): boolean {
+  return !reviewOnly && flaggedInTeamScope === 0
 }
