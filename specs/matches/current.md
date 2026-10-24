@@ -91,6 +91,7 @@
 ## Mock behavior (`VITE_USE_MOCK_API=true`)
 
 - `mockMatchService` keeps matches in memory (no seed data, independent from the legacy mock store): create validates that the teams differ, list is sorted by date descending, `getWithParticipants` throws `MATCH_NOT_FOUND`, `saveStats` stores what it receives.
+- Mock video links live in memory and are lost on reload, while mock videos persist in localStorage; a dangling link shows `Ver partido vinculado` on the video page.
 - `previewStatsImport` always fails with `INVALID_STATS_FILE` and the message `La vista previa de la planilla necesita el backend real.` No numbers are invented.
 
 ## Non-scope
@@ -99,7 +100,7 @@
 - No deleting of a match, no changing its teams, and no manual stats entry.
 - No roster endpoints; participants are saved only through the stats import.
 - No pagination or filters beyond what the list needs; `GET /matches` returns every match with its stats.
-- No backend change.
+- This repo makes no backend change; the link and the edit need the backend PR (back#33).
 
 ## Verification
 

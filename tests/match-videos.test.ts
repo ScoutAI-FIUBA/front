@@ -15,7 +15,7 @@ import {
   matchDetailsToUpdateInput,
 } from '../src/pages/partidos/match-form.ts'
 import { matchErrorCopy } from '../src/pages/partidos/match-import.ts'
-import { MatchApiError, buildUpdateDetailsBody, parseMatchErrorBody } from '../src/services/api/matches.client.ts'
+import { MatchApiError, buildUpdateDetailsBody, buildVideoMatchBody, parseMatchErrorBody } from '../src/services/api/matches.client.ts'
 import { mapApiVideo, type ApiVideo } from '../src/services/api/contract-mappers.ts'
 import type { Video } from '../src/types/index.ts'
 
@@ -34,13 +34,12 @@ function video(id: string, overrides: Partial<Video> = {}): Video {
   }
 }
 
-test('linkedVideos keeps only this match, drops deleted ones, newest first', () => {
+test('linkedVideos keeps only this match, newest first', () => {
   const result = linkedVideos(match, [
     video('old', { linkedMatchId: 'match-1', uploadedAt: '2026-09-01T10:00:00Z' }),
     video('new', { linkedMatchId: 'match-1', teamId: 'away', uploadedAt: '2026-10-05T10:00:00Z' }),
     video('other', { linkedMatchId: 'match-2' }),
     video('free'),
-    video('gone', { linkedMatchId: 'match-1', status: 'deleted' as Video['status'] }),
   ])
   assert.deepEqual(result.map((v) => v.id), ['new', 'old'])
   assert.deepEqual(linkedVideos(match, []), [])
@@ -54,7 +53,6 @@ test('linkCandidates offers home and away videos with their link state', () => {
     video('h-free', { uploadedAt: '2026-10-01T10:00:00Z' }),
     video('stranger', { teamId: 'third' }),
     video('failed', { status: 'failed' }),
-    video('deleted', { status: 'deleted' as Video['status'] }),
     video('preparing', { status: 'processing', uploadedAt: '2026-09-01T10:00:00Z' }),
   ])
   assert.deepEqual(
@@ -137,11 +135,24 @@ test('editing sends only what changed and clears an emptied description', () => 
   assert.equal(matchDetailsSchema.safeParse({ matchDate: '2026-10-01', description: 'a'.repeat(2000) }).success, true)
 })
 
+test('the PUT body always carries both keys and a 422 team error becomes a typed MatchApiError', () => {
+  // videos.api.ts imports extension-less modules, so node cannot load it: the body builder and the parser are tested instead.
+  assert.equal(JSON.stringify(buildVideoMatchBody('team-1', null)), '{"team_id":"team-1","match_id":null}')
+  assert.equal(JSON.stringify(buildVideoMatchBody('team-1', 'match-1')), '{"team_id":"team-1","match_id":"match-1"}')
+  const error = parseMatchErrorBody(
+    422,
+    JSON.stringify({ error: { code: 'VIDEO_TEAM_NOT_IN_MATCH', message: 'Video team is not in the match' } }),
+  )
+  assert.ok(error instanceof MatchApiError)
+  assert.equal(error.status, 422)
+  assert.equal(error.code, 'VIDEO_TEAM_NOT_IN_MATCH')
+})
+
 test('the PUT and PATCH services use the agreed endpoints', () => {
   const videos = readFileSync(new URL('../src/services/api/videos.api.ts', import.meta.url), 'utf8')
   assert.match(videos, /\/match`/)
   assert.match(videos, /method: 'PUT'/)
-  assert.match(videos, /team_id: teamId, match_id: matchId/)
+  assert.match(videos, /buildVideoMatchBody\(teamId, matchId\)/)
   const matches = readFileSync(new URL('../src/services/api/matches.api.ts', import.meta.url), 'utf8')
   assert.match(matches, /method: 'PATCH'/)
 })

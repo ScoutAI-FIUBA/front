@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -44,6 +44,15 @@ export function MatchDetailsDialog({
 }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const busyRef = useRef(false)
+  const activeRef = useRef(true)
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => {
+      activeRef.current = false
+    }
+  }, [])
   const {
     register,
     handleSubmit,
@@ -56,23 +65,26 @@ export function MatchDetailsDialog({
   const descriptionLength = watch('description').length
 
   const onSubmit = async (values: MatchDetailsValues) => {
-    if (saving) return
+    if (busyRef.current) return
     const input = matchDetailsToUpdateInput(values, match)
     if (!input) {
       onOpenChange(false)
       return
     }
+    busyRef.current = true
     setSaving(true)
     setError(null)
     try {
       const updated = await matchService.updateDetails(match.id, input)
+      if (!activeRef.current) return
       toast.success('Partido actualizado')
       onSaved(updated)
       onOpenChange(false)
     } catch (saveError) {
-      setError(matchErrorCopy(saveError).description)
+      if (activeRef.current) setError(matchErrorCopy(saveError).description)
     } finally {
-      setSaving(false)
+      busyRef.current = false
+      if (activeRef.current) setSaving(false)
     }
   }
 

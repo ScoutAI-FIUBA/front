@@ -342,6 +342,11 @@ export function buildUpdateDetailsBody(input: UpdateMatchDetailsInput): Record<s
   return body
 }
 
+/** PUT /videos/{id}/match body: both keys are always sent; `matchId: null` unlinks. */
+export function buildVideoMatchBody(teamId: string, matchId: string | null): Record<string, unknown> {
+  return { team_id: teamId, match_id: matchId }
+}
+
 // --- Errors ---
 
 export type MatchErrorCode =

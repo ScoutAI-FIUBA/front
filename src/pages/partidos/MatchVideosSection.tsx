@@ -204,13 +204,14 @@ export function MatchVideosSection({
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button asChild variant="outline" size="sm">
-                  <Link to={videoPath(video.id)}>Abrir video</Link>
+                  <Link to={videoPath(video.id)} aria-label={`Abrir video ${video.title}`}>Abrir video</Link>
                 </Button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   disabled={submitting}
+                  aria-label={`Desvincular ${video.title}`}
                   onClick={() => void runSetMatch(video, null, 'Video desvinculado')}
                 >
                   {busyVideoId === video.id ? 'Desvinculando…' : 'Desvincular'}

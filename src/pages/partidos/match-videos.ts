@@ -16,21 +16,15 @@ export const VIDEOS_EMPTY = 'Todavía no vinculaste videos a este partido'
 export const OTHER_MATCH_LABEL = 'Ya está vinculado a otro partido'
 export const THIS_MATCH_LABEL = 'Ya está vinculado a este partido'
 export const MOVE_CONFIRMATION = 'Se va a mover a este partido'
-export const TEAM_NOT_IN_MATCH_COPY = 'Ese video es de un equipo que no juega este partido.'
-
-/** The backend list already omits deleted videos; this keeps a stale status from ever being shown. */
-function isDeleted(video: Video): boolean {
-  return (video.status as string) === 'deleted'
-}
 
 function newestFirst(left: Video, right: Video): number {
   return right.uploadedAt.localeCompare(left.uploadedAt)
 }
 
-/** Videos linked to the match, newest first. */
+/** Videos linked to the match, newest first. The backend list already omits deleted videos. */
 export function linkedVideos(match: Pick<MatchRecord, 'id'>, videos: readonly Video[]): Video[] {
   return videos
-    .filter((video) => video.linkedMatchId === match.id && !isDeleted(video))
+    .filter((video) => video.linkedMatchId === match.id)
     .sort(newestFirst)
 }
 
@@ -42,7 +36,8 @@ export function linkCandidates(
   match: Pick<MatchRecord, 'id' | 'homeTeamId' | 'awayTeamId'>,
   videos: readonly Video[],
 ): LinkCandidate[] {
-  const usable = videos.filter((video) => !isDeleted(video) && video.status !== 'failed')
+  // Deleted videos never reach the frontend: the backend list omits them.
+  const usable = videos.filter((video) => video.status !== 'failed')
   const forSide = (side: MatchSide, teamId: string): LinkCandidate[] =>
     usable
       .filter((video) => video.teamId === teamId)

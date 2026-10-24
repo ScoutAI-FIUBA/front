@@ -2,7 +2,7 @@ import type { IVideoService, UploadVideoDto } from '../contracts/videos.service'
 import type { Video, VideoStatus } from '@/types'
 import { apiFetch, apiJson } from './http-client'
 import { mapApiVideo, type ApiVideo } from './contract-mappers'
-import { parseMatchErrorBody } from './matches.client'
+import { buildVideoMatchBody, parseMatchErrorBody } from './matches.client'
 
 interface ApiTeamRef {
   id: string
@@ -157,7 +157,7 @@ export const apiVideoService: IVideoService = {
     // Not apiJson: the match error codes (VIDEO_TEAM_NOT_IN_MATCH, ...) must survive.
     const res = await apiFetch(`/videos/${encodeURIComponent(videoId)}/match`, {
       method: 'PUT',
-      body: JSON.stringify({ team_id: teamId, match_id: matchId }),
+      body: JSON.stringify(buildVideoMatchBody(teamId, matchId)),
     })
     const text = await res.text()
     if (!res.ok) throw parseMatchErrorBody(res.status, text)

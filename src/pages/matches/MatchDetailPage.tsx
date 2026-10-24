@@ -136,10 +136,9 @@ function LinkedMatchLink({ matchId }: { matchId: string }) {
     void (async () => {
       try {
         const { match } = await matchService.getWithParticipants(matchId)
-        const [home, away] = await Promise.all([
-          teamService.getById(match.homeTeamId),
-          teamService.getById(match.awayTeamId),
-        ])
+        const teams = await teamService.list()
+        const home = teams.find((team) => team.id === match.homeTeamId)
+        const away = teams.find((team) => team.id === match.awayTeamId)
         if (!home || !away) throw new Error('team unavailable')
         if (active) setLabel(linkedMatchLabel(home.name, away.name, formatMatchDate(match.matchDate)))
       } catch {
