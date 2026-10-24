@@ -198,3 +198,12 @@ test('player payload sends null instead of invented defaults; no position reads 
   assert.equal(positionLabel(null), 'Sin posición')
   assert.equal(positionLabel('PG'), 'Base')
 })
+
+test('rosterCandidates treats 05 and 5 as the same jersey, so neither is created', () => {
+  const preview = makePreview([
+    { side: 'HOME', jersey: '05', name: 'UNO DOS' },
+    { side: 'HOME', jersey: '5', name: 'TRES CUATRO' },
+    { side: 'HOME', jersey: '07', name: 'SIETE BUENO' },
+  ])
+  assert.deepEqual(rosterCandidates(preview, 'HOME').map((c) => c.jerseyNumber), ['07'])
+})

@@ -1,3 +1,4 @@
+import { normalizeJerseyNumber } from '@/lib/jersey'
 import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { Player } from '@/types'
@@ -91,14 +92,17 @@ export const mockPlayerService: IPlayerService = {
     const skipped: TeamRosterResult['skipped'] = []
     updateStore((s) => {
       const taken = new Set(
-        s.players.filter((p) => p.teamId === teamId && p.jerseyNumber).map((p) => p.jerseyNumber),
+        s.players
+          .filter((p) => p.teamId === teamId && p.jerseyNumber)
+          .map((p) => normalizeJerseyNumber(p.jerseyNumber as string)),
       )
       for (const input of inputs) {
-        if (taken.has(input.jerseyNumber)) {
+        const jersey = normalizeJerseyNumber(input.jerseyNumber)
+        if (taken.has(jersey)) {
           skipped.push({ jerseyNumber: input.jerseyNumber, reason: 'jersey_taken' })
           continue
         }
-        taken.add(input.jerseyNumber)
+        taken.add(jersey)
         const player: Player = {
           id: generateId('player'),
           firstName: input.firstName,

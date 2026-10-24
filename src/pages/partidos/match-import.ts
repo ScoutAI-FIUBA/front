@@ -13,6 +13,7 @@ import {
   ApiTimeoutError,
   isApiAuthenticationError,
 } from '../../services/api/errors.ts'
+import { normalizeJerseyNumber } from '../../lib/jersey.ts'
 import { MatchApiError } from '../../services/api/matches.client.ts'
 
 export const MAX_STATS_FILE_BYTES = 5 * 1024 * 1024
@@ -321,13 +322,16 @@ export function rosterCandidates(preview: MatchStatsImportPreview, side: MatchSi
   const counts = new Map<string, number>()
   for (const player of inFile) {
     const jersey = player.jerseyNumber
-    if (jersey) counts.set(jersey, (counts.get(jersey) ?? 0) + 1)
+    if (jersey) {
+      const key = normalizeJerseyNumber(jersey)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
   }
   const result: RosterCandidate[] = []
   for (const player of preview.report.unlinkedPlayers) {
     if (player.teamSide !== side || player.reason !== 'no_roster_player' || !player.jerseyNumber) continue
     if (!/^[0-9]{1,2}$/.test(player.jerseyNumber)) continue
-    if ((counts.get(player.jerseyNumber) ?? 0) > 1) continue
+    if ((counts.get(normalizeJerseyNumber(player.jerseyNumber)) ?? 0) > 1) continue
     const split = splitFileName(player.name)
     if (!split) continue
     result.push({ ...split, jerseyNumber: player.jerseyNumber, fileName: player.name })
