@@ -266,10 +266,12 @@ export function tailSpan(timeline: GroupTimeline, tailId: GroupPlaybackTailId): 
   return tail.steps * timeline.spacing
 }
 
-/** Dot text: jersey number first, else the initials of the shared legend label, else a fallback. */
+/** Dot text: jersey number, else the number of "Jugador detectado N", else roster-name initials, else a fallback. */
 export function groupDotLabel(jerseyNumber: string | null, label: string | undefined, fallback: string): string {
   const jersey = jerseyNumber?.trim().replace(/^#/, '')
   if (jersey) return jersey
+  const detected = /^\s*Jugador detectado\s+(\d+)\s*$/i.exec(label ?? '')
+  if (detected) return detected[1]
   const initials = (label ?? '')
     .split(/\s+/)
     .filter((word) => /^\p{L}/u.test(word))
@@ -277,4 +279,43 @@ export function groupDotLabel(jerseyNumber: string | null, label: string | undef
     .map((word) => word[0].toUpperCase())
     .join('')
   return initials || fallback
+}
+
+export interface GroupDotLabelInput {
+  key: string
+  jerseyNumber: string | null
+  label: string | undefined
+  fallback: string
+}
+
+/** Dot texts for every shown player; colliding texts get their 1-based legend position appended. */
+export function groupDotLabels(inputs: GroupDotLabelInput[]): Map<string, string> {
+  const base = inputs.map((input) => groupDotLabel(input.jerseyNumber, input.label, input.fallback))
+  const counts = new Map<string, number>()
+  base.forEach((text) => counts.set(text, (counts.get(text) ?? 0) + 1))
+  const labels = new Map<string, string>()
+  inputs.forEach((input, index) => {
+    labels.set(input.key, (counts.get(base[index]) ?? 0) > 1 ? `${base[index]}${index + 1}` : base[index])
+  })
+  return labels
+}
+
+/** Longest slice of real time one animation frame may advance, so a hidden tab cannot make the replay jump. */
+export const MAX_FRAME_SECONDS = 0.1
+
+export function cappedElapsedSeconds(nowMs: number, lastMs: number): number {
+  const seconds = (nowMs - lastMs) / 1000
+  return Number.isFinite(seconds) ? Math.min(MAX_FRAME_SECONDS, Math.max(0, seconds)) : 0
+}
+
+/** 0-based shared step of the playhead (the scrubber position). */
+export function stepIndexAtProgress(timeline: GroupTimeline, progress: number): number {
+  return Math.max(0, stepAtTime(timeline, timeAtProgress(timeline, progress)) - 1)
+}
+
+/** Progress that lands exactly on the given 0-based shared step. */
+export function progressAtStepIndex(timeline: GroupTimeline, stepIndex: number): number {
+  if (timeline.ticks.length === 0) return 0
+  const index = Math.min(timeline.ticks.length - 1, Math.max(0, Math.round(stepIndex)))
+  return progressAtTime(timeline, timeline.ticks[index])
 }

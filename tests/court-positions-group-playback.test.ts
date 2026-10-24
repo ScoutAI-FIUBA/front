@@ -4,8 +4,13 @@ import test from 'node:test'
 import {
   GROUP_PLAYBACK_TAILS,
   advanceProgress,
+  MAX_FRAME_SECONDS,
   buildGroupTimeline,
+  cappedElapsedSeconds,
   groupDotLabel,
+  groupDotLabels,
+  progressAtStepIndex,
+  stepIndexAtProgress,
   playbackDurationSeconds,
   pointAt,
   progressAtTime,
@@ -185,6 +190,64 @@ test('survives heavily fragmented data with many partial players', () => {
     })
   }
   assert.equal(timeline.tracks.length, 40)
+  timeline.tracks.forEach((track) => {
+    for (let p = 0; p <= 1; p += 0.1) {
+      const time = timeAtProgress(timeline, p)
+      const point = pointAt(track, time, timeline.spacing, timeline.maxGap)
+      if (point) assert.ok(Number.isFinite(point.xM) && Number.isFinite(point.yM))
+      tailSegments(track, time, tailSpan(timeline, 'long'), timeline.spacing, timeline.maxGap).forEach((segment) => {
+        assert.ok([segment.x1, segment.y1, segment.x2, segment.y2, segment.opacity].every(Number.isFinite))
+      })
+    }
+  })
+})
+
+test('a hidden tab cannot make the replay jump', () => {
+  const timeline = twoPlayers()
+  assert.equal(cappedElapsedSeconds(30000, 0), MAX_FRAME_SECONDS)
+  assert.equal(cappedElapsedSeconds(1016, 1000), 0.016)
+  assert.equal(cappedElapsedSeconds(900, 1000), 0)
+  assert.equal(cappedElapsedSeconds(Number.NaN, 0), 0)
+  const result = advanceProgress(0.1, cappedElapsedSeconds(30000, 0), timeline, 1)
+  assert.equal(result.ended, false)
+  assert.ok(result.progress < 0.2)
+})
+
+test('dot labels use the detected number, stay unique and are deterministic', () => {
+  assert.equal(groupDotLabel(null, 'Jugador detectado 3', 'J'), '3')
+  const labels = groupDotLabels([
+    { key: 'a', jerseyNumber: null, label: 'Jugador detectado 1', fallback: 'J' },
+    { key: 'b', jerseyNumber: null, label: 'Jugador detectado 2', fallback: 'J' },
+    { key: 'c', jerseyNumber: null, label: 'Juan Pérez', fallback: 'J' },
+    { key: 'd', jerseyNumber: null, label: 'José Paz', fallback: 'J' },
+    { key: 'e', jerseyNumber: '10', label: 'Ana', fallback: 'J' },
+  ])
+  assert.deepEqual([...labels.values()], ['1', '2', 'JP3', 'JP4', '10'])
+  assert.equal(new Set(labels.values()).size, 5)
+})
+
+test('scrubber maps steps to progress and back exactly', () => {
+  const timeline = twoPlayers()
+  for (let step = 0; step < timeline.ticks.length; step += 1) {
+    assert.equal(stepIndexAtProgress(timeline, progressAtStepIndex(timeline, step)), step)
+  }
+  assert.equal(progressAtStepIndex(timeline, 0), 0)
+  assert.equal(progressAtStepIndex(timeline, 99), 1)
+  assert.equal(progressAtStepIndex(timeline, -3), 0)
+  assert.equal(progressAtStepIndex(buildGroupTimeline([]), 2), 0)
+  assert.equal(stepIndexAtProgress(buildGroupTimeline([]), 0.5), 0)
+})
+
+test('tail is empty on the far side of a gap and pointAt agrees at gap edges', () => {
+  const timeline = buildGroupTimeline([{ key: 'a', positions: [pos(0, 0), pos(10, 1), pos(200, 50), pos(210, 51)] }])
+  const [a] = timeline.tracks
+  const { spacing, maxGap } = timeline
+  assert.equal(pointAt(a, 100, spacing, maxGap), null)
+  assert.deepEqual(tailSegments(a, 100, 1000, spacing, maxGap), [])
+  assert.deepEqual(pointAt(a, 195, spacing, maxGap), { xM: 50, yM: 0 })
+  assert.deepEqual(tailSegments(a, 195, 1000, spacing, maxGap), [])
+  assert.deepEqual(pointAt(a, 18, spacing, maxGap), { xM: 1, yM: 0 })
+  assert.equal(tailSegments(a, 18, 1000, spacing, maxGap)[0].x2, 1)
 })
 
 test('page wires the joint replay opt-in, defaulting to the full route', () => {
@@ -210,6 +273,9 @@ test('group playback component fits the window, honours reduced motion and avoid
   assert.match(source, /Paso \$\{step\} de \$\{stepCount\}/)
   assert.match(source, /No representa tiempo real ni está sincronizado con el video/)
   assert.match(source, /type="range"/)
+  assert.match(source, /role="group" aria-label="Jugadores visibles"/)
+  assert.match(source, /setProgress\(progressRef\.current\)/)
+  assert.match(source, /cappedElapsedSeconds/)
   assert.doesNotMatch(source, /muestras|minutos/i)
   const pure = readFileSync(new URL('../src/components/analysis/court-positions-group-playback.ts', import.meta.url), 'utf8')
   assert.doesNotMatch(pure, /from '@\//)

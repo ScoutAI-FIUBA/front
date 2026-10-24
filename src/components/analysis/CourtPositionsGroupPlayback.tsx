@@ -17,9 +17,12 @@ import {
   GROUP_PLAYBACK_TAILS,
   advanceProgress,
   buildGroupTimeline,
-  groupDotLabel,
+  cappedElapsedSeconds,
+  groupDotLabels,
   pointAt,
+  progressAtStepIndex,
   stepAtTime,
+  stepIndexAtProgress,
   tailSegments,
   tailSpan,
   timeAtProgress,
@@ -60,6 +63,15 @@ export function CourtPositionsGroupPlayback({
     () => new Map(players.map((player) => [String(analysisJobPlayerKey(player)), player])),
     [players],
   )
+  const dotLabels = useMemo(
+    () => groupDotLabels(players.map((player) => ({
+      key: String(analysisJobPlayerKey(player)),
+      jerseyNumber: player.jerseyNumber,
+      label: playerLabels.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey),
+      fallback: player.stablePlayerId ? 'J' : String(player.trackId),
+    }))),
+    [players, playerLabels],
+  )
   const [progress, setProgress] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState<number>(1)
@@ -78,7 +90,7 @@ export function CourtPositionsGroupPlayback({
     let last = performance.now()
     let lastRender = last
     const tick = (now: number) => {
-      const result = advanceProgress(progressRef.current, (now - last) / 1000, timeline, speed)
+      const result = advanceProgress(progressRef.current, cappedElapsedSeconds(now, last), timeline, speed)
       last = now
       progressRef.current = result.progress
       if (result.ended) {
@@ -138,7 +150,7 @@ export function CourtPositionsGroupPlayback({
     return {
       key: track.key,
       color: playerColor(player),
-      dot: groupDotLabel(player.jerseyNumber, playerLabels.get(analysisJobPlayerKey(player) as AnalysisJobPlayerKey), player.stablePlayerId ? 'J' : String(player.trackId)),
+      dot: dotLabels.get(track.key) ?? '',
       point,
       tail: tailSegments(track, time, span, tolerance, timeline.maxGap),
     }
@@ -181,7 +193,7 @@ export function CourtPositionsGroupPlayback({
         </svg>
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" aria-label="Jugadores visibles">
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground" role="group" aria-label="Jugadores visibles">
         {players.map((player) => (
           <span key={analysisJobPlayerKey(player)} className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: playerColor(player) }} aria-hidden="true" />
@@ -196,7 +208,10 @@ export function CourtPositionsGroupPlayback({
         ) : (
           <div className="flex flex-wrap items-center gap-2">
             {isPlaying ? (
-              <Button type="button" size="sm" variant="outline" onClick={() => setIsPlaying(false)}>
+              <Button type="button" size="sm" variant="outline" onClick={() => {
+                setProgress(progressRef.current)
+                setIsPlaying(false)
+              }}>
                 <Pause className="h-4 w-4" aria-hidden="true" /> Pausar
               </Button>
             ) : (
@@ -215,10 +230,11 @@ export function CourtPositionsGroupPlayback({
           <input
             type="range"
             min="0"
-            max="1000"
+            max={Math.max(1, stepCount - 1)}
             step="1"
-            value={Math.round(progress * 1000)}
-            onChange={(event) => scrubTo(Number(event.currentTarget.value) / 1000)}
+            value={stepIndexAtProgress(timeline, progress)}
+            disabled={stepCount < 2}
+            onChange={(event) => scrubTo(progressAtStepIndex(timeline, Number(event.currentTarget.value)))}
             className="h-2 w-full cursor-pointer accent-primary"
             aria-valuetext={stepText}
           />
