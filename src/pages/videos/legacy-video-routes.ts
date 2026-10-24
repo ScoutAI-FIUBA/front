@@ -19,3 +19,8 @@ export function legacyVideoRedirectPath({
 
   return `${pathname}${search}${hash}`
 }
+
+/** App-made links to the old video detail (/partidos/:videoId) always carried ?tab=. */
+export function isLegacyVideoDetailSearch(search: string): boolean {
+  return new URLSearchParams(search).has('tab')
+}

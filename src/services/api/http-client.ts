@@ -133,7 +133,8 @@ export async function apiFetch(
   const token = requestSession?.token ?? null
 
   const headers = new Headers(init?.headers)
-  if (!headers.has('Content-Type') && init?.body) {
+  // FormData: the browser sets multipart/form-data with its boundary.
+  if (!headers.has('Content-Type') && init?.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
   if (token) {

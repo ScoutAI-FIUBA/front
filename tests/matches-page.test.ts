@@ -228,7 +228,7 @@ test('Videos uses the canonical upload and detail routes with isolated legacy re
   const appSource = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 
   assert.match(source, /videoUploadPath\(\)/)
-  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<LegacyVideoRouteRedirect destination="upload" \/>\}/)
+  assert.match(appSource, /path="\/partidos\/nuevo" element=\{<MatchCreatePage \/>\}/)
   assert.match(appSource, /path="\/videos\/subir" element=\{<VideoUploadPage \/>\}/)
   assert.match(appSource, /path="\/videos\/:videoId" element=\{<MatchDetailPage \/>\}/)
 })

@@ -68,8 +68,10 @@ export interface TeamMembership {
   leftAt?: string
 }
 
+/** @deprecated legacy mock analysis only */
 export type MatchStatus = 'scheduled' | 'completed' | 'cancelled'
 
+/** @deprecated legacy mock analysis only */
 export interface Match {
   id: string
   homeTeamId: string
@@ -81,6 +83,7 @@ export interface Match {
   title?: string
 }
 
+/** @deprecated legacy mock analysis only */
 export interface MatchRoster {
   id: string
   matchId: string
@@ -142,6 +145,7 @@ export type EventType =
 
 export type Quarter = 1 | 2 | 3 | 4 | 'OT'
 
+/** @deprecated legacy mock analysis only */
 export interface GameEvent {
   id: string
   matchId: string
@@ -579,4 +583,151 @@ export interface MockStore {
   analysisSessions: AnalysisSession[]
   manualAnalyses: SavedManualAnalysis[]
   activities: ActivityItem[]
+}
+
+// --- Matches (real /matches backend) ---
+
+export type MatchSide = 'HOME' | 'AWAY'
+
+export interface ShootingSplit {
+  made: number
+  attempted: number
+  /** 0..100 with one decimal, computed by the backend; null when nothing was attempted. */
+  pct: number | null
+}
+
+export interface BoxScoreLine {
+  minutes: string
+  secondsPlayed: number
+  points: number
+  twoPoint: ShootingSplit
+  threePoint: ShootingSplit
+  freeThrows: ShootingSplit
+  rebounds: { defensive: number; offensive: number; total: number }
+  assists: number
+  steals: number
+  turnovers: number
+  blocks: number
+  blocksReceived: number
+  fouls: number
+  foulsDrawn: number
+  valuation: number
+  plusMinus: number
+}
+
+export interface BoxScorePlayerLine extends BoxScoreLine {
+  teamSide: MatchSide
+  jerseyNumber: string | null
+  name: string
+  played: boolean
+  playerId: string | null
+}
+
+export interface BoxScoreTeamTotals {
+  name: string
+  points: number
+  totals: BoxScoreLine | null
+}
+
+export interface MatchBoxScore {
+  title: string | null
+  competition: string | null
+  teams: Record<MatchSide, BoxScoreTeamTotals>
+  players: BoxScorePlayerLine[]
+}
+
+export type MatchStatsFormat = 'none' | 'cabb_excel_v1' | 'unknown'
+
+export interface MatchRecord {
+  id: string
+  homeTeamId: string
+  awayTeamId: string
+  winnerTeamId: string | null
+  /** YYYY-MM-DD */
+  matchDate: string
+  description: string | null
+  statsFormat: MatchStatsFormat
+  boxScore: MatchBoxScore | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MatchParticipant {
+  id: string
+  playerId: string | null
+  teamSide: MatchSide
+  displayName: string
+  jerseyNumber: string | null
+}
+
+export interface MatchWithParticipants {
+  match: MatchRecord
+  participants: MatchParticipant[]
+}
+
+export type UnlinkedReason =
+  | 'no_roster_player'
+  | 'ambiguous_jersey_number'
+  | 'no_jersey_number'
+  | 'no_team_selected'
+
+export interface MatchImportTeamCheck {
+  side: MatchSide
+  excelName: string
+  teamId: string | null
+  teamName: string | null
+  /** 0..1 */
+  nameScore: number | null
+  /** 0..1 */
+  rosterScore: number | null
+  matchesSelectedTeam: boolean | null
+  playersInFile: number
+  playersWhoPlayed: number
+}
+
+export interface MatchImportLinkedPlayer {
+  teamSide: MatchSide
+  jerseyNumber: string | null
+  name: string
+  playerId: string
+  rosterName: string
+}
+
+export interface MatchImportUnlinkedPlayer {
+  teamSide: MatchSide
+  jerseyNumber: string | null
+  name: string
+  reason: UnlinkedReason
+}
+
+/** Snake_case on purpose: this is the exact wire body of PUT /matches/{id}/stats. */
+export interface MatchStatsSavePayload {
+  stats: unknown
+  winner_team_id: string | null
+  participants: {
+    team_side: string
+    display_name: string
+    player_id: string | null
+    jersey_number: string | null
+  }[]
+}
+
+export interface MatchStatsImportPreview {
+  winnerTeamId: string | null
+  boxScore: MatchBoxScore | null
+  report: {
+    teams: MatchImportTeamCheck[]
+    linkedPlayers: MatchImportLinkedPlayer[]
+    unlinkedPlayers: MatchImportUnlinkedPlayer[]
+    warnings: string[]
+  }
+  savePayload: MatchStatsSavePayload
+}
+
+export interface TeamMismatchDetail {
+  side: MatchSide
+  selectedTeam: string
+  nameInFile: string
+  nameScore: number | null
+  rosterScore: number | null
 }

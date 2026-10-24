@@ -34,10 +34,10 @@ test('upload success enters the exact Video AI analysis regardless of return con
   assert.equal(videoUploadSuccessPath(new URLSearchParams(), { id: 'video/1', teamId: 'team-1' }), '/videos/video%2F1?tab=reporte')
 })
 
-test('upload accepts Partidos as a product return destination', () => {
-  assert.equal(safeVideoUploadReturnPath('/partidos'), '/partidos')
+test('upload no longer accepts Partidos (now Matches) as a return destination', () => {
+  assert.equal(safeVideoUploadReturnPath('/partidos'), null)
   const path = videoUploadPath({ returnTo: '/partidos' })
-  assert.equal(new URL(path, 'https://scoutai.local').searchParams.get('return_to'), '/partidos')
+  assert.equal(new URL(path, 'https://scoutai.local').searchParams.has('return_to'), false)
 })
 
 test('upload drop affordance has real handlers and a pending guard', () => {

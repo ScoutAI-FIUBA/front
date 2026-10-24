@@ -2,7 +2,7 @@
 
 ## Current Integration Model
 
-The frontend can use the backend for auth, teams, players, videos, and clip collections. It also uses the real processing-job backend for analysis jobs (jobs, team sides, stats, shot chart, court positions, similar clips) and the player analysis stats endpoints. It uses mocks for matches and for the legacy analysis sessions.
+The frontend can use the backend for auth, teams, players, videos, matches, and clip collections. It also uses the real processing-job backend for analysis jobs (jobs, team sides, stats, shot chart, court positions, similar clips) and the player analysis stats endpoints. It uses mocks only for the legacy analysis sessions.
 
 Service selection happens in `src/services/registry.ts`.
 
@@ -10,7 +10,7 @@ Service selection happens in `src/services/registry.ts`.
 
 - `VITE_API_BASE_URL`: backend API base URL.
 - `VITE_API_URL`: fallback supported by `src/services/api/http-client.ts`.
-- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, videos, and clip collections.
+- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, videos, matches, and clip collections.
 
 `.env.example` currently points `VITE_API_BASE_URL` to the deployed backend and documents the mock toggle.
 
@@ -19,7 +19,7 @@ Service selection happens in `src/services/registry.ts`.
 `src/services/api/http-client.ts` defines:
 
 - `API_BASE_URL`: from `VITE_API_BASE_URL`, then `VITE_API_URL`, then `http://localhost:8005`.
-- `apiFetch`: fetch wrapper with JSON content-type handling, credentials, bearer token, and refresh-on-401 support.
+- `apiFetch`: fetch wrapper with JSON content-type handling (not set when the body is `FormData`, so the browser adds the multipart boundary), credentials, bearer token, and refresh-on-401 support.
 - `apiJson`: JSON helper that throws parsed API errors and handles `204` responses.
 
 ## Auth Token Behavior
@@ -39,6 +39,7 @@ Backend-capable services:
 - Players: `apiPlayerService` or `mockPlayerService`.
 - Videos: `apiVideoService` or `mockVideoService`.
 - Clip collections: `apiClipCollectionService` or `mockClipCollectionService`.
+- Matches: `apiMatchService` or `mockMatchService`.
 - Player analysis stats: `apiPlayerAnalysisService` or `mockPlayerAnalysisService` (follows `VITE_USE_MOCK_API`).
 
 Always real API (no mock):
@@ -47,8 +48,24 @@ Always real API (no mock):
 
 Mock-only services:
 
-- Matches: `mockMatchService`.
 - Analysis (legacy sessions): `mockAnalysisService`.
+
+## Matches Backend Integration
+
+Endpoints under `/matches` require bearer auth; ownership comes from the token. Client: `src/services/api/matches.client.ts` (pure mappers and error parsing) and `src/services/api/matches.api.ts`.
+
+- `POST /matches` with `home_team_id`, `away_team_id`, `match_date` (`YYYY-MM-DD`), optional `description` (max 2000) returns `201 {match}`. Errors: `422 INVALID_MATCH_TEAMS`, `404 TEAM_NOT_FOUND`.
+- `GET /matches?team_id=` returns `{matches[]}` sorted by date descending, with the full stats of each match and no pagination.
+- `GET /matches/{id}/stats` returns `{match, participants[]}`. A non-UUID id returns a FastAPI `422 {detail:[...]}`, not 404.
+- `POST /matches/stats/import-preview` (multipart: `file` up to 5 MiB, `home_team_id`, `away_team_id`, optional `allow_team_mismatch`) returns `winner_team_id`, `participants[]`, `stats` (`source` `cabb_excel`, `schema_version` 1, `title`, `competition`, `teams.HOME/AWAY`, `players[]`), and `report` (`teams[]`, `linked_players[]`, `unlinked_players[]` with `reason`, `warnings[]`). Nothing is saved. The file decides which table is HOME; players are linked and the winner is computed only when both team ids are sent. `winner_team_id` is null on a tie. Errors: `422 INVALID_STATS_FILE`, `422 TEAM_MISMATCH` (`details.teams[]`), `422 INVALID_MATCH_TEAMS`, `413 STATS_FILE_TOO_LARGE`, `404 TEAM_NOT_FOUND`.
+- `PUT /matches/{id}/stats` with `stats`, `winner_team_id`, `participants[]` is a full replace in one transaction (omitted winner or participants are cleared) and does not re-check `TEAM_MISMATCH`. Errors: `422 INVALID_WINNER_TEAM`, `404 PLAYER_NOT_FOUND`, `404 MATCH_NOT_FOUND`. The frontend sends the raw snake_case preview data unchanged.
+- The backend has no `PUT`/`DELETE /matches/{id}`, no roster endpoints, and no match<->video link. Linking a match to several videos is planned for a later phase (a video belongs to at most one match; videos can be partial clips, so no totals comparison is planned) and needs an additive backend change.
+- Player link is by jersey number only. `participants` holds only players who played; players with 0 minutes exist only in `stats.players` with `played: false`.
+- The preview request uses a 60-second timeout instead of the 20-second default.
+
+Two error envelopes exist: `{"error":{"code","message","details"?}}` and FastAPI `{"detail":[...]|"..."}` (mapped to `VALIDATION_ERROR` only for status 422; other statuses such as 404/405 keep a null code). Messages and warnings are English strings, so the frontend maps codes to Spanish copy and keeps the backend message as a secondary technical detail.
+
+Percentage convention: the match preview and stored stats use `pct` as 0..100 with one decimal, or `null` without attempts. The frontend displays it as is and never recomputes it.
 
 ## Videos Backend Integration
 
@@ -107,7 +124,7 @@ Percentage conventions differ by endpoint and must not be mixed:
 - `analysis-stats` `pct`: fraction 0..1 or `null` when there are no attempts. The client keeps the fraction; conversion to a percent happens only when formatting for display.
 - `players.stats` (the `stats` field of every `GET /players` item; canonical shape `games_played`, `points.total`, `field_goals.made_total` / `attempted_total` / `percentage`, etc.): integers; `percentage` is an integer 0..100 that is 0 when there are no attempts, so the frontend never displays it. The list row reads only `games_played`, `points.total`, and `field_goals.made_total` / `attempted_total` and computes the percent from made/attempted. Older backends may omit `stats`; a missing or malformed value maps to no summary ("Sin análisis").
 - `GET /players/{id}/stats` (not consumed by the frontend): same shape.
-- Match stats import preview (not consumed by the frontend): 0..100 with one decimal.
+- Match stats (import preview and stored box score, consumed by Matches): `pct` is 0..100 with one decimal, or `null` without attempts; shown as is, never recomputed. `name_score` and `roster_score` in the preview report are 0..1.
 
 `PUT /jobs/{job_id}/our-team` now returns `{ job, player_stats_sync }` (the `job` object is unchanged). `analysis-job-team-sides.client.ts` reads only `job` and ignores `player_stats_sync`.
 

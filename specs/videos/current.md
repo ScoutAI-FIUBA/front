@@ -11,7 +11,7 @@ ScoutAI v2 Phase 2 material library.
 - `/videos`: canonical global/team-filtered video library.
 - `/videos/subir`: canonical product entry for uploading a video.
 - `/videos/:videoId`: canonical video detail.
-- `/partidos`, `/partidos/nuevo`, and `/partidos/:videoId`: temporary compatibility redirects.
+- `/partidos/:id?tab=...`: temporary compatibility redirect to `/videos/:id`. `/partidos` and `/partidos/nuevo` belong to Matches (`specs/matches/current.md`).
 - `/videos/:videoId/colecciones`: preserved clips/collections route.
 
 ## Current Behavior
@@ -39,7 +39,7 @@ ScoutAI v2 Phase 2 material library.
 
 - The canonical desktop experience is a three-step `Nuevo video` flow: existing team selection, video file selection, and confirmation. It changes presentation and navigation language without changing the upload payload or starting analysis automatically.
 - `team_id` preselects a valid team.
-- `return_to` is allow-listed to `/videos`, `/analisis/nuevo`, or `/partidos`; external or unsupported targets are rejected.
+- `return_to` is allow-listed to `/videos` or `/analisis/nuevo`; external or unsupported targets are rejected.
 - Upload success updates the shared catalogue with the returned video and opens `/videos/:videoId?tab=reporte`; contextual return paths remain available for cancel/back behavior and legacy entry compatibility.
 - Drag-and-drop has real drag/drop handlers and accepts one video file; picker and drop share the same validation.
 - Submission is single-flight and controls are disabled while the upload is pending.

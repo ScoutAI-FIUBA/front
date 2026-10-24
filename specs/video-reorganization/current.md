@@ -17,10 +17,10 @@
 
 ## Legacy compatibility
 
-- `/partidos`, `/partidos/nuevo`, and `/partidos/:videoId` are temporary redirect-only routes.
-- Each redirect preserves the original search params and hash.
-- New product links do not target `/partidos`.
-- The redirect definitions are isolated so they can be removed before introducing a future `/partidos/:matchId` contract.
+- Only `/partidos/:id?tab=...` (a search with a `tab` param, which every app-made old video link carried) is a temporary redirect-only route to `/videos/:videoId`. It preserves the original search params and hash (`isLegacyVideoDetailSearch` in `src/pages/videos/legacy-video-routes.ts`).
+- `/partidos` and `/partidos/nuevo` no longer redirect: they belong to Matches (`specs/matches/current.md`). Old bookmarks to them open Matches, and an old `/partidos/:videoId` without `tab` shows the Matches not-found state with a link to Videos.
+- New video links do not target `/partidos`.
+- Before the Matches release, the "Partido" shown in the library and detail was composed in the frontend from a real `Video`, its latest `ProcessingJob`, and its team; the backend `Match` entity was not used. That behavior (library, detail tabs, Reporte sections, clips, upload) is the Videos behavior documented in this spec and in `specs/videos/current.md`, and its URL contract moved from `/partidos/:videoId` to `/videos/:videoId`.
 
 ## Library behavior
 
@@ -58,15 +58,14 @@
 
 ## Home and navigation
 
-- Primary navigation is `Inicio / Videos / Equipos / Jugadores`.
+- Primary navigation is `Inicio / Videos / Partidos / Equipos / Jugadores` (`Partidos` is the Matches feature, added after this reorganization).
 - Inicio presents the priority and recent items as videos and links only to canonical video routes.
 - Auth copy may describe videos and analysis but authentication behavior and protected-route restoration remain unchanged.
 
 ## Non-scope
 
-- No real Match pages or backend `/matches` integration.
-- No Excel/CSV import.
-- No video associations with matches or players.
+- Real Match pages, the `/matches` integration, and the Excel/CSV import are specified in `specs/matches/current.md`, not here.
+- No video<->match associations in this release (linking a match to several videos is planned for a later phase; a video belongs to at most one match).
 - No visual redesign, dependency change, file move, or backend change.
 
 ## Verification

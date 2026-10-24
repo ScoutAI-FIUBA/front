@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { legacyVideoRedirectPath } from '../src/pages/videos/legacy-video-routes.ts'
+import { isLegacyVideoDetailSearch, legacyVideoRedirectPath } from '../src/pages/videos/legacy-video-routes.ts'
 
 test('legacy video routes preserve search params and hash', () => {
   assert.equal(
@@ -23,12 +23,16 @@ test('legacy video routes preserve search params and hash', () => {
   )
 })
 
-test('legacy Partido routes stay redirect-only and canonical Video routes own the product pages', () => {
+test('Matches own /partidos and only the legacy ?tab= detail link redirects to Videos', () => {
   const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
 
   assert.match(app, /path="\/videos" element=\{<MatchesPage \/>\}/)
   assert.match(app, /path="\/videos\/:videoId" element=\{<MatchDetailPage \/>\}/)
-  assert.match(app, /path="\/partidos" element=\{<LegacyVideoRouteRedirect destination="library" \/>\}/)
-  assert.match(app, /path="\/partidos\/nuevo" element=\{<LegacyVideoRouteRedirect destination="upload" \/>\}/)
-  assert.match(app, /path="\/partidos\/:videoId" element=\{<LegacyVideoRouteRedirect destination="detail" \/>\}/)
+  assert.match(app, /path="\/partidos" element=\{<MatchListPage \/>\}/)
+  assert.match(app, /path="\/partidos\/nuevo" element=\{<MatchCreatePage \/>\}/)
+  assert.match(app, /path="\/partidos\/:matchId" element=\{<MatchRecordDetailPage \/>\}/)
+  assert.match(app, /path="\/partidos\/:matchId\/estadisticas" element=\{<MatchStatsImportPage \/>\}/)
+  assert.doesNotMatch(app, /LegacyVideoRouteRedirect/)
+  assert.equal(isLegacyVideoDetailSearch('?tab=reporte'), true)
+  assert.equal(isLegacyVideoDetailSearch(''), false)
 })

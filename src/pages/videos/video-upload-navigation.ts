@@ -12,11 +12,7 @@ export function safeVideoUploadReturnPath(value: string | null): string | null {
   try {
     const parsed = new URL(value, 'https://scoutai.local')
     if (parsed.origin !== 'https://scoutai.local') return null
-    if (
-      parsed.pathname !== '/videos' &&
-      parsed.pathname !== '/analisis/nuevo' &&
-      parsed.pathname !== '/partidos'
-    ) {
+    if (parsed.pathname !== '/videos' && parsed.pathname !== '/analisis/nuevo') {
       return null
     }
     return `${parsed.pathname}${parsed.search}`

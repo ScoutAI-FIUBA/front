@@ -41,7 +41,7 @@
 ## Navigation
 
 - The primary and empty-state CTA is `/videos/subir`.
-- Inicio contains no primary links to `/partidos`, `/analisis`, or `/analisis/nuevo`.
+- Inicio contains no primary links to `/partidos`, `/analisis`, or `/analisis/nuevo`. Partidos is reachable from the shell.
 - The shell Inicio link and ScoutAI logo point to `/`.
 - Direct login and registration finish at `/`; preserved internal deep links still return to their exact destination. Unauthenticated `/` visits pass through `ProtectedRoute` to `/login` and return to `/` without a redirect loop.
 
