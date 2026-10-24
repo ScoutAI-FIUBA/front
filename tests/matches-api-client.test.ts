@@ -217,6 +217,12 @@ test('buildPreviewFormData uses the backend field names', () => {
   assert.equal(denied.has('allow_team_mismatch'), false)
 })
 
+test('buildPreviewFormData omits the team ids when the file is only being read', () => {
+  const form = buildPreviewFormData({ file: new Blob(['x']), fileName: 'planilla.xlsx' })
+  assert.equal(form.has('home_team_id'), false)
+  assert.equal(form.has('away_team_id'), false)
+})
+
 test('apiFetch leaves Content-Type to the browser for FormData and keeps JSON for strings', async (t) => {
   const original = globalThis.fetch
   t.after(() => {

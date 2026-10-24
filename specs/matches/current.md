@@ -36,7 +36,7 @@
 
 ## Create and import flow (`/partidos/nuevo`)
 
-- Fields: home team (required, `Elegí el equipo local`), away team (required, different from home, `Elegí un equipo distinto al local`), date (`YYYY-MM-DD`, defaults to today, future dates allowed), description (optional, trimmed, max 2000 characters with a live counter, `Máximo 2000 caracteres`). Team options come from `teamService.list()` and the away list disables the home team. With fewer than two teams an empty state links to `/equipos`.
+- Fields: home team (required, `Elegí el equipo local`), away team (required, different from home, `Elegí un equipo distinto al local`), date (`YYYY-MM-DD`, defaults to today, future dates allowed), description (optional, trimmed, max 2000 characters with a live counter, `Máximo 2000 caracteres`). Team options come from `teamService.list()` and the away list disables the home team. With fewer than two teams the form still opens, because each side offers `Crear equipo nuevo` (see below).
 - Optional `Importar estadísticas (opcional)` dropzone (keyboard-focusable). Accepts `.xlsx` or `.csv` (case-insensitive), non-empty, at most 5 MiB (`El archivo supera 5 MB`); anything else is rejected before upload with `Elegí la planilla de la federación en .xlsx o .csv`. The chosen file shows name and size with `Quitar`.
 - Without a file, `Crear partido` calls `POST /matches` and opens the detail.
 - With a file, `Revisar estadísticas` calls the preview with both selected team ids. Nothing is created until the user confirms. The preview request is `multipart/form-data` with a 60-second timeout.
@@ -46,6 +46,16 @@
 - Players are linked only by jersey number: exactly one roster player of the selected team with that number. Unlinked reasons: no roster player with the number, more than one with the number, the file has no number, no team selected. Unlinked players are saved with the file name, without a roster link.
 - `Guardar partido y estadísticas` performs `POST /matches` and then `PUT /matches/{id}/stats`. If the PUT fails, the created match id is kept: the toast `El partido se creó pero no se guardaron las estadísticas`, a retry that repeats only the PUT (never a second POST), and a link to the detail are shown.
 - Buttons are disabled while a request is pending (single-flight).
+
+## Picking or creating the teams (`/partidos/nuevo`)
+
+- The preview endpoint also works without team ids (`home_team_id` and `away_team_id` are optional in the multipart body). When a file is chosen the page first reads it that way (nothing is saved) only to learn the team names of the file (`report.teams[].excel_name`, falling back to `stats.teams.{HOME,AWAY}.name`).
+- Each side then suggests the closest existing team (`teamService.list()`), shown as `Parece ser {equipo}` with `Usarlo` to confirm; the select stays available to pick another one. Nothing is selected automatically. If nothing is close enough the side says `En la planilla figura «{nombre}»` and offers `Crear equipo nuevo`.
+- Matching is pure logic in `src/pages/partidos/team-suggestion.ts`: names are lowercased, stripped of accents and punctuation, generic words (club, c.a., cd, asociación, deportivo, básquet…) are dropped, and token overlap is scored. It is deliberately conservative: a wrong suggestion is worse than none. Names that differ only in a number or a single letter (`Sub 17` vs `Sub 19`, `Equipo A` vs `Equipo B`) never match. Two near-equal candidates give no suggestion. The same team is never suggested for both sides.
+- `Crear equipo nuevo` (both sides, also without a file) opens a dialog with the name prefilled from the file and editable. A team is only created on an explicit click. If the typed name is similar to an existing team the dialog shows `Ya existe {equipo}, ¿es el mismo?` with `Usar {equipo}` and requires a second deliberate action, `Crear igual`, to create it. Single-flight; the new team is added to the lists and selected for that side.
+- The backend requires `name`, `short_name`, `city` and `country` to create a team and the frontend cannot change that. This flow asks only for the name and sends defaults: `shortName` = first 3 letters of the name in capitals (as the Equipos form does), `city` = `Sin especificar`, `country` = `Argentina`. They can be edited later in Equipos.
+- `TEAM_MISMATCH` and `Importar igual` keep working and use the current form values. The re-import page (`/partidos/:matchId/estadisticas`) is unchanged: the teams of an existing match are fixed.
+- With `VITE_USE_MOCK_API=true` the file read fails like the preview (`La vista previa de la planilla necesita el backend real.`), no suggestions appear, and creating a team works in memory.
 
 ## Videos of a match (`/partidos/:matchId`)
 
