@@ -5,10 +5,17 @@ import type {
   AnalysisJobShotChartPlayer,
   AnalysisJobShotChartShot,
   AnalysisJobTeamSide,
+  PlayerShotOutcomeConfidence,
   ShotChartResult,
 } from '../../types/index.ts'
 import type { IAnalysisJobShotChartService } from '../contracts/analysis-job-shot-chart.service.ts'
 import type { AnalysisJobRequest } from './analysis-jobs.client.ts'
+
+const OUTCOME_CONFIDENCES: readonly PlayerShotOutcomeConfidence[] = ['detected', 'inferred', 'timeout', 'unresolved']
+
+export function mapAnalysisJobOutcomeConfidence(value: unknown): PlayerShotOutcomeConfidence | null {
+  return OUTCOME_CONFIDENCES.find((confidence) => confidence === value) ?? null
+}
 
 interface ApiCourtPoint {
   x_m: number
@@ -45,6 +52,8 @@ export interface ApiAnalysisJobShotChartShot {
   shot_type: string | null
   timestamp_seconds: number | null
   attribution: string | null
+  outcome_confidence?: string | null
+  needs_review?: boolean | null
 }
 
 export interface ApiAnalysisJobShotChartPlayer {
@@ -112,6 +121,8 @@ function mapShot(shot: ApiAnalysisJobShotChartShot): AnalysisJobShotChartShot {
     shotType: shot.shot_type,
     timestampSeconds: shot.timestamp_seconds,
     attribution: shot.attribution,
+    outcomeConfidence: mapAnalysisJobOutcomeConfidence(shot.outcome_confidence),
+    needsReview: typeof shot.needs_review === 'boolean' ? shot.needs_review : null,
   }
 }
 

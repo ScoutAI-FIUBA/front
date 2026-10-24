@@ -1,4 +1,9 @@
-import type { AnalysisJobShotChartShot, AnalysisJobTeamSide, ShotChartResult } from '../../types/index.ts'
+import type {
+  AnalysisJobShotChartShot,
+  AnalysisJobTeamSide,
+  PlayerShotOutcomeConfidence,
+  ShotChartResult,
+} from '../../types/index.ts'
 import {
   analysisJobPlayerKey,
   type AnalysisJobPlayerKey,
@@ -15,6 +20,7 @@ export interface ShotEvidenceFilters {
   points: ShotEvidencePointsFilter
   player: 'all' | AnalysisJobPlayerKey
   zone: 'all' | string
+  reviewOnly: boolean
 }
 
 export const DEFAULT_SHOT_EVIDENCE_FILTERS: ShotEvidenceFilters = {
@@ -23,6 +29,7 @@ export const DEFAULT_SHOT_EVIDENCE_FILTERS: ShotEvidenceFilters = {
   points: 'all',
   player: 'all',
   zone: 'all',
+  reviewOnly: false,
 }
 
 export function analysisShotKey(shot: AnalysisJobShotChartShot, index: number): string {
@@ -72,6 +79,7 @@ export function filterAnalysisJobShots(
     && (filters.points === 'all' || shot.points === Number(filters.points))
     && (filters.player === 'all' || analysisJobPlayerKey(shot) === filters.player)
     && (filters.zone === 'all' || shot.zone === filters.zone)
+    && (!filters.reviewOnly || shotNeedsReview(shot))
   ))
 }
 
@@ -86,4 +94,41 @@ export function formatShotTimestamp(seconds: number): string {
   const minutes = Math.floor(wholeSeconds / 60)
   const remainder = wholeSeconds % 60
   return `${minutes}:${remainder.toString().padStart(2, '0')}`
+}
+
+export function shotNeedsReview(shot: Pick<AnalysisJobShotChartShot, 'needsReview'>): boolean {
+  return shot.needsReview === true
+}
+
+export const SHOT_REVIEW_EXPLANATION = 'El sistema no está seguro de este tiro. Conviene verlo en el video.'
+
+export function shotOutcomeEvidenceLabel(
+  confidence: PlayerShotOutcomeConfidence | null | undefined,
+): string | null {
+  if (confidence === 'detected') return 'Se vio entrar el balón'
+  if (confidence === 'inferred') return 'Inferido por la trayectoria del balón'
+  if (confidence === 'timeout') return 'No se vio entrar el balón: se cuenta como fallado'
+  if (confidence === 'unresolved') return 'Sin resolver'
+  return null
+}
+
+export function countShotsToReview(shots: Array<Pick<AnalysisJobShotChartShot, 'needsReview'>>): number {
+  return shots.filter(shotNeedsReview).length
+}
+
+export type ShotMapEmptyKind = 'review' | 'coordinates'
+
+/** Why the shot map has nothing to draw; null when at least one shot is drawable. */
+export function shotMapEmptyKind(
+  reviewOnly: boolean,
+  filteredShotCount: number,
+  drawableShotCount: number,
+): ShotMapEmptyKind | null {
+  if (drawableShotCount > 0) return null
+  return reviewOnly && filteredShotCount === 0 ? 'review' : 'coordinates'
+}
+
+/** The review toggle is usable when something is flagged, or when already on so it can be turned off. */
+export function reviewToggleDisabled(reviewOnly: boolean, flaggedInTeamScope: number): boolean {
+  return !reviewOnly && flaggedInTeamScope === 0
 }

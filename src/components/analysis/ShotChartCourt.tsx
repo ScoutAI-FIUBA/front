@@ -7,7 +7,12 @@ import type {
   AnalysisJobShotChartShot,
   ShotChartResult,
 } from '@/types'
-import { shotChartPointToPercent, shotChartResultLabel } from './shot-chart-court'
+import {
+  shotChartHasReviewShots,
+  shotChartPointToPercent,
+  shotChartResultLabel,
+  shotChartZoneLabel,
+} from './shot-chart-court'
 import {
   analysisJobPlayerLabelFromMap,
   buildAnalysisJobPlayerLabels,
@@ -36,6 +41,17 @@ const REPORT_RESULT_STYLES: Record<ShotChartResult, string> = {
   unknown: 'border-[#788397] border-dashed bg-[#11151D] text-[#A3ABBA]',
 }
 
+// Thin dashed outer ring: the system is not sure about this shot. It is a child
+// element so focus and selection styles on the marker cannot override it.
+function ReviewRing({ inset }: { inset: string }) {
+  return (
+    <span
+      className={cn('pointer-events-none absolute rounded-full border border-dashed border-amber-400', inset)}
+      aria-hidden="true"
+    />
+  )
+}
+
 function shotPlayerLabel(
   shot: AnalysisJobShotChartShot,
   playerLabels: Map<AnalysisJobPlayerKey, string>,
@@ -53,6 +69,7 @@ export function ShotChartCourt({
   presentation = 'legacy',
 }: ShotChartCourtProps) {
   const playerLabels = buildAnalysisJobPlayerLabels(players)
+  const hasReviewShots = shotChartHasReviewShots(shots)
   const resultStyles = presentation === 'match-report' ? REPORT_RESULT_STYLES : RESULT_STYLES
 
   return (
@@ -87,7 +104,8 @@ export function ShotChartCourt({
           if (!point) return null
           const player = shotPlayerLabel(shot, playerLabels)
           const result = shotChartResultLabel(shot.result)
-          const description = `${player} · ${shot.points}P · ${result} · ${shot.zone}`
+          const needsReview = shot.needsReview === true
+          const description = `${player} · ${shot.points}P · ${result} · ${shotChartZoneLabel(shot.zone)}${needsReview ? ' · Conviene revisar' : ''}`
           const markerKey = shotKey?.(shot, index) ?? `${shot.shotId ?? 'shot'}-${index}`
           const selected = markerKey === selectedShotKey
 
@@ -109,6 +127,7 @@ export function ShotChartCourt({
                 aria-pressed={selected}
                 onClick={() => onSelectShot(shot, index)}
               >
+                {needsReview && <ReviewRing inset="-inset-1" />}
                 {shot.points}
               </button>
             )
@@ -127,6 +146,7 @@ export function ShotChartCourt({
               role="img"
               tabIndex={0}
             >
+              {needsReview && <ReviewRing inset="-inset-1" />}
               {shot.points}
             </span>
           )
@@ -140,6 +160,14 @@ export function ShotChartCourt({
             {shotChartResultLabel(result)}
           </span>
         ))}
+        {hasReviewShots && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className={cn('relative h-3 w-3 rounded-full border-2', resultStyles.made)} aria-hidden="true">
+              <ReviewRing inset="-inset-[5px]" />
+            </span>
+            Conviene revisar
+          </span>
+        )}
         <span>El número del marcador indica 2P o 3P.</span>
       </div>
     </div>

@@ -10,6 +10,7 @@ import type {
 } from '../../types/index.ts'
 import type { IAnalysisJobStatsService } from '../contracts/analysis-job-stats.service.ts'
 import type { AnalysisJobRequest } from './analysis-jobs.client.ts'
+import { mapAnalysisJobOutcomeConfidence } from './analysis-job-shot-chart.client.ts'
 
 interface ApiShootingZoneStats {
   made: number
@@ -66,6 +67,8 @@ export interface ApiAnalysisJobShotStat {
   timestamp_seconds: number | null
   shot_type: string | null
   attribution: string | null
+  outcome_confidence?: string | null
+  needs_review?: boolean | null
 }
 
 export interface ApiAnalysisJobStatsCoverage {
@@ -161,6 +164,8 @@ function mapShot(shot: ApiAnalysisJobShotStat): AnalysisJobShotStat {
     timestampSeconds: shot.timestamp_seconds,
     shotType: shot.shot_type,
     attribution: shot.attribution,
+    outcomeConfidence: mapAnalysisJobOutcomeConfidence(shot.outcome_confidence),
+    needsReview: typeof shot.needs_review === 'boolean' ? shot.needs_review : null,
   }
 }
 
