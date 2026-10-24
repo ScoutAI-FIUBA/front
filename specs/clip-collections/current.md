@@ -24,9 +24,9 @@ Frontend integration for the backend clip collections foundation.
 ## Behavior
 
 - Collections are private and scoped to an owned video.
-- The canonical entry is the `Clips` tab on match detail. Collection routes keep their existing
-  `/videos/:videoId/colecciones` URLs, but return to `/partidos/:videoId?tab=clips` so the user stays
-  inside the match-review flow.
+- The canonical entry is the `Clips` tab on video detail. Collection routes keep their existing
+  `/videos/:videoId/colecciones` URLs, but return to `/videos/:videoId?tab=clips` so the user stays
+  inside the video-review flow.
 - The collections page loads the selected video and its collections independently. A failure in
   secondary video metadata does not block the collection index, and each failed section exposes its
   own retry action.

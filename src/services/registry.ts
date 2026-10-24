@@ -16,6 +16,7 @@ import { apiAuthService } from './api/auth.api'
 import { apiPlayerService } from './api/players.api'
 import { apiPlayerAnalysisService } from './api/player-analysis.api'
 import { apiTeamService } from './api/teams.api'
+import { apiMatchService } from './api/matches.api'
 import { apiVideoService, getApiVideoByIdForTeam } from './api/videos.api'
 import { apiClipCollectionService } from './api/clip-collections.api'
 import { apiAnalysisJobService } from './api/analysis-jobs.api'
@@ -43,8 +44,8 @@ export const playerAnalysisService: IPlayerAnalysisService = isMockApiEnabled
   ? mockPlayerAnalysisService
   : apiPlayerAnalysisService
 
-/** Match legacy y el flujo manual legacy siguen en mock; el análisis automático usa ProcessingJobs reales. */
-export const matchService: IMatchService = mockMatchService
+/** Matches usan el backend real; solo analysisService (sesiones legacy) sigue en mock. */
+export const matchService: IMatchService = isMockApiEnabled ? mockMatchService : apiMatchService
 export const videoService: IVideoService = isMockApiEnabled ? mockVideoService : apiVideoService
 export const getVideoByIdForTeam = (videoId: string, teamId: string) => (
   isMockApiEnabled

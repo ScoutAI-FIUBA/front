@@ -40,7 +40,8 @@ test('Videos is the primary library over videos and ProcessingJobs', () => {
   const matches = readSource('../src/pages/matches/MatchesPage.tsx')
 
   assert.match(app, /path="\/videos" element=\{<MatchesPage/)
-  assert.match(app, /path="\/partidos" element=\{<LegacyVideoRouteRedirect destination="library"/)
+  // Matches (federation box scores) own /partidos now; it no longer redirects to Videos.
+  assert.match(app, /path="\/partidos" element=\{<MatchListPage/)
   assert.match(shell, /to: '\/videos', label: 'Videos'/)
   assert.match(matches, /useAnalysisJobCatalog/)
   assert.match(matches, /buildMatchLibrary/)
@@ -69,14 +70,14 @@ test('direct playback, filters, clips and history remain in the canonical Video 
   assert.match(videos, /\/colecciones/)
 })
 
-test('the primary shell exposes only Inicio, Videos, Equipos and Jugadores', () => {
+test('the primary shell exposes only Inicio, Videos, Partidos, Equipos and Jugadores', () => {
   const shell = readSource('../src/components/layout/AppShell.tsx')
 
   assert.match(shell, /to: '\/', label: 'Inicio'/)
   assert.match(shell, /to: '\/videos', label: 'Videos'/)
+  assert.match(shell, /to: '\/videos', label: 'Videos'[\s\S]*to: '\/partidos', label: 'Partidos'/)
   assert.match(shell, /to: '\/equipos', label: 'Equipos'/)
   assert.match(shell, /to: '\/jugadores', label: 'Jugadores'/)
-  assert.doesNotMatch(shell, /to: '\/partidos'/)
   assert.doesNotMatch(shell, /to: '\/analisis'/)
   assert.doesNotMatch(shell, /to: '\/revision-manual'/)
 })

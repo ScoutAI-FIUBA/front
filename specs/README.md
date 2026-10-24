@@ -7,8 +7,9 @@ Specs document current behavior and proposed changes before implementation.
 - `auth/current.md`
 - `teams/current.md`
 - `players/current.md`
-- `matches/current.md`
+- `matches/current.md` (real Matches feature: list, create, federation box-score import)
 - `videos/current.md`
+- `video-reorganization/current.md` (Videos routes, legacy `/partidos/:id?tab=` redirect)
 - `analysis/current.md`
 - `dashboard/current.md`
 - `clip-collections/current.md`

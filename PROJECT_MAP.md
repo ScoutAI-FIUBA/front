@@ -64,7 +64,10 @@ src/
 - `/videos/:videoId?tab=video|reporte|clips`: canonical product detail over a video, its latest processing job, and clip collections. `reporte` remains the compatibility query value for the visible `Análisis IA` tab.
 - `/videos/:videoId/colecciones`: clip collections for a video.
 - `/videos/:videoId/colecciones/:collectionId`: clip collection detail.
-- `/partidos`, `/partidos/nuevo`, `/partidos/:videoId`: temporary compatibility redirects to their canonical Video routes, preserving search and hash.
+- `/partidos`: matches list (real `/matches` backend).
+- `/partidos/nuevo`: create a match, optionally importing the federation box score (Excel/CSV) with preview.
+- `/partidos/:matchId`: match detail with the box score. With a `?tab=` search param it is a legacy video link and redirects to `/videos/:videoId`, preserving search and hash.
+- `/partidos/:matchId/estadisticas`: import or replace the statistics of a match.
 - `/analisis`: analysis sessions page.
 - `/analisis/:id`: analysis detail page.
 - `/analisis/jobs/:jobId?team_id=...`: real processing-job detail without match/session assumptions.
@@ -76,8 +79,9 @@ src/
 - API clients live in `src/services/api`.
 - Mock services live in `src/services/mock`.
 - `src/services/registry.ts` selects real or mock services.
-- `authService`, `teamService`, `playerService`, `videoService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
-- The legacy `matchService` and `analysisService` currently use mocks; no real Match page consumes `matchService`.
+- `authService`, `teamService`, `playerService`, `videoService`, `matchService`, and `clipCollectionService` use the backend unless `VITE_USE_MOCK_API=true`.
+- `matchService` (`contracts/matches.service.ts`, `api/matches.client.ts` for mappers and errors, `api/matches.api.ts`, `mock/matches.mock.ts` in memory) backs the Matches pages in `src/pages/partidos/`. `src/pages/matches/` is the Videos code (legacy folder name).
+- The legacy `analysisService` still uses mocks.
 - `playerAnalysisService` (`contracts/player-analysis.service.ts`, `api/player-analysis.client.ts` for request paths and mappers, `api/player-analysis.api.ts`, `mock/player-analysis.mock.ts` with the backend's empty shape) provides aggregated player stats and shot chart; it follows `VITE_USE_MOCK_API`.
 - `src/pages/players/PlayerAnalysisStatsSheet.tsx`: read-only player stats sheet opened from `/jugadores`; `src/pages/players/player-analysis-stats.ts` holds its pure formatting, row summary (`formatPct`, `formatRowSummary`) and adapter helpers (covered by `tests/player-analysis-stats.test.ts`); `mapPlayerStatsSummary` in `services/api/mappers.ts` maps the player's `stats` to the optional row summary.
 - `analysisJobService`, `analysisJobTeamSideService`, `analysisJobStatsService`, `analysisJobShotChartService`, `analysisJobCourtPositionsService`, and `analysisJobSimilarService` always use the real processing-job backend.
@@ -86,12 +90,12 @@ src/
 
 - Mock persistence/data lives in `src/mocks`.
 - Mock services cover auth, teams, players, matches, videos, analysis, and clip collections.
-- Matches and analysis remain mocked until backend support exists.
+- The legacy analysis sessions remain mocked until backend support exists. Matches use the real backend; its mock is in memory and its import preview always fails with a "needs the real backend" error.
 
 ## Environment
 
 - `VITE_API_BASE_URL`: backend API URL.
-- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, and videos.
+- `VITE_USE_MOCK_API=true`: use local mocks for auth, teams, players, videos, and matches.
 
 ## Documentation And Specs
 

@@ -53,7 +53,8 @@
 - `src/pages/players/GlobalPlayerSheet.tsx`: shared global create/edit, assignment, partial mutation, and deletion flow.
 - `src/pages/players/global-player-list.ts`: stable global ordering and local registry filtering.
 - `src/pages/players/PlayerFormFields.tsx`: shared player fields and validation presentation.
-- `src/pages/matches/MatchesPage.tsx`: match creation and roster input.
+- `src/pages/matches/MatchesPage.tsx`: Videos library card grid (legacy folder name; `pages/matches` is Videos code, not Matches).
+- `src/pages/partidos/`: Matches feature. `MatchListPage.tsx` (`/partidos`), `MatchCreatePage.tsx` (`/partidos/nuevo`), `MatchRecordDetailPage.tsx` (`/partidos/:matchId`), `MatchStatsImportPage.tsx` (`/partidos/:matchId/estadisticas`), `MatchImportPreview.tsx`, `StatsFileDropzone.tsx`, `BoxScoreTable.tsx`, and the pure modules `match-routes.ts`, `match-form.ts`, `match-import.ts`, `box-score-format.ts`.
 - `src/pages/videos/VideosPage.tsx`: videos list, filtering, analysis request.
 - `src/pages/videos/VideoUploadPage.tsx`: video upload form using the selected API or mock service.
 - `src/pages/videos/VideoCollectionsPage.tsx`: dense match-context collection index with isolated metadata loading and a compact create flow.
@@ -76,6 +77,7 @@
 - `src/services/api/players.api.ts`: real players API service.
 - `src/services/api/videos.api.ts`: multipart video upload, video listing, and presigned playback URL retrieval for ready videos.
 - `src/services/api/clip-collections.api.ts`: clip collection and item metadata API.
+- `src/services/api/matches.api.ts` and `matches.client.ts`: real matches API (list, create, stats, multipart import preview) and the pure mappers, `MatchApiError`, and error parsing.
 - `src/services/api/mappers.ts`: backend/frontend mapping helpers.
 - `src/services/api/token.ts`: token storage helpers.
 - `src/services/api/errors.ts`: API error parsing.

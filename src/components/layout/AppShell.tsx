@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 const navItems = [
   { to: '/', label: 'Inicio' },
   { to: '/videos', label: 'Videos' },
+  { to: '/partidos', label: 'Partidos' },
   { to: '/equipos', label: 'Equipos' },
   { to: '/jugadores', label: 'Jugadores' },
 ]

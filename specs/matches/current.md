@@ -1,91 +1,89 @@
-# Partidos Legacy Compatibility Spec
+# Matches Current Spec
 
-> Current override (2026-10-18): `/partidos`, `/partidos/nuevo`, and `/partidos/:videoId` are temporary redirect-only routes to the canonical Video experience. They preserve search params and hash. New links target `/videos`; no real Match UI or backend integration is part of the current release. The detailed sections below document the preserved pre-migration behavior now presented as Videos. The authoritative migration acceptance criteria are in `specs/video-reorganization/current.md`.
+> Status (2026-10-24): Matches (`Partidos`) is a real feature backed by the `/matches` backend. This release (phase 1) adds the list, the create form, the Excel/CSV box-score import with preview, and the box-score detail, with no backend change. The sections below are the acceptance criteria of this release. The pre-migration "Partido = video" behavior now lives under Videos; see `specs/video-reorganization/current.md` (Legacy compatibility).
 
 ## Product model
 
-- `/videos` is the primary library; `/partidos` remains only as a temporary compatibility redirect.
-- A visible Partido is composed in the frontend from a real `Video`, its latest known `ProcessingJob`, and its existing team context.
-- The backend `Match` entity is not used because it is not related to videos or processing jobs yet.
+- A Match is a sporting game: home team, away team, date (`YYYY-MM-DD`), optional description, optional winner, and an optional box score.
+- The box score comes from the federation spreadsheet and is shown with the source label `Planilla de estadísticas de la federación`.
+- Matches and videos are not linked in this release; linking a match to several videos is planned for a later phase (a video belongs to at most one match; videos can be partial clips, so no totals comparison is planned). The later phase would show a `Videos del partido` list on the match page and a `Partido` link on the video page. This release adds no video link, no video picker, and no link wording in the UI. The link needs an additive backend migration that is not part of this release. Editing the date and description of a match (PATCH) is planned together with the link; the teams of a match stay fixed.
+- The legacy mock `Match`, `MatchStatus`, `MatchRoster`, and `GameEvent` types remain only for the legacy mock analysis sessions (`/analisis/:id`); they are marked `@deprecated` and Matches does not use them.
 
-## Route and navigation
+## Routes and navigation
 
-- Primary route: `/videos`.
-- Canonical upload route: `/videos/subir`. It presents the existing upload contract as `Nuevo video`, with the desktop sequence `01 Equipo`, `02 Archivo`, and `03 Confirmar`.
-- Canonical detail route: `/videos/:videoId`.
-- Detail tabs are refresh-safe query states: `?tab=video`, `?tab=reporte`, and `?tab=clips`; an absent or invalid value falls back to Video.
-- The completed Reporte has refresh-safe subsections in the same URL: `?tab=reporte&seccion=resumen`, `tiros`, `movimiento`, or `similares`. An absent or invalid `seccion` falls back to `resumen`, and subsection links use normal browser history.
-- Primary navigation: Inicio, Videos, Equipos, Jugadores.
-- `/videos`, `/analisis`, and `/revision-manual` remain routable for compatibility but are not primary navigation items.
+- `/partidos`: match list.
+- `/partidos/nuevo`: create a match, optionally importing statistics in the same flow.
+- `/partidos/:matchId`: match detail with the box score.
+- `/partidos/:matchId/estadisticas`: import (or replace) the statistics of an existing match.
+- Primary navigation is `Inicio / Videos / Partidos / Equipos / Jugadores`. Inicio has no `Partidos` link; the entry is reachable from the shell only.
+- Route builders are in `src/pages/partidos/match-routes.ts`. Pages live in `src/pages/partidos/`; `src/pages/matches/` is the Videos code (legacy folder name).
+- `/partidos/:matchId` with a `?tab=` search param is a legacy video link: it redirects (`replace`) to `/videos/:videoId` preserving search and hash (see `specs/video-reorganization/current.md`). Without `tab`, the id is treated as a match id. An old `/partidos/:videoId` link without `tab` shows the not-found state with a secondary link to Videos.
 
-## Data and states
+## Backend integration
 
-- The page reuses the analysis job catalog and its bounded team/video/job loading.
-- Cards show only the real video title, team, upload date, and one product-facing state composed from the video and latest job.
-- The visible states are `Preparando archivo`, `Sin analizar`, `En cola`, `Analizando`, `Reporte listo`, and `Error de análisis`.
-- A partial history failure uses the neutral fallback `Estado no disponible` instead of guessing a job state.
-- Internal `Video` and `ProcessingJob` states are not exposed as separate concepts in the card.
-- The newest job is selected by `createdAt`.
-- READY video without jobs: `Analizar`.
-- QUEUED or RUNNING: `Ver progreso`.
-- DONE: `Ver reporte`.
-- FAILED: `Ver problema`.
-- A video that is not ready cannot start a new job.
-- If job history could not be verified, the page preserves the video but does not offer `Analizar`.
-- Library CTAs enter the Partido detail first. Analysis-related states open its Reporte tab.
+- Service: `matchService` (`contracts/matches.service.ts`) uses the real backend unless `VITE_USE_MOCK_API=true` (`api/matches.api.ts`, pure mapping and error parsing in `api/matches.client.ts`).
+- Endpoints: `GET /matches?team_id=`, `POST /matches`, `GET /matches/{id}/stats` (match plus participants), `POST /matches/stats/import-preview` (multipart, nothing saved), `PUT /matches/{id}/stats` (full replace).
+- The backend has no `PUT`/`DELETE /matches/{id}`: teams, date, and description cannot be edited and a match cannot be deleted. The import page states once: `Equipos, fecha y descripción todavía no se pueden editar.`
+- Percentages (`pct`) come from the backend as 0..100 with one decimal (or `null` without attempts) and are never recomputed; they are formatted in `es-AR` with one decimal and a comma (`66,7%`), and `null` renders `—`.
+- The saved body is the raw snake_case preview data (`stats`, `winner_team_id`, `participants`), unchanged. The frontend never sends camelCased stats back.
+- The match date is formatted by splitting the `YYYY-MM-DD` string (`dd/mm/aaaa`), without `Date`, so there is no timezone shift.
 
-## Partido detail
+## List (`/partidos`)
 
-- The header shows only the real video title, team, upload date, and composed Partido state.
-- When `tab=reporte` is active, the Partido header uses a compact desktop variant: it preserves the title, team, upload date, composed state, and Video / Reporte / Clips navigation while reducing vertical spacing and keeping the title on one line when space allows. The Video tab keeps the existing large hero header.
-- Video reuses the existing signed-playback player and renewal behavior with reduced chrome.
-- Reporte keeps its compact Partido header and editorial report space before results exist. A ready video without a job explains that no report exists yet, previews only the four future sections by name and purpose, and exposes one primary `Analizar partido` action through the existing new-analysis route without fake result data.
-- QUEUED and RUNNING remain inside Partido and reuse the existing team-scoped polling loop. QUEUED states that the party is in the real queue; RUNNING states that analysis is in progress. A real `progressPercent` is rendered only when non-null, and elapsed time is shown only from a valid real `startedAt`. Neither state invents stages, ETA, frames, or intermediate findings, and neither routes the user to the legacy job workspace.
-- The non-DONE Reporte states share one transparent basketball visual built with React and inline SVG: a ball, shot trajectory, and hoop. Waiting, file preparation, queue, running, and failure are variants of the same component rather than separate illustrations. Only RUNNING with a non-null real `progressPercent` maps the ball and revealed trajectory to progress; indeterminate activity is non-positional, and reduced-motion users receive an equivalent static frame.
-- RUNNING treats that visual as the primary progress expression. The real percentage remains visible as accessible text when present and the elapsed time remains secondary; no redundant primary progress bar is rendered. The legacy analysis workspace keeps its existing framed presentation.
-- Polling replaces the latest job snapshot in place. A transition from QUEUED or RUNNING to DONE reveals the completed Reporte in the same Partido route without automatic external navigation.
-- FAILED uses the product statement `No se pudo analizar este partido`. The primary recovery action opens the existing new-analysis flow for the same team and video; the exact legacy job detail remains a secondary technical-support action. Raw backend errors are not promoted as user-facing reasons because the current contract does not mark them as safe copy.
-- A completed Reporte embeds the real result workspace for the latest job directly inside the Partido detail. It does not render a second Partido header or a second source player and does not require an `Abrir reporte completo` gateway.
-- The completed Reporte index is `01 Resumen`, `02 Tiros`, `03 Movimiento`, and `04 Similares`. It reuses the same result surfaces and exact-job Similar links as the legacy job route.
-- The embedded workspace owns one shared Stats/Shot Chart controller after team-side confirmation. Resumen and Tiros consume the same loaded result; Resumen does not mount a hidden Tiros screen to obtain shooting data.
-- The completed Reporte uses a match-specific editorial presentation for its typographic `01 Resumen` through `04 Similares` index, team-side decision, Resumen, and Tiros while leaving the legacy job workspace presentation available at `/analisis/jobs/:jobId`.
-- Before team-side confirmation, Resumen presents the real detected sides as `Lado 0` and `Lado 1`, including only backend-provided track counts, jersey numbers, roster matches, and the explicitly non-definitive suggestion. Persistence continues through the existing team-side endpoint.
-- After confirmation, Resumen builds its editorial field-goal statement only from the loaded team shooting totals and renders the shared real Shot Chart as the primary visual. Coverage remains secondary text and section access uses flat rows.
-- Tiros keeps local result, value, player, and zone filtering plus bidirectional marker/list selection. Result semantics are visually independent from the orange selection accent, and the selected-shot rail renders only real conditional fields.
-- Movimiento and Similares use the same flat editorial Reporte presentation without changing their existing behavior: Movimiento keeps one player-or-group filter, exclusive trajectory/heatmap views, real spatial metrics, sample-sequence playback, and no video synchronization; Similares keeps backend ordering, scores, metadata hydration, and exact legacy job navigation in divided editorial rows.
-- Source video in the match Reporte is evidence on demand: it stays mounted once, remains visually secondary until `Ver jugada` is used for a shot with `timestampSeconds`, and preserves the existing direct seek, play, signed-URL renewal, and no-offset behavior.
-- Team-side confirmation remains persisted by the existing endpoint and updates the embedded latest-job snapshot. No frontend mapping is added between track-based team-side evidence and v2 `stable_player_id` jersey identity.
-- Clips loads real `ClipCollection` records for the video and their persisted items only when the tab is opened.
-- Clip rows use a persisted backend `description` as their title when present. Legacy items without one keep the honest fallback `Clip N · mm:ss–mm:ss`; notes and player associations are not reconstructed.
-- The Video tab uses `presigned_thumbnail_url` from `GET /videos/{id}?team_id=...` as the native video poster when present and keeps the existing no-poster fallback when absent.
-- `GET /videos?team_id=...` does not expose the thumbnail, so the Partidos library progressively requests each visible catalog video's existing detail endpoint after the base catalog renders. A global pool limits detail requests to four at a time, an in-memory cache refreshes signed URLs before their 3600-second expiry, and null or failed posters keep the schematic court without affecting the catalog.
-- Poster and signed-thumbnail caching is scoped to the authenticated `user.id`. Identity changes clear the visible poster state and invalidate queued or in-flight poster responses from the previous account.
-- Existing collection and manual clip routes remain the editing workflow and remain routable.
+- `PageHeader` `Partidos` with the action `Nuevo partido`.
+- Each row links to the detail and shows date, `{Local} vs {Visitante}`, the score when stats exist, a badge `Estadísticas cargadas` or `Sin estadísticas`, and a truncated description. A team that cannot be resolved shows `Equipo no disponible`.
+- Loading, error with `Reintentar`, session expiry (as the Videos page), and the empty state `Todavía no cargaste partidos` are explicit.
 
-## Navigation reuse
+## Create and import flow (`/partidos/nuevo`)
 
-- Partidos upload CTAs open `/partidos/nuevo`. The flow reuses `teamService.list()` and the existing video upload boundary without adding analysis creation or new backend fields. Team loading, inline retry, empty teams, selection, file picking/drop, current video-type validation, filename-derived title, and single-flight submission remain explicit.
-- The confirmation step exposes the selected team and file, editable title, optional description, and clarifies that the date shown later is the upload date rather than the sporting date. Its Reporte preview describes only conditional real capabilities: detected shots and court location, video evidence when a shot has a recorded moment, player movement/heatmaps, and comparable team analyses when they exist.
-- Upload keeps the existing `/videos/subir` compatibility route through the same implementation, but a successful upload now upserts the returned video into the shared catalogue and enters its exact Partido at `/partidos/:videoId?tab=reporte`.
-- A Partido whose material is still `PENDING_UPLOAD` stays on that route and polls the existing video detail boundary at a bounded interval until the real material status becomes `READY` or `FAILED`. It does not invent upload progress or navigate away.
-- Once the material is ready, `Analizar partido` creates the ProcessingJob inline through the existing endpoint and single-flight guard. The returned job becomes `latestJob` and is added to the shared catalogue immediately, so the existing QUEUED/RUNNING polling reveals DONE in the same Reporte. FAILED retry uses the same inline flow. Legacy upload and analysis routes remain available as compatibility entry points.
-- The shared HTTP client reads a JSON representation returned with `202 Accepted`, while continuing to accept an empty `202`. Job creation therefore receives the accepted job immediately and updates the current Partido without requiring a reload; `204` and `205` remain bodyless successes.
-- New analysis uses `/analisis/nuevo` with the real team and video ids.
-- Active report progress remains inline in Partido. A failed job may open its exact legacy `/analisis/jobs/:jobId?team_id=...` route only as a secondary technical-detail action, while recovery reuses `/analisis/nuevo` with the same team and video. A completed job is reviewed inline in Partido; Similar results continue opening their exact legacy job route.
+- Fields: home team (required, `Elegí el equipo local`), away team (required, different from home, `Elegí un equipo distinto al local`), date (`YYYY-MM-DD`, defaults to today, future dates allowed), description (optional, trimmed, max 2000 characters with a live counter, `Máximo 2000 caracteres`). Team options come from `teamService.list()` and the away list disables the home team. With fewer than two teams an empty state links to `/equipos`.
+- Optional `Importar estadísticas (opcional)` dropzone (keyboard-focusable). Accepts `.xlsx` or `.csv` (case-insensitive), non-empty, at most 5 MiB (`El archivo supera 5 MB`); anything else is rejected before upload with `Elegí la planilla de la federación en .xlsx o .csv`. The chosen file shows name and size with `Quitar`.
+- Without a file, `Crear partido` calls `POST /matches` and opens the detail.
+- With a file, `Revisar estadísticas` calls the preview with both selected team ids. Nothing is created until the user confirms. The preview request is `multipart/form-data` with a 60-second timeout.
+- The backend decides which table is HOME from the file and links players and computes the winner only when both team ids are sent, so both ids are always sent (the form ids when creating, the match ids when re-importing).
+- `TEAM_MISMATCH`: one alert per entry, `Elegiste {equipo} como Local, pero en el archivo figura «{nombre}».`, with `Cambiar equipos` and `Importar igual` (repeats the preview with `allow_team_mismatch`).
+- The preview shows competition/title, the scoreline and `Ganó {equipo}` or `Empate`, per team the name found in the file, players in the file and who played, whether it matches the selected team, linked players (file name to roster name), unlinked players with the reason, backend warnings under `Avisos`, one box-score table per team, a `Qué se va a guardar` summary (players who played, linked, winner), and `Ver los datos exactos` with the JSON to be saved.
+- Players are linked only by jersey number: exactly one roster player of the selected team with that number. Unlinked reasons: no roster player with the number, more than one with the number, the file has no number, no team selected. Unlinked players are saved with the file name, without a roster link.
+- `Guardar partido y estadísticas` performs `POST /matches` and then `PUT /matches/{id}/stats`. If the PUT fails, the created match id is kept: the toast `El partido se creó pero no se guardaron las estadísticas`, a retry that repeats only the PUT (never a second POST), and a link to the detail are shown.
+- Buttons are disabled while a request is pending (single-flight).
 
-## Resilience
+## Re-import (`/partidos/:matchId/estadisticas`)
 
-- Initial loading, total error with retry, empty library, empty filtered result, session expiry, and partial catalog failure are explicit states.
-- Active jobs reuse the current catalog polling behavior and its disconnected notice.
+- Loads the match, uses its team ids, and offers the same dropzone, mismatch handling, and preview.
+- Overwrite semantics: `PUT /matches/{id}/stats` is a full replace in one transaction (omitted winner or participants are cleared) and does not re-check `TEAM_MISMATCH`; the preview is the only guard and always the source of the saved payload. If the match already has stats, a confirmation dialog states `Esto reemplaza las estadísticas guardadas de este partido. No se puede deshacer.`
+- After saving, the app navigates to the detail with a toast.
+
+## Detail (`/partidos/:matchId`)
+
+- Header: date, teams, score, winner or tie (the winner is null on a tie), description, competition. Source line: `Fuente: planilla de estadísticas de la federación`.
+- One accessible table per team (native `<table>` with caption, `scope="col"`, player name as row header; columns # / Jugador / Min / Pts / 2P / %2P / 3P / %3P / TL / %TL / RO / RD / RT / Ast / Rec / Pér / Tap / Fal / Val / +/-), a totals footer (or `El archivo no trae totales del equipo` with only the points), a marker for players linked to the roster, and a `No jugaron:` line for players with 0 minutes. The wrapper scrolls horizontally and is keyboard-focusable.
+- Stats formats: none shows `Este partido todavía no tiene estadísticas` with the import action; unknown shows `Estas estadísticas tienen un formato que esta versión no sabe mostrar`. The action reads `Importar estadísticas` or `Reemplazar estadísticas`.
+- Not found (`MATCH_NOT_FOUND` or a validation error for a non-UUID id): `No encontramos este partido`, with the secondary link `¿Era un enlace viejo a un video? Abrilo en Videos`.
+- Roster names come from `playerService.filterByTeam` for both teams; a failure there is tolerated.
+- Match pages contain no estimated or detected numbers and no `Análisis IA` content.
+
+## Errors
+
+- Error codes are mapped to Spanish copy; the backend message (English) is kept as a secondary `Detalle técnico`. Codes: `MATCH_NOT_FOUND`, `TEAM_NOT_FOUND`, `PLAYER_NOT_FOUND`, `INVALID_MATCH_TEAMS`, `INVALID_WINNER_TEAM`, `INVALID_STATS_FILE`, `STATS_FILE_TOO_LARGE`, `TEAM_MISMATCH`, `VALIDATION_ERROR`.
+- Two backend error envelopes are handled: `{error:{code,message,details?}}` and FastAPI `{detail:[...]|string}` (mapped to `VALIDATION_ERROR`); plain-text errors keep a null code.
+- A players export such as `celtics_roster_25_26.csv` is not a box score and yields `INVALID_STATS_FILE`.
+- Backend warning strings are translated when they match a known pattern and shown verbatim otherwise.
+- A 401 follows the shared refresh-once behavior.
+
+## Mock behavior (`VITE_USE_MOCK_API=true`)
+
+- `mockMatchService` keeps matches in memory (no seed data, independent from the legacy mock store): create validates that the teams differ, list is sorted by date descending, `getWithParticipants` throws `MATCH_NOT_FOUND`, `saveStats` stores what it receives.
+- `previewStatsImport` always fails with `INVALID_STATS_FILE` and the message `La vista previa de la planilla necesita el backend real.` No numbers are invented.
 
 ## Non-scope
 
-- No backend `/matches` integration.
-- No invented opponent/score/competition, fabricated progress/statistics, analysis stages, ETA, or processed-frame counts. R3-C changes only the desktop no-job, QUEUED, RUNNING, and FAILED Partido Reporte states; completed Reporte, mobile, backend contracts, Auth, Clips, and upload remain unchanged.
-- No changes to backend contracts, authentication, or analysis result rendering.
-- R4-B does not add upload progress, multipart cancellation, inline team creation, automatic analysis, or mobile-specific redesign.
+- No video link or video picker in this release (linking a match to several videos is planned for a later phase).
+- No editing or deleting of a match (teams, date, description) and no manual stats entry.
+- No roster endpoints; participants are saved only through the stats import.
+- No pagination or filters beyond what the list needs; `GET /matches` returns every match with its stats.
+- No backend change.
 
 ## Verification
 
-- Run affected Node tests, the complete test suite, `npm run build`, `npm run lint`, and `git diff --check`.
-- Visually verify desktop and mobile with mock services while keeping all displayed records sourced from those service contracts.
+- Tests cover the API client mappers and error envelopes, the multipart request (no JSON content type), the create form rules, file checks, reason/warning/error copy, the create-then-save recovery, the box-score formatters, the nav and route changes, and the `?tab=` redirect.
+- Run the Node test suite, `npx tsc -b`, `npm run lint`, `npm run build`, and `git diff --check`.
