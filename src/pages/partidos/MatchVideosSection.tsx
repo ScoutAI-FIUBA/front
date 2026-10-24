@@ -24,6 +24,7 @@ import {
 import { videoService } from '@/services/registry'
 import type { MatchRecord, Video } from '@/types'
 import { matchErrorCopy } from './match-import'
+import { MATCH_DIALOG_CLASS } from './dialog-theme'
 import {
   MOVE_CONFIRMATION,
   OTHER_MATCH_LABEL,
@@ -223,7 +224,7 @@ export function MatchVideosSection({
       ) : null}
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!submitting) setDialogOpen(open) }}>
-        <DialogContent>
+        <DialogContent className={MATCH_DIALOG_CLASS}>
           <DialogHeader>
             <DialogTitle>Vincular video</DialogTitle>
             <DialogDescription>

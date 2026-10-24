@@ -24,6 +24,7 @@ import {
   matchErrorCopy,
 } from './match-import'
 import { formatMatchDate } from './box-score-format'
+import { MATCH_DIALOG_CLASS } from './dialog-theme'
 import { MATCHES_PATH, matchDetailPath } from './match-routes'
 import { ImportErrorAlert, MatchImportPreview, TeamMismatchAlerts } from './MatchImportPreview'
 import { StatsFileDropzone } from './StatsFileDropzone'
@@ -288,7 +289,7 @@ export function MatchStatsImportPage() {
       )}
 
       <Dialog open={confirmOpen} onOpenChange={(open) => { if (busy === null) setConfirmOpen(open) }}>
-        <DialogContent>
+        <DialogContent className={MATCH_DIALOG_CLASS}>
           <DialogHeader>
             <DialogTitle>Reemplazar estadísticas</DialogTitle>
             <DialogDescription>{OVERWRITE_WARNING}</DialogDescription>

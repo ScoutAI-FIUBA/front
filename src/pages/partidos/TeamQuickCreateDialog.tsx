@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { teamService } from '@/services/registry'
 import type { Team } from '@/types'
 import { NEW_TEAM_DEFAULT_COUNTRY, newTeamDefaults, similarTeams } from './team-suggestion'
+import { MATCH_DIALOG_CLASS } from './dialog-theme'
 
 /**
  * Creates a team from its name, city and country. A team is created only on an explicit click; if the name
@@ -90,7 +91,7 @@ export function TeamQuickCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next) }}>
-      <DialogContent>
+      <DialogContent className={MATCH_DIALOG_CLASS}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

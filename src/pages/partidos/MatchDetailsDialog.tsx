@@ -21,6 +21,7 @@ import {
   type MatchDetailsValues,
 } from './match-form'
 import { matchErrorCopy } from './match-import'
+import { MATCH_DIALOG_CLASS } from './dialog-theme'
 
 export const TEAMS_READ_ONLY_NOTE = 'Para cambiar los equipos creá un partido nuevo.'
 
@@ -90,7 +91,7 @@ export function MatchDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next) }}>
-      <DialogContent>
+      <DialogContent className={MATCH_DIALOG_CLASS}>
         <DialogHeader>
           <DialogTitle>Editar fecha y descripción</DialogTitle>
           <DialogDescription>{homeName} vs {awayName}. {TEAMS_READ_ONLY_NOTE}</DialogDescription>
