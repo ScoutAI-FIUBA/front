@@ -14,6 +14,10 @@ ScoutAI v2 Phase 2 material library.
 - `/partidos/:id?tab=...`: temporary compatibility redirect to `/videos/:id`. `/partidos` and `/partidos/nuevo` belong to Matches (`specs/matches/current.md`).
 - `/videos/:videoId/colecciones`: preserved clips/collections route.
 
+## Linked match
+
+- A video may be linked to one match (`Video.linkedMatchId`, from the backend `match_id`). When it is, the detail header shows `Partido: {Local} vs {Visitante} · dd/mm/aaaa` linking to `/partidos/:matchId` (fallback `Ver partido vinculado`). The link is created from the match page; nothing else on the video page changes and no stats are combined.
+
 ## Current Behavior
 
 - Videos is the source-material library; automatic jobs are discoverable primarily from `/analisis` and Inicio.

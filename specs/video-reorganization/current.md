@@ -65,7 +65,7 @@
 ## Non-scope
 
 - Real Match pages, the `/matches` integration, and the Excel/CSV import are specified in `specs/matches/current.md`, not here.
-- No video<->match associations in this release (linking a match to several videos is planned for a later phase; a video belongs to at most one match).
+- A video may link to one match (see `specs/matches/current.md`); no stats are combined or compared.
 - No visual redesign, dependency change, file move, or backend change.
 
 ## Verification

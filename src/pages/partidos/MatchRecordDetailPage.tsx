@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CircleAlert, FileUp, RefreshCw } from 'lucide-react'
+import { CircleAlert, FileUp, Pencil, RefreshCw } from 'lucide-react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,8 @@ import type { MatchRecord, Team } from '@/types'
 import { BoxScoreTable } from './BoxScoreTable'
 import { formatMatchDate, matchScoreline, winnerLabel } from './box-score-format'
 import { MATCHES_PATH, matchStatsImportPath } from './match-routes'
+import { MatchDetailsDialog } from './MatchDetailsDialog'
+import { MatchVideosSection } from './MatchVideosSection'
 
 type LoadState = 'loading' | 'error' | 'session-expired' | 'not-found' | 'success'
 
@@ -21,6 +23,7 @@ function MatchRecordDetail({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<MatchRecord | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [rosterNames, setRosterNames] = useState<Record<string, string>>({})
+  const [editOpen, setEditOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoadState('loading')
@@ -132,9 +135,31 @@ function MatchRecordDetail({ matchId }: { matchId: string }) {
           </p>
         ) : null}
         {match.description ? <p>{match.description}</p> : null}
+        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => setEditOpen(true)}>
+          <Pencil aria-hidden="true" className="h-4 w-4" />
+          Editar fecha y descripción
+        </Button>
         {boxScore?.competition ? <p>Competencia: {boxScore.competition}</p> : null}
         {boxScore ? <p>Fuente: planilla de estadísticas de la federación</p> : null}
       </section>
+
+      <MatchVideosSection match={match} homeName={homeName} awayName={awayName} />
+
+      {editOpen ? (
+        <MatchDetailsDialog
+          match={match}
+          homeName={homeName}
+          awayName={awayName}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          onSaved={(updated) => setMatch((current) => current && {
+            ...current,
+            matchDate: updated.matchDate,
+            description: updated.description,
+            updatedAt: updated.updatedAt,
+          })}
+        />
+      ) : null}
 
       {match.statsFormat === 'none' ? (
         <EmptyState

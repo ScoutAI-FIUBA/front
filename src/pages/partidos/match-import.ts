@@ -14,7 +14,7 @@ export const STATS_FILE_TYPE_ERROR = 'Elegí la planilla de la federación en .x
 export const STATS_FILE_SIZE_ERROR = 'El archivo supera 5 MB'
 export const UNLINKED_SAVE_NOTE = 'Se guarda con el nombre del archivo, sin vincular a tu plantel.'
 export const OVERWRITE_WARNING = 'Esto reemplaza las estadísticas guardadas de este partido. No se puede deshacer.'
-export const NOT_EDITABLE_NOTE = 'Equipos, fecha y descripción todavía no se pueden editar.'
+export const NOT_EDITABLE_NOTE = 'Los equipos todavía no se pueden editar.'
 
 /** Returns the Spanish error to show, or null when the file can be sent. */
 export function validateStatsFile(file: { name: string; size: number }): string | null {
@@ -174,6 +174,18 @@ export function matchErrorCopy(error: unknown, context?: 'preview'): MatchErrorC
         return {
           title: 'Los datos enviados no son válidos',
           description: 'Revisá los campos e intentá de nuevo.',
+          detail,
+        }
+      case 'VIDEO_TEAM_NOT_IN_MATCH':
+        return {
+          title: 'No se puede vincular este video',
+          description: 'Ese video es de un equipo que no juega este partido.',
+          detail,
+        }
+      case 'VIDEO_NOT_FOUND':
+        return {
+          title: 'No encontramos este video',
+          description: 'Puede que ya no exista. Actualizá la lista e intentá de nuevo.',
           detail,
         }
       case 'MATCH_NOT_FOUND':
