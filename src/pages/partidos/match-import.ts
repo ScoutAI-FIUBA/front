@@ -1,6 +1,11 @@
 import type { MatchSide, MatchStatsSavePayload, TeamMismatchDetail, UnlinkedReason } from '../../types/index.ts'
 import type { CreateMatchInput, IMatchService } from '../../services/contracts/matches.service.ts'
-import { isApiAuthenticationError } from '../../services/api/errors.ts'
+import {
+  ApiNetworkError,
+  ApiResponseError,
+  ApiTimeoutError,
+  isApiAuthenticationError,
+} from '../../services/api/errors.ts'
 import { MatchApiError } from '../../services/api/matches.client.ts'
 
 export const MAX_STATS_FILE_BYTES = 5 * 1024 * 1024
@@ -24,6 +29,28 @@ export function fileSizeLabel(size: number): string {
   if (size < 1024 * 1024) return `${Math.round(size / 1024).toLocaleString('es-AR')} KB`
   return `${(size / 1024 / 1024).toLocaleString('es-AR', { maximumFractionDigits: 1 })} MB`
 }
+
+/** Message when a newly chosen file is rejected; says so if it also dropped the previous selection. */
+export function rejectedFileMessage(problem: string, hadSelectedFile: boolean): string {
+  return hadSelectedFile ? `${problem}. Quitamos la planilla que habías elegido antes.` : problem
+}
+
+export function playedSummary(count: number): string {
+  return count === 1
+    ? 'Las estadísticas de 1 jugador que jugó.'
+    : `Las estadísticas de ${count} jugadores que jugaron.`
+}
+
+export function linkedSummary(count: number): string {
+  return count === 1 ? '1 vinculado a tu plantel.' : `${count} vinculados a tu plantel.`
+}
+
+export function fileCountsSummary(inFile: number, played: number): string {
+  const inFileText = inFile === 1 ? '1 en el archivo' : `${inFile} en el archivo`
+  return `${inFileText}, ${played === 1 ? '1 jugó' : `${played} jugaron`}`
+}
+
+export const PREVIEW_ROUTE_MISSING_COPY = 'El servidor todavía no tiene la importación de planillas.'
 
 export function sideLabel(side: MatchSide): string {
   return side === 'HOME' ? 'Local' : 'Visitante'
@@ -82,6 +109,8 @@ export function mismatchMessage(detail: TeamMismatchDetail): string {
   return `Elegiste ${detail.selectedTeam} como ${sideLabel(detail.side)}, pero en el archivo figura «${detail.nameInFile}».`
 }
 
+const FALLBACK_DESCRIPTION = 'Intentá de nuevo en unos minutos.'
+
 export interface MatchErrorCopy {
   title: string
   description: string
@@ -90,7 +119,7 @@ export interface MatchErrorCopy {
 }
 
 /** Spanish copy per error code. The backend message is kept only as a technical detail. */
-export function matchErrorCopy(error: unknown): MatchErrorCopy {
+export function matchErrorCopy(error: unknown, context?: 'preview'): MatchErrorCopy {
   if (isApiAuthenticationError(error)) {
     return { title: 'Tu sesión terminó', description: 'Ingresá de nuevo para continuar.' }
   }
@@ -137,7 +166,8 @@ export function matchErrorCopy(error: unknown): MatchErrorCopy {
       case 'PLAYER_NOT_FOUND':
         return {
           title: 'No encontramos a un jugador vinculado',
-          description: 'Un jugador del plantel ya no existe. Volvé a revisar las estadísticas para actualizar los vínculos.',
+          description:
+            'Un jugador del plantel ya no existe. Si el partido ya se creó, abrilo con "Ir al partido" e importá las estadísticas de nuevo desde ahí; si no, volvé a revisar las estadísticas.',
           detail,
         }
       case 'VALIDATION_ERROR':
@@ -155,9 +185,26 @@ export function matchErrorCopy(error: unknown): MatchErrorCopy {
     }
   }
   const message = error instanceof Error ? error.message.trim() : ''
+  // A backend without the preview route answers 404/405 with a null code.
+  if (
+    context === 'preview'
+    && error instanceof ApiResponseError
+    && (error.status === 404 || error.status === 405)
+  ) {
+    return {
+      title: 'No pudimos leer la planilla',
+      description: PREVIEW_ROUTE_MISSING_COPY,
+      detail: message || undefined,
+    }
+  }
+  // Timeouts and connection errors already carry Spanish text.
+  if (error instanceof ApiTimeoutError || error instanceof ApiNetworkError) {
+    return { title: 'No pudimos completar la operación', description: message || FALLBACK_DESCRIPTION }
+  }
   return {
     title: 'No pudimos completar la operación',
-    description: message || 'Intentá de nuevo en unos minutos.',
+    description: FALLBACK_DESCRIPTION,
+    detail: message || undefined,
   }
 }
 

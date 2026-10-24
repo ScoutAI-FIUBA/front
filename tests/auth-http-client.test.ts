@@ -287,6 +287,39 @@ test('protected 401 refreshes once and retries with the new access token', async
   )
 })
 
+test('protected 401 refresh retry re-sends the same FormData body without a JSON content type', async (t) => {
+  installBrowserStorage()
+  t.after(restoreBrowserGlobals)
+  setStoredToken('access-old')
+  const form = new FormData()
+  form.append('home_team_id', 'h')
+  const seen: Array<{ body: unknown; contentType: string | null; authorization: string | null }> = []
+
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input)
+    if (url.endsWith('/auth/refresh')) return loginResponse('access-new')
+    const headers = new Headers(init?.headers)
+    seen.push({
+      body: init?.body,
+      contentType: headers.get('Content-Type'),
+      authorization: headers.get('Authorization'),
+    })
+    return headers.get('Authorization') === 'Bearer access-new'
+      ? Response.json({ ok: true })
+      : new Response(null, { status: 401 })
+  }) as typeof fetch
+
+  const response = await apiFetch('/matches/stats/import-preview', { method: 'POST', body: form })
+
+  assert.equal(response.status, 200)
+  assert.equal(seen.length, 2)
+  assert.equal(seen[0].body, form)
+  assert.equal(seen[1].body, form)
+  assert.equal(seen[1].authorization, 'Bearer access-new')
+  assert.deepEqual(seen.map((request) => request.contentType), [null, null])
+  assert.equal((seen[1].body as FormData).get('home_team_id'), 'h')
+})
+
 test('failed refresh clears auth immediately and later 401s do not start refresh loops', async (t) => {
   installBrowserStorage()
   t.after(restoreBrowserGlobals)

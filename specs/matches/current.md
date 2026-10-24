@@ -65,7 +65,10 @@
 ## Errors
 
 - Error codes are mapped to Spanish copy; the backend message (English) is kept as a secondary `Detalle técnico`. Codes: `MATCH_NOT_FOUND`, `TEAM_NOT_FOUND`, `PLAYER_NOT_FOUND`, `INVALID_MATCH_TEAMS`, `INVALID_WINNER_TEAM`, `INVALID_STATS_FILE`, `STATS_FILE_TOO_LARGE`, `TEAM_MISMATCH`, `VALIDATION_ERROR`.
-- Two backend error envelopes are handled: `{error:{code,message,details?}}` and FastAPI `{detail:[...]|string}` (mapped to `VALIDATION_ERROR`); plain-text errors keep a null code.
+- Two backend error envelopes are handled: `{error:{code,message,details?}}` and FastAPI `{detail:[...]|string}`. A FastAPI `detail` body is `VALIDATION_ERROR` only for status 422; any other status (for example `404 {"detail":"Not Found"}` or `405 {"detail":"Method Not Allowed"}`) keeps a null code with the detail text as the message. Plain-text errors keep a null code.
+- An error with a null code shows the generic title `No pudimos completar la operación`, a Spanish description, and the backend message as `Detalle técnico`; the load and preview screens keep it retryable. If the preview request fails with a null-code 404 or 405 (a backend without the import route), the copy is `El servidor todavía no tiene la importación de planillas.`
+- Choosing an invalid file while another file is selected removes the selected file and says so, so a rejected choice never submits the previous file. `Importar igual` re-validates the form and previews with the current form values, not the values captured when the mismatch arrived.
+- Counts use correct singular and plural (`1 jugador que jugó`, `1 vinculado`). A page that is unmounted when a request finishes does not navigate or show a toast. A failure to load teams in the list does not fail the list (`Equipo no disponible`).
 - A players export such as `celtics_roster_25_26.csv` is not a box score and yields `INVALID_STATS_FILE`.
 - Backend warning strings are translated when they match a known pattern and shown verbatim otherwise.
 - A 401 follows the shared refresh-once behavior.

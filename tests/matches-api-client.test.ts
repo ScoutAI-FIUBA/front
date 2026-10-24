@@ -178,7 +178,18 @@ test('parseMatchErrorBody handles the three error shapes', () => {
   const fastapi = parseMatchErrorBody(422, JSON.stringify({ detail: [{ msg: 'bad uuid' }, { msg: 'other' }] }))
   assert.equal(fastapi.code, 'VALIDATION_ERROR')
   assert.equal(fastapi.message, 'bad uuid. other')
-  assert.equal(parseMatchErrorBody(400, JSON.stringify({ detail: 'nope' })).code, 'VALIDATION_ERROR')
+  assert.equal(parseMatchErrorBody(422, JSON.stringify({ detail: 'nope' })).code, 'VALIDATION_ERROR')
+
+  // FastAPI answers 404/405 (e.g. a backend without the preview route) with {detail:"..."}: not a validation error.
+  const notFound = parseMatchErrorBody(404, JSON.stringify({ detail: 'Not Found' }))
+  assert.equal(notFound.code, null)
+  assert.equal(notFound.status, 404)
+  assert.equal(notFound.message, 'Not Found')
+  const notAllowed = parseMatchErrorBody(405, JSON.stringify({ detail: 'Method Not Allowed' }))
+  assert.equal(notAllowed.code, null)
+  assert.equal(notAllowed.message, 'Method Not Allowed')
+  assert.equal(parseMatchErrorBody(400, JSON.stringify({ detail: 'nope' })).code, null)
+  assert.equal(parseMatchErrorBody(404, JSON.stringify({ detail: [{ msg: 'x' }] })).code, null)
 
   const plain = parseMatchErrorBody(405, 'Method Not Allowed')
   assert.equal(plain.code, null)

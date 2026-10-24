@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { ApiResponseError } from '../src/services/api/errors.ts'
+import { ApiNetworkError, ApiResponseError, ApiTimeoutError } from '../src/services/api/errors.ts'
 import { MatchApiError, parseMatchErrorBody, teamMismatchDetails } from '../src/services/api/matches.client.ts'
 import type { MatchErrorCode } from '../src/services/api/matches.client.ts'
+import { readFileSync } from 'node:fs'
 import { emptyMatchFormValues, matchFormSchema, matchFormToCreateInput } from '../src/pages/partidos/match-form.ts'
 import {
   MAX_STATS_FILE_BYTES,
+  fileCountsSummary,
   fileSizeLabel,
+  linkedSummary,
+  playedSummary,
+  rejectedFileMessage,
   matchErrorCopy,
   mismatchMessage,
   runCreateWithStats,
@@ -179,8 +184,13 @@ test('error copy for auth, plain-text and unknown errors', () => {
   assert.equal(matchErrorCopy(new MatchApiError(401, null, 'x')).title, 'Tu sesión terminó')
   const plain = matchErrorCopy(parseMatchErrorBody(405, 'Method Not Allowed'))
   assert.equal(plain.title, 'No pudimos completar la operación')
-  assert.equal(plain.description, 'Method Not Allowed')
-  assert.equal(matchErrorCopy(new Error('Tardó demasiado')).description, 'Tardó demasiado')
+  assert.equal(plain.description, 'Intentá de nuevo en unos minutos.')
+  assert.equal(plain.detail, 'Method Not Allowed')
+  const generic = matchErrorCopy(new Error('Internal boom'))
+  assert.equal(generic.description, 'Intentá de nuevo en unos minutos.')
+  assert.equal(generic.detail, 'Internal boom')
+  assert.equal(matchErrorCopy(new ApiTimeoutError('Leer la planilla tardó demasiado. Probá de nuevo.')).description, 'Leer la planilla tardó demasiado. Probá de nuevo.')
+  assert.equal(matchErrorCopy(new ApiNetworkError('No pudimos conectarnos con el servidor.')).detail, undefined)
   assert.equal(matchErrorCopy('boom').description, 'Intentá de nuevo en unos minutos.')
   const fastapi = matchErrorCopy(parseMatchErrorBody(422, JSON.stringify({ detail: [{ msg: 'bad uuid' }] })))
   assert.equal(fastapi.title, 'Los datos enviados no son válidos')
@@ -249,3 +259,55 @@ test('runCreateWithStats does not PUT when the POST fails', async () => {
 function isError(error: unknown, code: MatchErrorCode): boolean {
   return error instanceof MatchApiError && error.code === code
 }
+
+test('a missing preview route (404/405 without a code) gets clear Spanish copy only for the preview', () => {
+  for (const status of [404, 405]) {
+    const error = parseMatchErrorBody(status, JSON.stringify({ detail: 'Not Found' }))
+    const preview = matchErrorCopy(error, 'preview')
+    assert.equal(preview.description, 'El servidor todavía no tiene la importación de planillas.')
+    assert.equal(preview.detail, 'Not Found')
+    const other = matchErrorCopy(error)
+    assert.equal(other.title, 'No pudimos completar la operación')
+    assert.doesNotMatch(other.description, /importación/)
+  }
+  // A coded 404 keeps its own copy even for the preview.
+  assert.equal(
+    matchErrorCopy(new MatchApiError(404, 'TEAM_NOT_FOUND', 'x'), 'preview').title,
+    'No encontramos uno de los equipos',
+  )
+  // 422 FastAPI bodies are validation errors.
+  assert.equal(
+    matchErrorCopy(parseMatchErrorBody(422, JSON.stringify({ detail: [{ msg: 'bad' }] })), 'preview').title,
+    'Los datos enviados no son válidos',
+  )
+})
+
+test('PLAYER_NOT_FOUND copy points to the match instead of a hidden back button', () => {
+  const copy = matchErrorCopy(new MatchApiError(404, 'PLAYER_NOT_FOUND', 'gone'))
+  assert.match(copy.description, /Ir al partido/)
+})
+
+test('counts use correct singular and plural', () => {
+  assert.equal(playedSummary(1), 'Las estadísticas de 1 jugador que jugó.')
+  assert.equal(playedSummary(19), 'Las estadísticas de 19 jugadores que jugaron.')
+  assert.equal(linkedSummary(1), '1 vinculado a tu plantel.')
+  assert.equal(linkedSummary(0), '0 vinculados a tu plantel.')
+  assert.equal(fileCountsSummary(12, 10), '12 en el archivo, 10 jugaron')
+  assert.equal(fileCountsSummary(1, 1), '1 en el archivo, 1 jugó')
+})
+
+test('a rejected file says it also dropped the previous selection', () => {
+  assert.equal(rejectedFileMessage('Problema', false), 'Problema')
+  assert.match(rejectedFileMessage('Problema', true), /Quitamos la planilla que habías elegido antes/)
+})
+
+test('page sources: Importar igual uses the current form values, navigation is guarded after unmount', () => {
+  const create = readFileSync(new URL('../src/pages/partidos/MatchCreatePage.tsx', import.meta.url), 'utf8')
+  assert.match(create, /form\.handleSubmit\(\(values\) => requestPreview\(values, true\)\)/)
+  assert.doesNotMatch(create, /requestPreview\(mismatch\.values/)
+  const importPage = readFileSync(new URL('../src/pages/partidos/MatchStatsImportPage.tsx', import.meta.url), 'utf8')
+  for (const source of [create, importPage]) {
+    assert.match(source, /activeRef\.current = false/)
+    assert.match(source, /if \(!activeRef\.current\) return\s+(toast|navigate)/)
+  }
+})

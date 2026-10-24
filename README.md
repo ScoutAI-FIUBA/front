@@ -1,6 +1,6 @@
 # ScoutAI Frontend
 
-Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos, jugadores y vinculación jugador–equipo** consumen el backend real; partidos, videos y análisis siguen en mock.
+Plataforma de scouting deportivo con React, TypeScript, Vite, Tailwind CSS y componentes estilo shadcn/ui. **Auth, equipos, jugadores y vinculación jugador–equipo** consumen el backend real; **partidos** también usan el backend real (`/matches`) salvo que `VITE_USE_MOCK_API=true`; los videos usan el backend real y las sesiones de análisis legacy siguen en mock.
 
 ## Requisitos
 
@@ -27,7 +27,7 @@ Para volver a mocks locales: `VITE_USE_MOCK_API=true` en `.env`.
 - Dashboard
 - Equipos (lista + vincular jugador)
 - Jugadores (lista + crear)
-- Partidos (crear + roster)
+- Partidos (lista, crear, importar planilla de estadísticas, detalle con box score)
 - Videos (lista + subir)
 - Análisis (lista + detalle)
 
@@ -36,7 +36,7 @@ Para volver a mocks locales: `VITE_USE_MOCK_API=true` en `.env`.
 ```
 src/services/contracts/   → interfaces
 src/services/api/         → cliente HTTP (auth, teams, players)
-src/services/mock/        → mocks (partidos, videos, análisis + fallback)
+src/services/mock/        → mocks (partidos con `VITE_USE_MOCK_API=true`, análisis legacy + fallback)
 src/services/registry.ts  → punto único de cambio
 ```
 

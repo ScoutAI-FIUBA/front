@@ -11,6 +11,9 @@ import {
   sideLabel,
   translateImportWarning,
   unlinkedReasonLabel,
+  fileCountsSummary,
+  linkedSummary,
+  playedSummary,
   type MatchErrorCopy,
 } from './match-import'
 
@@ -125,7 +128,7 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
                   <dd className="text-foreground">«{check.excelName}»</dd>
                   <dt className="text-muted-foreground">Jugadores</dt>
                   <dd className="text-foreground">
-                    {check.playersInFile} en el archivo, {check.playersWhoPlayed} jugaron
+                    {fileCountsSummary(check.playersInFile, check.playersWhoPlayed)}
                   </dd>
                   <dt className="text-muted-foreground">Equipo elegido</dt>
                   <dd className="text-foreground">
@@ -187,8 +190,8 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
         <section aria-labelledby="preview-save-title" className="rounded-lg border border-border bg-surface p-4">
           <h3 id="preview-save-title" className="text-base font-semibold text-foreground">Qué se va a guardar</h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
-            <li>Las estadísticas de {playedCount} jugadores que jugaron.</li>
-            <li>{report.linkedPlayers.length} vinculados a tu plantel.</li>
+            <li>{playedSummary(playedCount)}</li>
+            <li>{linkedSummary(report.linkedPlayers.length)}</li>
             <li>Resultado: {winnerText}.</li>
           </ul>
           {replacing ? (

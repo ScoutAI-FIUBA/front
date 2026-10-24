@@ -31,7 +31,14 @@ export function MatchListPage() {
   const load = useCallback(async () => {
     setLoadState('loading')
     try {
-      const [loadedMatches, loadedTeams] = await Promise.all([matchService.list(), teamService.list()])
+      const [loadedMatches, loadedTeams] = await Promise.all([
+        matchService.list(),
+        // Team names are secondary: a failure only shows 'Equipo no disponible'.
+        teamService.list().catch((teamsError: unknown) => {
+          if (isApiAuthenticationError(teamsError)) throw teamsError
+          return [] as Team[]
+        }),
+      ])
       setMatches(loadedMatches)
       setTeams(loadedTeams)
       setLoadState('success')

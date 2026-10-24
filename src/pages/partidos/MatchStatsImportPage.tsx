@@ -51,6 +51,12 @@ export function MatchStatsImportPage() {
   const [preview, setPreview] = useState<MatchStatsImportPreview | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const previewHeadingRef = useRef<HTMLHeadingElement>(null)
+  const activeRef = useRef(true)
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => { activeRef.current = false }
+  }, [])
 
   const loadMatch = useCallback(async (isActive: () => boolean = () => true) => {
     setLoad({ kind: 'loading' })
@@ -180,7 +186,7 @@ export function MatchStatsImportPage() {
         if (isMatchApiError(previewError, 'TEAM_MISMATCH')) {
           setMismatch(teamMismatchDetails(previewError))
         } else {
-          setError(matchErrorCopy(previewError))
+          setError(matchErrorCopy(previewError, 'preview'))
         }
       }
     })
@@ -192,6 +198,7 @@ export function MatchStatsImportPage() {
       setError(null)
       try {
         await matchService.saveStats(match.id, preview.savePayload)
+        if (!activeRef.current) return
         toast.success('Estadísticas guardadas')
         navigate(matchDetailPath(match.id))
       } catch (saveError) {

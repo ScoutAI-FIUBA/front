@@ -2,7 +2,7 @@ import { type ChangeEvent, type DragEvent, useId, useState } from 'react'
 import { FileSpreadsheet, Upload, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { fileSizeLabel, validateStatsFile } from './match-import'
+import { fileSizeLabel, rejectedFileMessage, validateStatsFile } from './match-import'
 
 interface StatsFileDropzoneProps {
   file: File | null
@@ -21,8 +21,13 @@ export function StatsFileDropzone({ file, onFileChange, disabled = false }: Stat
   const acceptFile = (selected: File | undefined) => {
     if (!selected || disabled) return
     const problem = validateStatsFile(selected)
-    setError(problem)
-    if (problem) return
+    if (problem) {
+      // A rejected choice must not leave the previous file selected (it would be the one submitted).
+      setError(rejectedFileMessage(problem, file !== null))
+      if (file) onFileChange(null)
+      return
+    }
+    setError(null)
     onFileChange(selected)
   }
 

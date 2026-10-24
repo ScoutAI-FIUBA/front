@@ -73,6 +73,12 @@ export function MatchCreatePage() {
   const [createdMatchId, setCreatedMatchId] = useState<string | null>(null)
   const [focusFormTick, setFocusFormTick] = useState(0)
   const previewHeadingRef = useRef<HTMLHeadingElement>(null)
+  const activeRef = useRef(true)
+
+  useEffect(() => {
+    activeRef.current = true
+    return () => { activeRef.current = false }
+  }, [])
 
   const loadTeams = useCallback(async (isActive: () => boolean = () => true) => {
     setTeamsState('loading')
@@ -143,7 +149,7 @@ export function MatchCreatePage() {
         if (isMatchApiError(previewError, 'TEAM_MISMATCH')) {
           setMismatch({ details: teamMismatchDetails(previewError), values })
         } else {
-          setError(matchErrorCopy(previewError))
+          setError(matchErrorCopy(previewError, 'preview'))
         }
       }
     })
@@ -153,6 +159,7 @@ export function MatchCreatePage() {
     setError(null)
     try {
       const created = await matchService.create(matchFormToCreateInput(values))
+      if (!activeRef.current) return
       toast.success('Partido creado')
       navigate(matchDetailPath(created.id))
     } catch (createError) {
@@ -174,6 +181,7 @@ export function MatchCreatePage() {
       })
       if (result.matchId) setCreatedMatchId(result.matchId)
       if (result.statsSaved && result.matchId) {
+        if (!activeRef.current) return
         toast.success('Partido y estadísticas guardados')
         navigate(matchDetailPath(result.matchId))
         return
@@ -417,7 +425,7 @@ export function MatchCreatePage() {
             <TeamMismatchAlerts
               details={mismatch.details}
               onChangeTeams={changeTeams}
-              onImportAnyway={() => void requestPreview(mismatch.values, true)}
+              onImportAnyway={() => void form.handleSubmit((values) => requestPreview(values, true))()}
               busy={busy === 'preview'}
             />
           ) : null}

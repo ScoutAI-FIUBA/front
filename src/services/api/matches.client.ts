@@ -371,7 +371,7 @@ export class MatchApiError extends ApiResponseError {
   }
 }
 
-/** Handles `{error:{code,message,details?}}`, FastAPI `{detail:[...]|"..."}` and plain text. */
+/** Handles `{error:{code,message,details?}}`, FastAPI `{detail:[...]|"..."}` (422 only) and plain text. */
 export function parseMatchErrorBody(status: number, text: string): MatchApiError {
   const fallback = text.trim() || 'Error de servidor'
   let data: unknown
@@ -392,8 +392,10 @@ export function parseMatchErrorBody(status: number, text: string): MatchApiError
       details,
     )
   }
+  // FastAPI also answers 404/405 with {detail:"..."}: only a 422 is a validation error.
+  const validationCode = status === 422 ? 'VALIDATION_ERROR' : null
   if (typeof data.detail === 'string') {
-    return new MatchApiError(status, 'VALIDATION_ERROR', data.detail, data.detail)
+    return new MatchApiError(status, validationCode, data.detail || fallback, data.detail)
   }
   if (Array.isArray(data.detail)) {
     const message =
@@ -401,7 +403,7 @@ export function parseMatchErrorBody(status: number, text: string): MatchApiError
         .map((item) => (isRecord(item) && typeof item.msg === 'string' ? item.msg : ''))
         .filter(Boolean)
         .join('. ') || fallback
-    return new MatchApiError(status, 'VALIDATION_ERROR', message, data.detail)
+    return new MatchApiError(status, validationCode, message, data.detail)
   }
   return new MatchApiError(status, null, fallback)
 }
