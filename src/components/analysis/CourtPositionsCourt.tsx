@@ -10,7 +10,7 @@ import {
   buildAnalysisJobPlayerLabels,
   type AnalysisJobPlayerKey,
 } from '@/pages/analysis/analysis-job-player-identity'
-import { validCourtPositions } from './court-positions-court'
+import { playerColor, validCourtPositions } from './court-positions-court'
 import { BasketballCourtLines } from './BasketballCourtLines'
 import { courtColumnStyle, courtFrameStyle } from './court-size'
 
@@ -20,19 +20,6 @@ interface CourtPositionsCourtProps {
   ourTeamSide: AnalysisJobTeamSide | null
   playerLabels?: Map<AnalysisJobPlayerKey, string>
   presentation?: 'legacy' | 'match-report'
-}
-
-function playerColor(player: AnalysisJobCourtPositionsPlayer): string {
-  if (!player.stablePlayerId) {
-    const hue = ((player.trackId * 137.508) % 360 + 360) % 360
-    return `hsl(${hue.toFixed(1)} 72% 38%)`
-  }
-  const hash = [...player.stablePlayerId].reduce(
-    (value, character) => ((value * 31) + character.charCodeAt(0)) | 0,
-    0,
-  )
-  const hue = ((hash * 137.508) % 360 + 360) % 360
-  return `hsl(${hue.toFixed(1)} 72% 38%)`
 }
 
 export function CourtPositionsCourt({

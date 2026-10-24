@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CircleAlert, LoaderCircle, MapPinned, Users } from 'lucide-react'
 import { CourtPositionsCourt } from '@/components/analysis/CourtPositionsCourt'
+import { CourtPositionsGroupPlayback } from '@/components/analysis/CourtPositionsGroupPlayback'
 import { CourtPositionsHeatmap } from '@/components/analysis/CourtPositionsHeatmap'
 import { CourtPositionsPlayback } from '@/components/analysis/CourtPositionsPlayback'
 import { buildCourtPositionsHeatmap } from '@/components/analysis/court-positions-heatmap'
@@ -56,6 +57,45 @@ export interface AnalysisMovementTechnicalSummary {
 
 type LoadState = 'idle' | 'loading' | 'success' | 'error'
 type CourtPositionsView = 'trajectories' | 'heatmap'
+type CourtPositionsGroupMode = 'full' | 'together'
+
+const GROUP_MODE_OPTIONS: Array<{ id: CourtPositionsGroupMode; label: string }> = [
+  { id: 'full', label: 'Recorrido completo' },
+  { id: 'together', label: 'Reproducir juntos' },
+]
+
+function GroupModeToggle({
+  value,
+  onChange,
+  presentation,
+}: {
+  value: CourtPositionsGroupMode
+  onChange: (mode: CourtPositionsGroupMode) => void
+  presentation: 'legacy' | 'match-report'
+}) {
+  return (
+    <div className="flex flex-wrap gap-1" role="group" aria-label="Forma de ver a todos los jugadores">
+      {GROUP_MODE_OPTIONS.map((option) => (
+        <Button
+          key={option.id}
+          type="button"
+          size="sm"
+          variant={presentation === 'legacy' && value === option.id ? 'default' : 'ghost'}
+          className={cn(
+            presentation === 'match-report' && 'rounded-full border px-4',
+            presentation === 'match-report' && (value === option.id
+              ? 'border-[#FF6A1F] bg-[#FF6A1F] text-white hover:bg-[#ff7b38]'
+              : 'border-[#3A4254] bg-transparent text-[#A3ABBA] hover:border-[#FF6A1F] hover:bg-transparent hover:text-[#F4F5F7]'),
+          )}
+          aria-pressed={value === option.id}
+          onClick={() => onChange(option.id)}
+        >
+          {option.label}
+        </Button>
+      ))}
+    </div>
+  )
+}
 
 function formatMetres(value: number): string {
   return `${value.toLocaleString('es-AR', { maximumFractionDigits: 2 })} m`
@@ -77,6 +117,7 @@ export function AnalysisJobCourtPositionsView({
   const [positions, setPositions] = useState<AnalysisJobCourtPositions | null>(null)
   const [filter, setFilter] = useState<CourtPositionsFilter>('all')
   const [view, setView] = useState<CourtPositionsView>('trajectories')
+  const [groupMode, setGroupMode] = useState<CourtPositionsGroupMode>('full')
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const ourTeamSideRef = useRef(job.ourTeamSide)
@@ -97,6 +138,7 @@ export function AnalysisJobCourtPositionsView({
       setPositions(null)
       setFilter('all')
       setView('trajectories')
+      setGroupMode('full')
       setError('')
       setLoadState('idle')
       onTechnicalSummaryChange?.(null)
@@ -108,6 +150,7 @@ export function AnalysisJobCourtPositionsView({
     setPositions(null)
     setFilter('all')
     setView('trajectories')
+    setGroupMode('full')
     setError('')
     setLoadState('loading')
     void loadAnalysisJobCourtPositions(context, analysisJobCourtPositionsService).then(
@@ -170,6 +213,11 @@ export function AnalysisJobCourtPositionsView({
     ? visiblePlayers[0]
     : null
   const playerLabels = buildCourtPositionPlayerLabels(groupedPlayers, playerIdentities)
+  // The joint replay is an opt-in view of the whole analysed team: any change of filter or side returns to the full route.
+  useEffect(() => {
+    setGroupMode('full')
+  }, [filter, job.ourTeamSide])
+  const groupPlayback = groupMode === 'together'
 
   if (jobStatus !== 'DONE') return null
 
@@ -310,7 +358,11 @@ export function AnalysisJobCourtPositionsView({
           <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#252B38] py-4">
             <div>
               <p className="font-semibold text-[#F4F5F7]">Vista comparativa</p>
-              <p className="mt-1 text-xs text-[#A3ABBA]">Se superponen los recorridos completos de la selección.</p>
+              <p className="mt-1 text-xs text-[#A3ABBA]">
+                {view === 'trajectories' && groupPlayback
+                  ? 'Los jugadores se mueven juntos y la cola se desvanece.'
+                  : 'Se superponen los recorridos completos de la selección.'}
+              </p>
             </div>
             <span className="text-sm tabular-nums text-[#A3ABBA]">{visibleIdentifiedPlayers.length} jugadores</span>
           </div>
@@ -327,7 +379,12 @@ export function AnalysisJobCourtPositionsView({
             <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} presentation="match-report" />
           ) : (
             <div className="space-y-3">
-              <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} presentation="match-report" />
+              <GroupModeToggle value={groupMode} onChange={setGroupMode} presentation="match-report" />
+              {groupPlayback ? (
+                <CourtPositionsGroupPlayback court={positions.court} players={visibleIdentifiedPlayers} playerLabels={playerLabels} presentation="match-report" />
+              ) : (
+                <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} presentation="match-report" />
+              )}
               <p className="text-xs text-[#A3ABBA]">Elegí un jugador para reproducir su recorrido individual.</p>
             </div>
           )}
@@ -417,8 +474,17 @@ export function AnalysisJobCourtPositionsView({
           <CourtPositionsPlayback key={analysisJobPlayerKey(selectedPlayer)} court={positions.court} player={selectedPlayer} />
         ) : (
           <div className="space-y-3">
-            <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} />
-            <p className="text-xs text-muted-foreground">La comparación superpone recorridos completos. Elegí un jugador para reproducir una secuencia individual.</p>
+            <GroupModeToggle value={groupMode} onChange={setGroupMode} presentation="legacy" />
+            {groupPlayback ? (
+              <CourtPositionsGroupPlayback court={positions.court} players={visibleIdentifiedPlayers} playerLabels={playerLabels} />
+            ) : (
+              <CourtPositionsCourt court={positions.court} players={visibleIdentifiedPlayers} ourTeamSide={job.ourTeamSide} playerLabels={playerLabels} />
+            )}
+            <p className="text-xs text-muted-foreground">
+              {groupPlayback
+                ? 'Elegí un jugador para reproducir una secuencia individual.'
+                : 'La comparación superpone recorridos completos. Elegí un jugador para reproducir una secuencia individual.'}
+            </p>
           </div>
         )}
       </div>
