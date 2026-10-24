@@ -13,10 +13,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { teamService } from '@/services/registry'
 import type { Team } from '@/types'
-import { newTeamDefaults, similarTeams } from './team-suggestion'
+import { NEW_TEAM_DEFAULT_COUNTRY, newTeamDefaults, similarTeams } from './team-suggestion'
 
 /**
- * Creates a team from its name only. A team is created only on an explicit click; if the name
+ * Creates a team from its name, city and country. A team is created only on an explicit click; if the name
  * looks like an existing team a second, deliberate click ("Crear igual") is required.
  */
 export function TeamQuickCreateDialog({
@@ -37,6 +37,8 @@ export function TeamQuickCreateDialog({
   onUseExisting: (team: Team) => void
 }) {
   const [name, setName] = useState(initialName)
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState(NEW_TEAM_DEFAULT_COUNTRY)
   const [warned, setWarned] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,15 +53,18 @@ export function TeamQuickCreateDialog({
   useEffect(() => {
     if (!open) return
     setName(initialName)
+    setCity('')
+    setCountry(NEW_TEAM_DEFAULT_COUNTRY)
     setWarned(false)
     setError(null)
   }, [open, initialName])
 
   const trimmed = name.trim()
+  const complete = trimmed !== '' && city.trim() !== '' && country.trim() !== ''
   const similar = similarTeams(trimmed, teams)
 
   const create = async () => {
-    if (busyRef.current || !trimmed) return
+    if (busyRef.current || !complete) return
     if (similar.length > 0 && !warned) {
       setWarned(true)
       return
@@ -68,7 +73,7 @@ export function TeamQuickCreateDialog({
     setSaving(true)
     setError(null)
     try {
-      const created = await teamService.create(newTeamDefaults(trimmed))
+      const created = await teamService.create(newTeamDefaults(trimmed, city, country))
       if (!activeRef.current) return
       toast.success('Equipo creado')
       onCreated(created)
@@ -89,7 +94,7 @@ export function TeamQuickCreateDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Solo hace falta el nombre. La ciudad y el país los podés completar después en Equipos.
+            Completá el nombre, la ciudad y el país. El resto lo podés editar después en Equipos.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -105,6 +110,26 @@ export function TeamQuickCreateDialog({
               value={name}
               disabled={saving}
               onChange={(event) => { setName(event.target.value); setWarned(false) }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="quick-team-city">Ciudad</Label>
+            <Input
+              id="quick-team-city"
+              className="mt-1"
+              value={city}
+              disabled={saving}
+              onChange={(event) => { setCity(event.target.value) }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="quick-team-country">País</Label>
+            <Input
+              id="quick-team-country"
+              className="mt-1"
+              value={country}
+              disabled={saving}
+              onChange={(event) => { setCountry(event.target.value) }}
             />
           </div>
 
@@ -134,7 +159,7 @@ export function TeamQuickCreateDialog({
             <Button type="button" variant="ghost" disabled={saving} onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant={showWarning ? 'outline' : 'default'} disabled={saving || !trimmed}>
+            <Button type="submit" variant={showWarning ? 'outline' : 'default'} disabled={saving || !complete}>
               {saving ? 'Creando…' : showWarning ? 'Crear igual' : 'Crear equipo'}
             </Button>
           </div>

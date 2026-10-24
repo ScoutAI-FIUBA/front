@@ -76,11 +76,11 @@ test('suggestForSides never suggests the same team twice', () => {
   assert.equal(both.AWAY?.team.id, '2')
 })
 
-test('newTeamDefaults fills only what the backend requires', () => {
-  assert.deepEqual(newTeamDefaults('  Ferro Carril '), {
+test('newTeamDefaults trims the typed name, city and country and derives the short name', () => {
+  assert.deepEqual(newTeamDefaults('  Ferro Carril ', ' Buenos Aires ', ' Argentina '), {
     name: 'Ferro Carril',
     shortName: 'FER',
-    city: 'Sin especificar',
+    city: 'Buenos Aires',
     country: 'Argentina',
   })
 })

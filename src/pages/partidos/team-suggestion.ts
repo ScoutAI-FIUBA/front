@@ -90,16 +90,15 @@ export function suggestForSides(
 }
 
 /** Defaults for the fields the backend requires but this flow does not ask for. */
-export const NEW_TEAM_DEFAULT_CITY = 'Sin especificar'
 export const NEW_TEAM_DEFAULT_COUNTRY = 'Argentina'
 
-export function newTeamDefaults(name: string) {
+export function newTeamDefaults(name: string, city: string, country: string) {
   const trimmed = name.trim()
   return {
     name: trimmed,
     shortName: trimmed.slice(0, 3).toUpperCase(),
-    city: NEW_TEAM_DEFAULT_CITY,
-    country: NEW_TEAM_DEFAULT_COUNTRY,
+    city: city.trim(),
+    country: country.trim(),
   }
 }
 
