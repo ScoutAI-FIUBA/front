@@ -16,4 +16,6 @@ export interface IVideoService {
   filterByStatus(status: Video['status'] | 'all'): Promise<Video[]>
   upload(dto: UploadVideoDto): Promise<Video>
   requestAnalysis(videoId: string): Promise<Video>
+  /** PUT /videos/{id}/match: links the video to a match, or unlinks it with null. Overwrites a previous link. */
+  setMatch(videoId: string, teamId: string, matchId: string | null): Promise<Video>
 }

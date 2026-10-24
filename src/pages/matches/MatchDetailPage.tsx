@@ -28,11 +28,14 @@ import {
   upsertVideoInAnalysisCatalog,
 } from '@/pages/analysis/analysis-job-catalog-store'
 import { createAnalysisJobSubmission } from '@/pages/videos/analysis-job-creation'
+import { matchDetailPath } from '@/pages/partidos/match-routes'
+import { LINKED_MATCH_FALLBACK, formatMatchDate, linkedMatchLabel } from '@/pages/partidos/match-videos'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import {
   analysisJobService,
   clipCollectionService,
   getVideoByIdForTeam,
+  matchService,
   teamService,
   videoService,
 } from '@/services/registry'
@@ -121,6 +124,40 @@ function stateTone(state: MatchLibraryDisplayState): string {
   }
   if (state === 'preparing-file') return 'border-amber-500/30 bg-amber-500/10 text-amber-200'
   return 'border-white/10 bg-white/[0.04] text-[#A3ABBA]'
+}
+
+/** Link from the video header to the match this video is linked to; never blocks the page. */
+function LinkedMatchLink({ matchId }: { matchId: string }) {
+  const [label, setLabel] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    setLabel(null)
+    void (async () => {
+      try {
+        const { match } = await matchService.getWithParticipants(matchId)
+        const teams = await teamService.list()
+        const home = teams.find((team) => team.id === match.homeTeamId)
+        const away = teams.find((team) => team.id === match.awayTeamId)
+        if (!home || !away) throw new Error('team unavailable')
+        if (active) setLabel(linkedMatchLabel(home.name, away.name, formatMatchDate(match.matchDate)))
+      } catch {
+        if (active) setLabel(LINKED_MATCH_FALLBACK)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [matchId])
+
+  return (
+    <Link
+      to={matchDetailPath(matchId)}
+      className="mt-2 inline-block text-sm font-semibold text-[#FF9A68] underline-offset-4 hover:underline"
+    >
+      {label ?? LINKED_MATCH_FALLBACK}
+    </Link>
+  )
 }
 
 function MatchVideoTab({ video }: { video: Video }) {
@@ -757,6 +794,7 @@ export function MatchDetailPage() {
               <span aria-hidden="true" className="hidden sm:inline">·</span>
               <span>Fecha de carga · {formatUploadDate(model.video.uploadedAt)}</span>
             </p>
+            {model.video.linkedMatchId ? <LinkedMatchLink matchId={model.video.linkedMatchId} /> : null}
           </div>
           <span className={`w-fit shrink-0 rounded-full border text-xs font-semibold uppercase tracking-[0.14em] ${isCompactReportHeader ? 'px-3 py-1.5' : 'px-4 py-2'} ${stateTone(displayState)}`}>
             {matchLibraryDisplayLabel(displayState)}

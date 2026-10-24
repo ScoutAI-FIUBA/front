@@ -49,6 +49,15 @@ export const mockMatchService: IMatchService = {
     return match
   },
 
+  async updateDetails(id, input) {
+    await simulateNetwork()
+    const match = findMatch(id)
+    if (input.matchDate !== undefined) match.matchDate = input.matchDate
+    if (input.description !== undefined) match.description = input.description
+    match.updatedAt = new Date().toISOString()
+    return match
+  },
+
   async previewStatsImport() {
     await simulateNetwork()
     // No invented numbers: reading a real spreadsheet needs the backend.

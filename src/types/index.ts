@@ -96,7 +96,10 @@ export type VideoStatus = 'uploaded' | 'processing' | 'analyzed' | 'failed'
 
 export interface Video {
   id: string
+  /** Legacy mock analysis only. The real match link is `linkedMatchId`. */
   matchId?: string
+  /** Real Match this video is linked to (backend `match_id`), or null. */
+  linkedMatchId: string | null
   teamId: string
   title: string
   storageUrl: string

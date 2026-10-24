@@ -1,6 +1,8 @@
 import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { IVideoService } from '../contracts/videos.service'
+import { MatchApiError } from '../api/matches.client'
+import { mockMatchService } from './matches.mock'
 
 export const mockVideoService: IVideoService = {
   canRequestAnalysis: true,
@@ -31,6 +33,7 @@ export const mockVideoService: IVideoService = {
       const video = {
         id: generateId('video'),
       matchId: '',
+        linkedMatchId: null,
         teamId: dto.teamId,
       title: dto.title,
       storageUrl: `/mock/videos/${dto.file.name}`,
@@ -51,6 +54,23 @@ export const mockVideoService: IVideoService = {
       })
     })
     return video
+  },
+
+  async setMatch(videoId, teamId, matchId) {
+    await simulateNetwork()
+    const video = getStore().videos.find((v) => v.id === videoId && v.teamId === teamId)
+    if (!video) throw new MatchApiError(404, 'VIDEO_NOT_FOUND', 'Video not found')
+    if (matchId !== null) {
+      const { match } = await mockMatchService.getWithParticipants(matchId)
+      if (match.homeTeamId !== video.teamId && match.awayTeamId !== video.teamId) {
+        throw new MatchApiError(422, 'VIDEO_TEAM_NOT_IN_MATCH', 'Video team is not in the match')
+      }
+    }
+    updateStore((s) => {
+      const target = s.videos.find((v) => v.id === videoId)
+      if (target) target.linkedMatchId = matchId
+    })
+    return getStore().videos.find((v) => v.id === videoId)!
   },
 
   async requestAnalysis(videoId) {

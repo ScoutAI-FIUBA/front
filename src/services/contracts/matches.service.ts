@@ -13,6 +13,13 @@ export interface CreateMatchInput {
   description?: string
 }
 
+/** Only the provided keys are sent; `description: null` clears it. Teams never change. */
+export interface UpdateMatchDetailsInput {
+  /** YYYY-MM-DD */
+  matchDate?: string
+  description?: string | null
+}
+
 export interface PreviewStatsImportInput {
   file: Blob
   fileName: string
@@ -26,6 +33,8 @@ export interface IMatchService {
   /** GET /matches/{id}/stats */
   getWithParticipants(id: string): Promise<MatchWithParticipants>
   create(input: CreateMatchInput): Promise<MatchRecord>
+  /** PATCH /matches/{id}: date and description only. */
+  updateDetails(id: string, input: UpdateMatchDetailsInput): Promise<MatchRecord>
   previewStatsImport(input: PreviewStatsImportInput): Promise<MatchStatsImportPreview>
   /** Full replace of the stats of a match. */
   saveStats(matchId: string, payload: MatchStatsSavePayload): Promise<MatchWithParticipants>

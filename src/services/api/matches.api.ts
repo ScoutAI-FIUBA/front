@@ -2,6 +2,7 @@ import type { IMatchService } from '../contracts/matches.service'
 import { apiFetch } from './http-client'
 import {
   buildPreviewFormData,
+  buildUpdateDetailsBody,
   mapApiMatch,
   mapImportPreview,
   mapMatchWithParticipants,
@@ -41,6 +42,16 @@ export const apiMatchService: IMatchService = {
     if (input.description) body.description = input.description
     const data = await readMatchJson<{ match: ApiMatch }>(
       await apiFetch('/matches', { method: 'POST', body: JSON.stringify(body) }),
+    )
+    return mapApiMatch(data.match)
+  },
+
+  async updateDetails(id, input) {
+    const data = await readMatchJson<{ match: ApiMatch }>(
+      await apiFetch(`/matches/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(buildUpdateDetailsBody(input)),
+      }),
     )
     return mapApiMatch(data.match)
   },

@@ -178,6 +178,7 @@ export const SEED_DATA: MockStore = {
     {
       id: 'video-1',
       matchId: 'match-1',
+      linkedMatchId: null,
       teamId: 'team-3',
       title: 'Liga Metropolitana: MET vs OLY',
       storageUrl: '/mock/videos/match-1.mp4',
@@ -190,6 +191,7 @@ export const SEED_DATA: MockStore = {
     {
       id: 'video-2',
       matchId: 'match-1',
+      linkedMatchId: null,
       teamId: 'team-3',
       title: 'Entrenamiento Táctico B',
       storageUrl: '/mock/videos/training-b.mp4',
@@ -201,6 +203,7 @@ export const SEED_DATA: MockStore = {
     {
       id: 'video-3',
       matchId: 'match-2',
+      linkedMatchId: null,
       teamId: 'team-1',
       title: 'Amistoso Preparatorio',
       storageUrl: '/mock/videos/friendly.mp4',
@@ -212,6 +215,7 @@ export const SEED_DATA: MockStore = {
     {
       id: 'video-4',
       matchId: 'match-1',
+      linkedMatchId: null,
       teamId: 'team-3',
       title: 'Clásico Regional',
       storageUrl: '/mock/videos/clasico.mp4',

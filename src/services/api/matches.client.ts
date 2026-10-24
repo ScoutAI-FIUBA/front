@@ -16,7 +16,7 @@ import type {
   TeamMismatchDetail,
   UnlinkedReason,
 } from '../../types/index.ts'
-import type { PreviewStatsImportInput } from '../contracts/matches.service.ts'
+import type { PreviewStatsImportInput, UpdateMatchDetailsInput } from '../contracts/matches.service.ts'
 import { ApiResponseError } from './errors.ts'
 
 // --- Wire (snake_case) shapes. Everything is optional-ish: the mappers are defensive. ---
@@ -334,12 +334,27 @@ export function buildPreviewFormData(input: PreviewStatsImportInput): FormData {
   return form
 }
 
+/** PATCH body with ONLY the provided keys (omitted = unchanged on the backend). */
+export function buildUpdateDetailsBody(input: UpdateMatchDetailsInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {}
+  if (input.matchDate !== undefined) body.match_date = input.matchDate
+  if (input.description !== undefined) body.description = input.description
+  return body
+}
+
+/** PUT /videos/{id}/match body: both keys are always sent; `matchId: null` unlinks. */
+export function buildVideoMatchBody(teamId: string, matchId: string | null): Record<string, unknown> {
+  return { team_id: teamId, match_id: matchId }
+}
+
 // --- Errors ---
 
 export type MatchErrorCode =
   | 'MATCH_NOT_FOUND'
   | 'TEAM_NOT_FOUND'
   | 'PLAYER_NOT_FOUND'
+  | 'VIDEO_NOT_FOUND'
+  | 'VIDEO_TEAM_NOT_IN_MATCH'
   | 'INVALID_MATCH_TEAMS'
   | 'INVALID_WINNER_TEAM'
   | 'INVALID_STATS_FILE'
@@ -351,6 +366,8 @@ const MATCH_ERROR_CODES: readonly MatchErrorCode[] = [
   'MATCH_NOT_FOUND',
   'TEAM_NOT_FOUND',
   'PLAYER_NOT_FOUND',
+  'VIDEO_NOT_FOUND',
+  'VIDEO_TEAM_NOT_IN_MATCH',
   'INVALID_MATCH_TEAMS',
   'INVALID_WINNER_TEAM',
   'INVALID_STATS_FILE',

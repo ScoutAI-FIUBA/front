@@ -18,6 +18,7 @@ export interface ApiVideo {
   title: string
   description: string | null
   status: 'PENDING_UPLOAD' | 'READY' | 'FAILED' | 'DELETED'
+  match_id?: string | null
   mime_type: string | null
   size_bytes: number | null
   duration_ms: number | null
@@ -35,6 +36,7 @@ export function mapApiVideo(video: ApiVideo, playbackUrl = '', thumbnailUrl = ''
   return {
     id: video.id,
     teamId: video.team_id,
+    linkedMatchId: video.match_id ?? null,
     title: video.title,
     storageUrl: playbackUrl,
     thumbnailUrl: thumbnailUrl || undefined,

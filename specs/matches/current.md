@@ -1,12 +1,12 @@
 # Matches Current Spec
 
-> Status (2026-10-24): Matches (`Partidos`) is a real feature backed by the `/matches` backend. This release (phase 1) adds the list, the create form, the Excel/CSV box-score import with preview, and the box-score detail, with no backend change. The sections below are the acceptance criteria of this release. The pre-migration "Partido = video" behavior now lives under Videos; see `specs/video-reorganization/current.md` (Legacy compatibility).
+> Status (2026-10-24): Matches (`Partidos`) is a real feature backed by the `/matches` backend. Phase 1 added the list, the create form, the Excel/CSV box-score import with preview, and the box-score detail. Phase 2 adds linking videos to a match and editing the date and description of a match; it needs the backend `PUT /videos/{id}/match` and `PATCH /matches/{id}` endpoints. The sections below are the acceptance criteria of this release. The pre-migration "Partido = video" behavior now lives under Videos; see `specs/video-reorganization/current.md` (Legacy compatibility).
 
 ## Product model
 
 - A Match is a sporting game: home team, away team, date (`YYYY-MM-DD`), optional description, optional winner, and an optional box score.
 - The box score comes from the federation spreadsheet and is shown with the source label `Planilla de estadísticas de la federación`.
-- Matches and videos are not linked in this release; linking a match to several videos is planned for a later phase (a video belongs to at most one match; videos can be partial clips, so no totals comparison is planned). The later phase would show a `Videos del partido` list on the match page and a `Partido` link on the video page. This release adds no video link, no video picker, and no link wording in the UI. The link needs an additive backend migration that is not part of this release. Editing the date and description of a match (PATCH) is planned together with the link; the teams of a match stay fixed.
+- A match can have many videos and a video belongs to at most one match. Videos may be partial clips or the whole game, so nothing is compared or combined: no totals, no detected stats, no comparison between the video and the box score. The link is only a reference. The teams of a match never change.
 - The legacy mock `Match`, `MatchStatus`, `MatchRoster`, and `GameEvent` types remain only for the legacy mock analysis sessions (`/analisis/:id`); they are marked `@deprecated` and Matches does not use them.
 
 ## Routes and navigation
@@ -22,8 +22,8 @@
 ## Backend integration
 
 - Service: `matchService` (`contracts/matches.service.ts`) uses the real backend unless `VITE_USE_MOCK_API=true` (`api/matches.api.ts`, pure mapping and error parsing in `api/matches.client.ts`).
-- Endpoints: `GET /matches?team_id=`, `POST /matches`, `GET /matches/{id}/stats` (match plus participants), `POST /matches/stats/import-preview` (multipart, nothing saved), `PUT /matches/{id}/stats` (full replace).
-- The backend has no `PUT`/`DELETE /matches/{id}`: teams, date, and description cannot be edited and a match cannot be deleted. The import page states once: `Equipos, fecha y descripción todavía no se pueden editar.`
+- Endpoints: `GET /matches?team_id=`, `POST /matches`, `GET /matches/{id}/stats` (match plus participants), `POST /matches/stats/import-preview` (multipart, nothing saved), `PUT /matches/{id}/stats` (full replace), `PATCH /matches/{id}` (date and description only), and `PUT /videos/{id}/match` (link or unlink a video).
+- There is no `DELETE /matches/{id}` and the teams of a match can never change. The import page states once: `Los equipos todavía no se pueden editar.`
 - Percentages (`pct`) come from the backend as 0..100 with one decimal (or `null` without attempts) and are never recomputed; they are formatted in `es-AR` with one decimal and a comma (`66,7%`), and `null` renders `—`.
 - The saved body is the raw snake_case preview data (`stats`, `winner_team_id`, `participants`), unchanged. The frontend never sends camelCased stats back.
 - The match date is formatted by splitting the `YYYY-MM-DD` string (`dd/mm/aaaa`), without `Date`, so there is no timezone shift.
@@ -47,6 +47,21 @@
 - `Guardar partido y estadísticas` performs `POST /matches` and then `PUT /matches/{id}/stats`. If the PUT fails, the created match id is kept: the toast `El partido se creó pero no se guardaron las estadísticas`, a retry that repeats only the PUT (never a second POST), and a link to the detail are shown.
 - Buttons are disabled while a request is pending (single-flight).
 
+## Videos of a match (`/partidos/:matchId`)
+
+- Section `Videos del partido` (`MatchVideosSection`) with the note `Pueden ser clips o el partido completo.` It loads `videoService.filterByTeam` for the home and the away team in parallel and lists the videos whose `linkedMatchId` is the match (title, team name, upload date, `Abrir video` to `/videos/:id`, `Desvincular`). It shows no totals, no detected stats and no comparison.
+- Rules: one match, many videos; a video, at most one match. Only videos of the home or the away team can be linked (`VIDEO_TEAM_NOT_IN_MATCH`: `Ese video es de un equipo que no juega este partido.`). Failed videos are not offered.
+- `Vincular video` opens a dialog with a select grouped by team. A video already linked to this match is shown as `Ya está vinculado a este partido` (disabled). A video linked to ANOTHER match is labelled `Ya está vinculado a otro partido`; choosing it shows a checkbox `Se va a mover a este partido` that must be ticked before the button (`Mover y vincular`) is enabled, because the backend overwrites the previous link.
+- `Desvincular` sends `match_id: null`, is single-flight, and shows the toast `Video desvinculado`; linking shows `Video vinculado`.
+- States: loading (`Cargando videos…`), empty (`Todavía no vinculaste videos a este partido`), error with `Reintentar` (`No pudimos cargar los videos`), and neither team has videos (`Ninguno de los equipos tiene videos todavía`, link `Subir un video` to `/videos/subir`).
+- The video page (`/videos/:id`) header shows `Partido: {Local} vs {Visitante} · dd/mm/aaaa` linking to `/partidos/:id` when the video is linked, or `Ver partido vinculado` if the match cannot be loaded. Nothing else on the video page changes.
+- Every video from the backend carries `match_id`; the frontend field is `Video.linkedMatchId: string | null`. The legacy `Video.matchId` (legacy mock analysis) is untouched.
+
+## Editing date and description
+
+- `Editar fecha y descripción` on the detail opens a dialog with the date (`YYYY-MM-DD`) and the description (max 2000 characters with a counter), the same rules as the create form. The teams are shown read-only with `Para cambiar los equipos creá un partido nuevo.`
+- Saving sends `PATCH /matches/{id}` with only the changed keys (an empty description is sent as `null` to clear it) and refreshes the header. Buttons are disabled while saving (single-flight).
+
 ## Re-import (`/partidos/:matchId/estadisticas`)
 
 - Loads the match, uses its team ids, and offers the same dropzone, mismatch handling, and preview.
@@ -64,7 +79,7 @@
 
 ## Errors
 
-- Error codes are mapped to Spanish copy; the backend message (English) is kept as a secondary `Detalle técnico`. Codes: `MATCH_NOT_FOUND`, `TEAM_NOT_FOUND`, `PLAYER_NOT_FOUND`, `INVALID_MATCH_TEAMS`, `INVALID_WINNER_TEAM`, `INVALID_STATS_FILE`, `STATS_FILE_TOO_LARGE`, `TEAM_MISMATCH`, `VALIDATION_ERROR`.
+- Error codes are mapped to Spanish copy; the backend message (English) is kept as a secondary `Detalle técnico`. Codes: `MATCH_NOT_FOUND`, `TEAM_NOT_FOUND`, `PLAYER_NOT_FOUND`, `VIDEO_NOT_FOUND`, `VIDEO_TEAM_NOT_IN_MATCH`, `INVALID_MATCH_TEAMS`, `INVALID_WINNER_TEAM`, `INVALID_STATS_FILE`, `STATS_FILE_TOO_LARGE`, `TEAM_MISMATCH`, `VALIDATION_ERROR`.
 - Two backend error envelopes are handled: `{error:{code,message,details?}}` and FastAPI `{detail:[...]|string}`. A FastAPI `detail` body is `VALIDATION_ERROR` only for status 422; any other status (for example `404 {"detail":"Not Found"}` or `405 {"detail":"Method Not Allowed"}`) keeps a null code with the detail text as the message. Plain-text errors keep a null code.
 - An error with a null code shows the generic title `No pudimos completar la operación`, a Spanish description, and the backend message as `Detalle técnico`; the load and preview screens keep it retryable. If the preview request fails with a null-code 404 or 405 (a backend without the import route), the copy is `El servidor todavía no tiene la importación de planillas.`
 - Choosing an invalid file while another file is selected removes the selected file and says so, so a rejected choice never submits the previous file. `Importar igual` re-validates the form and previews with the current form values, not the values captured when the mismatch arrived.
@@ -76,15 +91,16 @@
 ## Mock behavior (`VITE_USE_MOCK_API=true`)
 
 - `mockMatchService` keeps matches in memory (no seed data, independent from the legacy mock store): create validates that the teams differ, list is sorted by date descending, `getWithParticipants` throws `MATCH_NOT_FOUND`, `saveStats` stores what it receives.
+- Mock video links live in memory and are lost on reload, while mock videos persist in localStorage; a dangling link shows `Ver partido vinculado` on the video page.
 - `previewStatsImport` always fails with `INVALID_STATS_FILE` and the message `La vista previa de la planilla necesita el backend real.` No numbers are invented.
 
 ## Non-scope
 
-- No video link or video picker in this release (linking a match to several videos is planned for a later phase).
-- No editing or deleting of a match (teams, date, description) and no manual stats entry.
+- No combining of video and match numbers (no totals, no comparison, no detected stats on match pages).
+- No deleting of a match, no changing its teams, and no manual stats entry.
 - No roster endpoints; participants are saved only through the stats import.
 - No pagination or filters beyond what the list needs; `GET /matches` returns every match with its stats.
-- No backend change.
+- This repo makes no backend change; the link and the edit need the backend PR (back#33).
 
 ## Verification
 
