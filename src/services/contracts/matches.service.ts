@@ -23,8 +23,9 @@ export interface UpdateMatchDetailsInput {
 export interface PreviewStatsImportInput {
   file: Blob
   fileName: string
-  homeTeamId: string
-  awayTeamId: string
+  /** Optional: without ids the backend only reads the file (no linking, no winner). */
+  homeTeamId?: string
+  awayTeamId?: string
   allowTeamMismatch?: boolean
 }
 

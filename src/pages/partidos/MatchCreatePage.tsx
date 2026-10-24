@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
-import { ArrowLeft, LoaderCircle, RefreshCw, Users } from 'lucide-react'
+import { ArrowLeft, LoaderCircle, Plus, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PageHeader } from '@/components/ui/page-header'
@@ -20,7 +19,7 @@ import {
 import { isApiAuthenticationError } from '@/services/api/errors'
 import { isMatchApiError, teamMismatchDetails } from '@/services/api/matches.client'
 import { matchService, teamService } from '@/services/registry'
-import type { MatchStatsImportPreview, Team, TeamMismatchDetail } from '@/types'
+import type { MatchSide, MatchStatsImportPreview, Team, TeamMismatchDetail } from '@/types'
 import {
   MATCH_DESCRIPTION_MAX,
   emptyMatchFormValues,
@@ -32,6 +31,8 @@ import { type MatchErrorCopy, matchErrorCopy, runCreateWithStats } from './match
 import { MATCHES_PATH, matchDetailPath } from './match-routes'
 import { ImportErrorAlert, MatchImportPreview, TeamMismatchAlerts } from './MatchImportPreview'
 import { StatsFileDropzone } from './StatsFileDropzone'
+import { TeamQuickCreateDialog } from './TeamQuickCreateDialog'
+import { suggestForSides, teamNamesInFile } from './team-suggestion'
 
 type TeamsState = 'loading' | 'success' | 'error' | 'session-expired'
 type Busy = 'preview' | 'saving' | 'creating'
@@ -72,6 +73,11 @@ export function MatchCreatePage() {
   const [snapshot, setSnapshot] = useState<PreviewSnapshot | null>(null)
   const [createdMatchId, setCreatedMatchId] = useState<string | null>(null)
   const [focusFormTick, setFocusFormTick] = useState(0)
+  // Team names read from the chosen file (no ids sent), used only to suggest teams.
+  const [fileNames, setFileNames] = useState<Record<MatchSide, string> | null>(null)
+  const [reading, setReading] = useState(false)
+  const readTokenRef = useRef(0)
+  const [createSide, setCreateSide] = useState<MatchSide | null>(null)
   const previewHeadingRef = useRef<HTMLHeadingElement>(null)
   const activeRef = useRef(true)
 
@@ -129,6 +135,38 @@ export function MatchCreatePage() {
       busyRef.current = false
       setBusy(null)
     }
+  }
+
+  const readFileNames = async (next: File) => {
+    const token = ++readTokenRef.current
+    setReading(true)
+    try {
+      const read = await matchService.previewStatsImport({ file: next, fileName: next.name })
+      if (activeRef.current && token === readTokenRef.current) setFileNames(teamNamesInFile(read))
+    } catch (readError) {
+      if (activeRef.current && token === readTokenRef.current) setError(matchErrorCopy(readError, 'preview'))
+    } finally {
+      if (activeRef.current && token === readTokenRef.current) setReading(false)
+    }
+  }
+
+  const handleFileChange = (next: File | null) => {
+    readTokenRef.current += 1
+    setFile(next)
+    setFileNames(null)
+    setReading(false)
+    setMismatch(null)
+    setError(null)
+    if (next) void readFileNames(next)
+  }
+
+  const chooseTeam = (side: MatchSide, teamId: string) => {
+    if (side === 'AWAY' && teamId === homeTeamId) {
+      toast.error('Ese equipo ya es el local')
+      return
+    }
+    if (side === 'HOME' && teamId === awayTeamId) setValue('awayTeamId', '', { shouldValidate: false })
+    setValue(side === 'HOME' ? 'homeTeamId' : 'awayTeamId', teamId, { shouldValidate: true })
   }
 
   const requestPreview = (values: MatchFormValues, allowTeamMismatch: boolean) => {
@@ -204,7 +242,55 @@ export function MatchCreatePage() {
 
   const homeTeam = snapshot ? teamsById.get(snapshot.values.homeTeamId) : undefined
   const awayTeam = snapshot ? teamsById.get(snapshot.values.awayTeamId) : undefined
-  const submitting = busy !== null
+  const submitting = busy !== null || reading
+
+  // Never suggest the team already chosen for the other side.
+  const suggestions = useMemo(() => {
+    if (!fileNames) return { HOME: null, AWAY: null }
+    return {
+      HOME: suggestForSides(fileNames, teams.filter((team) => team.id !== awayTeamId)).HOME,
+      AWAY: suggestForSides(fileNames, teams.filter((team) => team.id !== homeTeamId)).AWAY,
+    }
+  }, [fileNames, teams, homeTeamId, awayTeamId])
+
+  const sideHelp = (side: MatchSide) => {
+    const selectedId = side === 'HOME' ? homeTeamId : awayTeamId
+    const nameInFile = fileNames?.[side] ?? ''
+    const suggestion = suggestions[side]
+    return (
+      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+        {!selectedId && suggestion ? (
+          <p className="flex flex-wrap items-center gap-2">
+            <span>
+              Parece ser <span className="font-semibold text-foreground">{suggestion.team.name}</span>
+              {' '}(en la planilla: «{nameInFile}»)
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={submitting}
+              onClick={() => chooseTeam(side, suggestion.team.id)}
+            >
+              Usarlo
+            </Button>
+          </p>
+        ) : null}
+        {!selectedId && !suggestion && nameInFile ? <p>En la planilla figura «{nameInFile}»</p> : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="-ml-3"
+          disabled={submitting}
+          onClick={() => setCreateSide(side)}
+        >
+          <Plus aria-hidden="true" className="h-4 w-4" />
+          Crear equipo nuevo
+        </Button>
+      </div>
+    )
+  }
 
   const header = (
     <>
@@ -255,20 +341,6 @@ export function MatchCreatePage() {
             </>
           )}
         </Alert>
-      </div>
-    )
-  }
-
-  if (teams.length < 2) {
-    return (
-      <div className="pb-16 pt-6">
-        {header}
-        <EmptyState
-          icon={<Users aria-hidden="true" className="h-5 w-5" />}
-          title="Necesitás al menos dos equipos"
-          description="Un partido enfrenta a dos equipos. Creá los equipos que te falten y volvé a este formulario."
-          action={<Button asChild><Link to="/equipos">Ir a Equipos</Link></Button>}
-        />
       </div>
     )
   }
@@ -344,6 +416,7 @@ export function MatchCreatePage() {
                 )}
               />
               <FieldError id="match-home-team-error" message={errors.homeTeamId?.message} />
+              {sideHelp('HOME')}
             </div>
             <div>
               <Label htmlFor="match-away-team">Visitante</Label>
@@ -371,6 +444,7 @@ export function MatchCreatePage() {
                 )}
               />
               <FieldError id="match-away-team-error" message={errors.awayTeamId?.message} />
+              {sideHelp('AWAY')}
             </div>
           </div>
 
@@ -414,8 +488,8 @@ export function MatchCreatePage() {
             </p>
             <StatsFileDropzone
               file={file}
-              onFileChange={(next) => { setFile(next); setMismatch(null); setError(null) }}
-              disabled={submitting}
+              onFileChange={handleFileChange}
+              disabled={busy !== null}
             />
           </div>
         </fieldset>
@@ -435,7 +509,9 @@ export function MatchCreatePage() {
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" disabled={submitting}>
             {submitting ? <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" /> : null}
-            {busy === 'preview'
+            {reading
+              ? 'Leyendo la planilla…'
+              : busy === 'preview'
               ? 'Revisando…'
               : busy === 'creating'
                 ? 'Creando…'
@@ -448,6 +524,20 @@ export function MatchCreatePage() {
           </Button>
         </div>
       </form>
+
+      <TeamQuickCreateDialog
+        open={createSide !== null}
+        onOpenChange={(open) => { if (!open) setCreateSide(null) }}
+        title={createSide === 'AWAY' ? 'Crear equipo visitante' : 'Crear equipo local'}
+        initialName={createSide ? fileNames?.[createSide] ?? '' : ''}
+        teams={teams}
+        onCreated={(team) => {
+          if (!createSide) return
+          setTeams((current) => [...current, team])
+          chooseTeam(createSide, team.id)
+        }}
+        onUseExisting={(team) => { if (createSide) chooseTeam(createSide, team.id) }}
+      />
     </div>
   )
 }

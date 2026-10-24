@@ -328,8 +328,8 @@ export function mapImportPreview(raw: ApiImportPreview): MatchStatsImportPreview
 export function buildPreviewFormData(input: PreviewStatsImportInput): FormData {
   const form = new FormData()
   form.append('file', input.file, input.fileName)
-  form.append('home_team_id', input.homeTeamId)
-  form.append('away_team_id', input.awayTeamId)
+  if (input.homeTeamId) form.append('home_team_id', input.homeTeamId)
+  if (input.awayTeamId) form.append('away_team_id', input.awayTeamId)
   if (input.allowTeamMismatch === true) form.append('allow_team_mismatch', 'true')
   return form
 }
