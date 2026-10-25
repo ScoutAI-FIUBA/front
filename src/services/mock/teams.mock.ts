@@ -1,11 +1,12 @@
 import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
 import type { ITeamService } from '../contracts/teams.service'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
 
 export const mockTeamService: ITeamService = {
   async list() {
     await simulateNetwork()
-    return getStore().teams
+    return sortTeamsOwnFirst(getStore().teams)
   },
 
   async getById(id) {
@@ -18,6 +19,7 @@ export const mockTeamService: ITeamService = {
     const team = {
       id: generateId('team'),
       ...dto,
+      isOwn: dto.isOwn ?? false,
       season: '2024/2025',
     }
     updateStore((s) => {
@@ -35,6 +37,7 @@ export const mockTeamService: ITeamService = {
       team.shortName = dto.shortName
       team.city = dto.city
       team.country = dto.country
+      if (dto.isOwn !== undefined) team.isOwn = dto.isOwn
     })
     const team = updated.teams.find((t) => t.id === id)
     if (!team) throw new Error('Team not found')

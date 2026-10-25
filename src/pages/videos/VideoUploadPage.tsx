@@ -25,6 +25,8 @@ import { cn } from '@/lib/utils'
 import { videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
 import { upsertVideoInAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
 import { teamsPathForVideoUpload } from '@/pages/teams/team-creation-navigation'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { OwnTeamBadge } from '@/components/OwnTeamBadge'
 
 type VideoUploadStep = 1 | 2 | 3
 
@@ -78,7 +80,7 @@ export function VideoUploadPage() {
   const [teamsState, setTeamsState] = useState<'loading' | 'success' | 'error'>('loading')
 
   const applyLoadedTeams = useCallback((loaded: Team[]) => {
-    setTeams(loaded)
+    setTeams(sortTeamsOwnFirst(loaded))
     setTeamId((current) => {
       if (current && loaded.some((team) => team.id === current)) return current
       if (requestedTeamId && loaded.some((team) => team.id === requestedTeamId)) return requestedTeamId
@@ -266,7 +268,7 @@ export function VideoUploadPage() {
                     {selected ? <Check aria-hidden="true" className="h-5 w-5" /> : (team.shortName || team.name).slice(0, 3).toUpperCase()}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-lg font-semibold text-[#F4F5F7]">{team.name}</span>
+                    <span className="flex items-center gap-2 text-lg font-semibold text-[#F4F5F7]">{team.name}{team.isOwn && <OwnTeamBadge />}</span>
                     <span className="mt-1 block text-sm text-[#A3ABBA]">{metadata || [team.city, team.country].filter(Boolean).join(', ') || 'Sin información adicional'}</span>
                   </span>
                   <ArrowRight aria-hidden="true" className={cn('h-5 w-5 transition-colors', selected ? 'text-[#FF6A1F]' : 'text-[#4F586A] group-hover:text-[#A3ABBA]')} />

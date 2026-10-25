@@ -36,7 +36,7 @@
 
 ## Create and import flow (`/partidos/nuevo`)
 
-- Fields: home team (required, `Elegí el equipo local`), away team (required, different from home, `Elegí un equipo distinto al local`), date (`YYYY-MM-DD`, defaults to today, future dates allowed), description (optional, trimmed, max 2000 characters with a live counter, `Máximo 2000 caracteres`). Team options come from `teamService.list()` and the away list disables the home team. With fewer than two teams the form still opens, because each side offers `Crear equipo nuevo` (see below).
+- Fields: home team (required, `Elegí el equipo local`), away team (required, different from home, `Elegí un equipo distinto al local`), date (`YYYY-MM-DD`, defaults to today, future dates allowed), description (optional, trimmed, max 2000 characters with a live counter, `Máximo 2000 caracteres`). Team options come from `teamService.list()`, own teams first with a `Mi equipo` badge, and the away list disables the home team. Teams created inline (`Crear equipo nuevo`) are rivals (`isOwn: false`). With fewer than two teams the form still opens, because each side offers `Crear equipo nuevo` (see below).
 - Optional `Importar estadísticas (opcional)` dropzone (keyboard-focusable). Accepts `.xlsx` or `.csv` (case-insensitive), non-empty, at most 5 MiB (`El archivo supera 5 MB`); anything else is rejected before upload with `Elegí la planilla de la federación en .xlsx o .csv`. The chosen file shows name and size with `Quitar`.
 - Without a file, `Crear partido` calls `POST /matches` and opens the detail.
 - With a file, `Revisar estadísticas` calls the preview with both selected team ids. Nothing is created until the user confirms. The preview request is `multipart/form-data` with a 60-second timeout.

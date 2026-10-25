@@ -19,6 +19,7 @@ const team: Team = {
   shortName: 'SUR',
   city: 'Buenos Aires',
   country: 'Argentina',
+  isOwn: false,
 }
 
 function video(id: string, status: Video['status'] = 'uploaded'): Video {

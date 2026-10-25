@@ -17,6 +17,7 @@ function team(id: string): Team {
     shortName: id.toUpperCase(),
     city: 'Buenos Aires',
     country: 'Argentina',
+    isOwn: false,
   }
 }
 

@@ -29,6 +29,8 @@ import {
   type VideoAnalysisFilter,
   type VideoMaterialFilter,
 } from './video-library-filters'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 const MATERIAL_FILTERS = new Set<VideoMaterialFilter>(['all', 'ready', 'preparing', 'failed'])
 const ANALYSIS_FILTERS = new Set<VideoAnalysisFilter>(['all', 'none', 'QUEUED', 'RUNNING', 'DONE', 'FAILED'])
@@ -129,7 +131,7 @@ export function VideosPage() {
 
           <section className="border-y py-4" aria-label="Filtros de la biblioteca">
             <div className="grid gap-3 sm:grid-cols-3">
-              <Select value={teamFilter} onValueChange={(value) => setSearchParams(withVideoTeamFilter(searchParams, value))}><SelectTrigger aria-label="Filtrar por equipo"><SelectValue placeholder="Equipo" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los equipos</SelectItem>{teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select>
+              <Select value={teamFilter} onValueChange={(value) => setSearchParams(withVideoTeamFilter(searchParams, value))}><SelectTrigger aria-label="Filtrar por equipo"><SelectValue placeholder="Equipo" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los equipos</SelectItem>{sortTeamsOwnFirst(teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}</SelectContent></Select>
               <Select value={materialFilter} onValueChange={(value) => changeFilter('video_status', value)}><SelectTrigger aria-label="Estado del video"><SelectValue placeholder="Estado del video" /></SelectTrigger><SelectContent><SelectItem value="all">Cualquier estado del video</SelectItem><SelectItem value="ready">Listo</SelectItem><SelectItem value="preparing">Preparando archivo</SelectItem><SelectItem value="failed">Error</SelectItem></SelectContent></Select>
               <Select value={analysisFilter} onValueChange={(value) => changeFilter('analysis_status', value)}><SelectTrigger aria-label="Estado del análisis"><SelectValue placeholder="Estado del análisis" /></SelectTrigger><SelectContent><SelectItem value="all">Cualquier estado de análisis</SelectItem><SelectItem value="none">Sin análisis</SelectItem><SelectItem value="QUEUED">En cola</SelectItem><SelectItem value="RUNNING">En proceso</SelectItem><SelectItem value="DONE">Completado</SelectItem><SelectItem value="FAILED">Fallido</SelectItem></SelectContent></Select>
             </div>

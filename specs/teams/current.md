@@ -32,8 +32,9 @@ Current behavior documentation.
   and links each team to its canonical roster at `/equipos/:teamId`.
 - Player counts are derived from one player-list request. Counts are omitted if
   that secondary request fails; the team list remains usable.
-- Team create and edit share a short dialog with name, short name, city, and
-  country. Delete remains secondary and requires confirmation.
+- Team create and edit share a short dialog with name, short name, city,
+  country, and the checkbox `Es mi equipo` (`isOwn`; checked by default on create,
+  the stored value on edit). Delete remains secondary and requires confirmation.
 - `/equipos/:teamId` loads team identity and roster in parallel using
   `teamService.getById()` and `playerService.filterByTeam()`.
 - The roster prioritizes jersey number, name, position, and physical measurements.
@@ -49,7 +50,19 @@ Current behavior documentation.
 
 ## Acceptance Criteria
 
-- Team UI uses only `name`, `shortName`, `city`, and `country` as productive data.
+- A team is either own (`Mi equipo`) or a rival; own teams are not the only ones
+  allowed: videos and analysis stay available for all teams. Existing teams start
+  as rivals. One or many teams can be own.
+- Every team list or picker shows own teams first (stable order otherwise) with a
+  `Mi equipo` badge. Lookup maps and the video list of a match are not reordered.
+- `/equipos` has a segmented filter `Mis equipos` / `Rivales` / `Todos`, combined
+  with the search. The default is `Mis equipos` when any team is own, otherwise
+  `Todos`; it is set once after the first load and not reset on reloads. With no own
+  teams marked, the filter shows `No tenés equipos marcados como propios. Editá un
+  equipo y marcá 'Es mi equipo'.`
+- Teams created from the Equipos form default to own; teams created inline from
+  the match, import, or analysis flows default to rival (`isOwn: false`).
+- Team UI uses only `name`, `shortName`, `city`, `country`, and `isOwn` as productive data.
 - `Ver plantel` is the primary team action; video links and synthetic KPIs are not
   presented on the team index.
 - Loading, error, empty, no-results, and retry states exist for the team index and

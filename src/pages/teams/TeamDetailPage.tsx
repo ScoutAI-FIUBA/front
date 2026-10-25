@@ -14,6 +14,7 @@ import type { Player, Team } from '@/types'
 import { TeamFormDialog } from './TeamFormDialog'
 import { TeamRosterPlayerSheet, type RosterSheetIntent } from './TeamRosterPlayerSheet'
 import { duplicateJerseyNumbers, filterRosterPlayers } from './team-roster'
+import { OwnTeamBadge } from '@/components/OwnTeamBadge'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -141,7 +142,7 @@ export function TeamDetailPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Equipo</p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight">{team.name}</h1>
+            <h1 className="mt-0.5 flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight">{team.name}{team.isOwn && <OwnTeamBadge className="text-xs" />}</h1>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" /> {team.city}, {team.country}
             </p>

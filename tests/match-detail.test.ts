@@ -29,6 +29,7 @@ const team: Team = {
   shortName: 'SUR',
   city: 'Buenos Aires',
   country: 'Argentina',
+  isOwn: false,
 }
 
 const video: Video = {

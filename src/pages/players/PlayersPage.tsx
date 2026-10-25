@@ -22,6 +22,8 @@ import {
   sortGlobalPlayers,
   UNASSIGNED_TEAM_FILTER,
 } from './global-player-list'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -168,7 +170,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value={UNASSIGNED_TEAM_FILTER}>Sin equipo</SelectItem>
-              {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+              {sortTeamsOwnFirst(teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
             </SelectContent>
           </Select>
         </div>

@@ -16,6 +16,8 @@ import { useAnalysisJobCatalog } from './use-analysis-job-catalog'
 import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { useAuth } from '@/contexts/AuthContext'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 export function AnalysisJobNewPage() {
   const { user } = useAuth()
@@ -92,7 +94,7 @@ export function AnalysisJobNewPage() {
           <section aria-labelledby="choose-video-title">
             <div className="flex flex-col gap-3 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Paso 1</p><h2 id="choose-video-title" className="mt-1 text-xl font-semibold">Elegí el material</h2></div>
-              <Select value={requestedTeamId} onValueChange={changeTeam}><SelectTrigger className="w-full sm:w-56" aria-label="Filtrar por equipo"><SelectValue placeholder="Todos los equipos" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los equipos</SelectItem>{catalog.teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}</SelectContent></Select>
+              <Select value={requestedTeamId} onValueChange={changeTeam}><SelectTrigger className="w-full sm:w-56" aria-label="Filtrar por equipo"><SelectValue placeholder="Todos los equipos" /></SelectTrigger><SelectContent><SelectItem value="all">Todos los equipos</SelectItem>{sortTeamsOwnFirst(catalog.teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}</SelectContent></Select>
             </div>
 
             {readyVideos.length === 0 ? (

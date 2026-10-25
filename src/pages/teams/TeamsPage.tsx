@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, MapPin, Pencil, Plus, Search, Shield, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
@@ -9,11 +9,24 @@ import { Input } from '@/components/ui/input'
 import { playerService, teamService } from '@/services/registry'
 import type { CreateTeamDto } from '@/services/contracts/teams.service'
 import type { Team } from '@/types'
+import { OwnTeamBadge } from '@/components/OwnTeamBadge'
 import { TeamFormDialog } from './TeamFormDialog'
 import {
   createTeamWithNavigationContext,
   TEAM_CREATION_RETURN_QUERY_PARAM,
 } from './team-creation-navigation'
+import {
+  defaultOwnFilter,
+  filterTeamsByOwnership,
+  sortTeamsOwnFirst,
+  type OwnFilter,
+} from './team-ownership'
+
+const OWN_FILTER_OPTIONS: { value: OwnFilter; label: string }[] = [
+  { value: 'own', label: 'Mis equipos' },
+  { value: 'rivals', label: 'Rivales' },
+  { value: 'all', label: 'Todos' },
+]
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -25,6 +38,8 @@ export function TeamsPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
+  const [ownFilter, setOwnFilter] = useState<OwnFilter>('all')
+  const ownFilterInitialized = useRef(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTeam, setEditingTeam] = useState<Team | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -36,7 +51,12 @@ export function TeamsPage() {
     const playersPromise = playerService.list().catch(() => null)
     try {
       const loadedTeams = await teamService.list()
-      setTeams(loadedTeams)
+      const sortedTeams = sortTeamsOwnFirst(loadedTeams)
+      setTeams(sortedTeams)
+      if (!ownFilterInitialized.current) {
+        ownFilterInitialized.current = true
+        setOwnFilter(defaultOwnFilter(sortedTeams))
+      }
       setLoadState('ready')
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'No se pudieron cargar los equipos')
@@ -60,13 +80,14 @@ export function TeamsPage() {
 
   const filteredTeams = useMemo(() => {
     const query = search.trim().toLocaleLowerCase('es')
-    if (!query) return teams
-    return teams.filter((team) => (
+    const scoped = filterTeamsByOwnership(teams, ownFilter)
+    if (!query) return scoped
+    return scoped.filter((team) => (
       `${team.name} ${team.shortName} ${team.city} ${team.country}`
         .toLocaleLowerCase('es')
         .includes(query)
     ))
-  }, [search, teams])
+  }, [ownFilter, search, teams])
 
   const openCreate = () => {
     setEditingTeam(null)
@@ -153,9 +174,24 @@ export function TeamsPage() {
       </header>
 
       {teams.length > 0 && (
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por equipo o ciudad" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por equipo o ciudad" />
+          </div>
+          <div role="group" aria-label="Filtrar equipos" className="inline-flex self-start rounded-lg border bg-surface p-1">
+            {OWN_FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={ownFilter === option.value}
+                onClick={() => setOwnFilter(option.value)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${ownFilter === option.value ? 'bg-primary-subtle text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -173,7 +209,16 @@ export function TeamsPage() {
         </Card>
       )}
 
-      {teams.length > 0 && filteredTeams.length === 0 && (
+      {teams.length > 0 && filteredTeams.length === 0 && ownFilter === 'own' && !search.trim() && (
+        <EmptyState
+          title="No hay equipos propios"
+          description="No tenés equipos marcados como propios. Editá un equipo y marcá 'Es mi equipo'."
+          icon={<Shield className="h-5 w-5" />}
+          action={<Button variant="outline" onClick={() => setOwnFilter('all')}>Ver todos</Button>}
+        />
+      )}
+
+      {teams.length > 0 && filteredTeams.length === 0 && !(ownFilter === 'own' && !search.trim()) && (
         <EmptyState
           title="No hay coincidencias"
           description="Probá con otro nombre, nombre corto o ubicación."
@@ -195,7 +240,7 @@ export function TeamsPage() {
                 {team.shortName}
               </div>
               <div className="pointer-events-none relative z-10 min-w-0 flex-1">
-                <h2 className="truncate text-lg font-semibold">{team.name}</h2>
+                <h2 className="flex items-center gap-2 text-lg font-semibold"><span className="truncate">{team.name}</span>{team.isOwn && <OwnTeamBadge />}</h2>
                 <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" /> {team.city}, {team.country}
                 </p>
