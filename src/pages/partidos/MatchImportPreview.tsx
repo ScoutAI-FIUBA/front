@@ -241,16 +241,6 @@ export const MatchImportPreview = forwardRef<HTMLHeadingElement, MatchImportPrev
               Reemplaza las estadísticas que ya tiene este partido.
             </p>
           ) : null}
-          <details className="mt-4">
-            <summary className="cursor-pointer text-sm font-medium text-primary">Ver los datos exactos</summary>
-            <pre
-              tabIndex={0}
-              aria-label="Datos exactos que se van a guardar"
-              className="mt-2 max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs"
-            >
-              {JSON.stringify(savePayload, null, 2)}
-            </pre>
-          </details>
         </section>
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
