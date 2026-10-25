@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { BarChart3, MapPinOff, Pencil, Plus, Search, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,7 @@ import {
   sortGlobalPlayers,
   UNASSIGNED_TEAM_FILTER,
 } from './global-player-list'
-import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { defaultPlayersTeamFilter, sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
 import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 type LoadState = 'loading' | 'ready' | 'error'
@@ -39,6 +39,7 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
   const [loadError, setLoadError] = useState('')
   const [search, setSearch] = useState('')
   const [teamFilter, setTeamFilter] = useState('all')
+  const teamFilterInitialized = useRef(false)
   const [sheetOpen, setSheetOpen] = useState(openCreateOnMount)
   const [sheetIntent, setSheetIntent] = useState<GlobalPlayerSheetIntent>({ kind: 'create' })
   const [statsPlayerId, setStatsPlayerId] = useState<string | null>(null)
@@ -51,6 +52,11 @@ export function PlayersPage({ openCreateOnMount = false }: PlayersPageProps) {
     ])
     setPlayers(sortGlobalPlayers(loadedPlayers))
     setTeams(loadedTeams)
+    // Default to the owner's own team once; later loads never override the user's choice.
+    if (!teamFilterInitialized.current) {
+      teamFilterInitialized.current = true
+      setTeamFilter(defaultPlayersTeamFilter(loadedTeams))
+    }
   }, [])
 
   const load = useCallback(async () => {

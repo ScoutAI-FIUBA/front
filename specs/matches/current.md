@@ -65,6 +65,7 @@
 - `Desvincular` sends `match_id: null`, is single-flight, and shows the toast `Video desvinculado`; linking shows `Video vinculado`.
 - States: loading (`Cargando videos…`), empty (`Todavía no vinculaste videos a este partido`), error with `Reintentar` (`No pudimos cargar los videos`), and neither team has videos (`Ninguno de los equipos tiene videos todavía`, link `Subir un video` to `/videos/subir`).
 - The video page (`/videos/:id`) header shows `Partido: {Local} vs {Visitante} · dd/mm/aaaa` linking to `/partidos/:id` when the video is linked, or `Ver partido vinculado` if the match cannot be loaded. Nothing else on the video page changes.
+- A video can also be linked at upload time, optionally, from the `Partido (opcional)` select of `/videos/subir` (see `specs/videos/current.md`); it uses the same `PUT /videos/{id}/match` after the upload completes.
 - Every video from the backend carries `match_id`; the frontend field is `Video.linkedMatchId: string | null`. The legacy `Video.matchId` (legacy mock analysis) is untouched.
 
 ## Editing date and description

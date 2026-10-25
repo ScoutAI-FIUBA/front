@@ -37,7 +37,7 @@ Current behavior documentation.
 - Players list loads players and teams in parallel without per-row requests.
 - Players are ordered by surname and first name, independently from API order.
 - Search covers first name, last name, and jersey number.
-- Team filtering supports all players, unassigned players, and each real team.
+- Team filtering supports all players, unassigned players, and each real team. On the first load the filter defaults to the owner's own team when there is exactly one (`defaultPlayersTeamFilter`); with several or none it stays `Todos`. It is applied once and never overrides a later user choice; own teams are listed first.
 - Compact rows prioritize jersey, name, position, team, and available measurements.
 - Team names link to the canonical team roster when the player is assigned.
 - Create and edit use one right-side global player sheet.
