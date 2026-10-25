@@ -47,7 +47,8 @@ Current behavior documentation.
 - Profile updates and team moves execute only when needed; partial success remains visible and retryable without frontend rollback.
 - Jersey number is optional text of one or two digits: inputs strip non-digits, and `0` and `00` are distinct values.
 - Delete exists only as a secondary action inside edit and uses browser confirmation.
-- Create player requires only first name and last name. Birth date, height, weight, and position are optional ("(opcional)" in the labels): an empty value is sent as `null`, a filled value keeps its checks (not future, positive numbers, a known position). The frontend no longer invents default height or weight.
+- Create player requires only first name and last name. Birth date, height, weight, and position are optional ("(opcional)" in the labels): an empty value is sent as `null`, a filled value keeps its checks (not future, an integer height from 1 to 300 cm, an integer weight from 1 to 400 kg, and a known position). The frontend no longer invents default height or weight.
+- Position includes a `Sin posición` option so an existing value can be cleared and serialized as `null` on edit.
 - A player without a position shows "Sin posición"; a missing birth date, height, or weight is simply not shown.
 - `playerService.createTeamRoster(teamId, players)` calls `POST /players/bulk` (name and jersey only) and returns `{created, skipped}`. It is used only by the match import when the owner explicitly turns on "Crear plantel" for a team (see `specs/matches/current.md`). The mock applies the same skip rule (a jersey the team already has is skipped).
 - Create and edit surfaces share the same player-field component and validation schema.
