@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LogOut, Menu, ShieldCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 const navItems = [
   { to: '/', label: 'Inicio' },

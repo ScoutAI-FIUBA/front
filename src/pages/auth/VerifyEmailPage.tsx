@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 import { Alert } from '@/components/ui/alert'
 import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 export function VerifyEmailPage() {
   const { confirmEmailVerification } = useAuth()

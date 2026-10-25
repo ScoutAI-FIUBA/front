@@ -2,7 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { CircleAlert } from 'lucide-react'
 import { SessionRestoreStatus } from '@/components/auth/SessionRestoreStatus'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 import { createLoginNavigationState } from '@/pages/auth/login-navigation'
 
 export function ProtectedRoute() {

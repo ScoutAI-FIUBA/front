@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import {
   buildMatchLibrary,

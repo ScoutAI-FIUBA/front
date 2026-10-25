@@ -15,7 +15,7 @@ import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNoti
 import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines'
 import { ProcessingShotArc } from '@/components/analysis/ProcessingShotArc'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 import { AnalysisWorkspaceVideo } from '@/pages/analysis/AnalysisWorkspaceVideo'
 import {
   AnalysisJobResultsWorkspace,
