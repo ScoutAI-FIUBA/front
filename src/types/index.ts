@@ -28,6 +28,7 @@ export interface Team {
   shortName: string
   city: string
   country: string
+  isOwn: boolean
   league?: string
   category?: string
   season?: string

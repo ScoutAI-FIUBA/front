@@ -38,6 +38,8 @@ import {
   matchPosterCacheExpiry,
   requestMatchPoster,
 } from './match-posters'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 const FILTERS: Array<{ value: MatchLibraryFilter; label: string }> = [
   { value: 'all', label: 'Todos' },
@@ -382,7 +384,7 @@ export function MatchesPage() {
           <SelectTrigger aria-label="Filtrar por equipo" className="border-[#3A4254] bg-[#151922]"><SelectValue placeholder="Equipo" /></SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_VIDEO_TEAMS_FILTER}>Todos los equipos</SelectItem>
-            {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+            {sortTeamsOwnFirst(teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={materialFilter} onValueChange={(value) => changeFilter('video_status', value)}>

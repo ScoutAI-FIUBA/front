@@ -37,6 +37,8 @@ import {
 import { StatusIndicator } from '@/components/ui/status-indicator'
 import { teamService, videoService } from '@/services/registry'
 import type { Team, Video } from '@/types'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
 
 type ResourceState = 'loading' | 'ready' | 'error'
 type SourceKind = 'none' | 'existing' | 'upload'
@@ -162,7 +164,7 @@ export function AnalysisSetup({
       const nextVideos = initialValue && !videoData.some((video) => video.id === initialValue.video.id)
         ? [initialValue.video, ...videoData]
         : videoData
-      setTeams(nextTeams)
+      setTeams(sortTeamsOwnFirst(nextTeams))
       setVideos(nextVideos)
       setResourceState('ready')
     } catch (error) {
@@ -392,8 +394,9 @@ export function AnalysisSetup({
         shortName: name.slice(0, 3).toUpperCase(),
         city,
         country: 'Argentina',
+        isOwn: false,
       })
-      setTeams((current) => [createdTeam, ...current.filter((team) => team.id !== createdTeam.id)])
+      setTeams((current) => sortTeamsOwnFirst([createdTeam, ...current.filter((team) => team.id !== createdTeam.id)]))
       setTeamId(createdTeam.id)
       setNewTeamName('')
       setNewTeamCity('')
@@ -571,7 +574,7 @@ export function AnalysisSetup({
                     <Select value={teamId} onValueChange={handleTeamChange}>
                       <SelectTrigger className="mt-2"><SelectValue placeholder="Seleccionar equipo" /></SelectTrigger>
                       <SelectContent>
-                        {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                        {teams.map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
                       </SelectContent>
                     </Select>
                   ) : (
@@ -596,7 +599,7 @@ export function AnalysisSetup({
                           <SelectItem value="none">Sin rival</SelectItem>
                           {teams
                             .filter((team) => team.id !== teamId)
-                            .map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                            .map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

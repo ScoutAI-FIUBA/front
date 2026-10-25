@@ -10,7 +10,7 @@ import {
 } from '../src/pages/partidos/team-suggestion.ts'
 import type { MatchStatsImportPreview, Team } from '../src/types/index.ts'
 
-const team = (id: string, name: string): Team => ({ id, name, shortName: name.slice(0, 3), city: 'x', country: 'y' })
+const team = (id: string, name: string): Team => ({ id, name, shortName: name.slice(0, 3), city: 'x', country: 'y', isOwn: false })
 
 test('normalizeTeamName lowercases and strips accents and punctuation', () => {
   assert.equal(normalizeTeamName('  Atlético   Unión, de Santa-Fe '), 'atletico union de santa fe')
@@ -82,6 +82,7 @@ test('newTeamDefaults trims the typed name, city and country and derives the sho
     shortName: 'FER',
     city: 'Buenos Aires',
     country: 'Argentina',
+    isOwn: false,
   })
 })
 

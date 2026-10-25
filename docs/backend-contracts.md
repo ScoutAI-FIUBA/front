@@ -50,6 +50,10 @@ Mock-only services:
 
 - Analysis (legacy sessions): `mockAnalysisService`.
 
+## Teams Backend Integration
+
+`GET /teams`, `POST /teams`, and `PUT /teams/{id}` carry `is_own` (boolean, default false), mapped to `Team.isOwn` (a missing value is read as false). `GET /teams` returns own teams first. `POST` accepts an optional `is_own` (default false). `PUT` replaces the four identity fields and keeps the stored `is_own` when it is omitted or null, so the frontend sends `is_own` only when it is defined.
+
 ## Matches Backend Integration
 
 Endpoints under `/matches` require bearer auth; ownership comes from the token. Client: `src/services/api/matches.client.ts` (pure mappers and error parsing) and `src/services/api/matches.api.ts`.

@@ -35,6 +35,7 @@ export function TeamFormDialog({
   const [shortName, setShortName] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('Argentina')
+  const [isOwn, setIsOwn] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [shortNameEdited, setShortNameEdited] = useState(false)
 
@@ -44,6 +45,7 @@ export function TeamFormDialog({
     setShortName(team?.shortName ?? '')
     setCity(team?.city ?? '')
     setCountry(team?.country ?? 'Argentina')
+    setIsOwn(team ? team.isOwn : true)
     setShortNameEdited(Boolean(team))
     setError(null)
   }, [open, team])
@@ -55,12 +57,13 @@ export function TeamFormDialog({
 
   const submit = async () => {
     const values = {
+      isOwn,
       name: name.trim(),
       shortName: shortName.trim(),
       city: city.trim(),
       country: country.trim(),
     }
-    if (Object.values(values).some((value) => !value)) {
+    if (Object.values({ name, shortName, city, country }).some((value) => !value.trim())) {
       setError('Completá nombre, nombre corto, ciudad y país.')
       return
     }
@@ -126,6 +129,16 @@ export function TeamFormDialog({
               />
             </div>
           </div>
+          <label htmlFor="team-is-own" className="flex cursor-pointer items-center gap-3 text-sm text-[#E3E6EB]">
+            <input
+              id="team-is-own"
+              type="checkbox"
+              checked={isOwn}
+              onChange={(event) => setIsOwn(event.target.checked)}
+              className="h-4 w-4 accent-[#FF6A1F]"
+            />
+            Es mi equipo
+          </label>
           {error && (
             <p
               className="rounded-lg border border-[#6B3038] bg-[#2A1519] px-3 py-2 text-sm font-medium text-[#FF9AA5]"

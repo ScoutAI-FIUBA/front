@@ -24,6 +24,7 @@ const team: Team = {
   shortName: 'EDP',
   city: 'Buenos Aires',
   country: 'Argentina',
+  isOwn: false,
 }
 
 test('loads videos and teams as the primary page dataset', async () => {

@@ -8,9 +8,9 @@ import {
 import type { ProcessingJob, Team, Video } from '../src/types/index.ts'
 
 const teams: Team[] = [
-  { id: 'team-1', name: 'Metropolitano', shortName: 'MET', city: 'Buenos Aires', country: 'Argentina' },
-  { id: 'team-2', name: 'Olympia', shortName: 'OLY', city: 'Montevideo', country: 'Uruguay' },
-  { id: 'team-3', name: 'Central', shortName: 'CEN', city: 'Córdoba', country: 'Argentina' },
+  { id: 'team-1', name: 'Metropolitano', shortName: 'MET', city: 'Buenos Aires', country: 'Argentina', isOwn: false },
+  { id: 'team-2', name: 'Olympia', shortName: 'OLY', city: 'Montevideo', country: 'Uruguay', isOwn: false },
+  { id: 'team-3', name: 'Central', shortName: 'CEN', city: 'Córdoba', country: 'Argentina', isOwn: false },
 ]
 
 function video(id: string, teamId: string): Video {

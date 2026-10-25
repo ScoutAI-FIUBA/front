@@ -99,6 +99,7 @@ export function newTeamDefaults(name: string, city: string, country: string) {
     shortName: trimmed.slice(0, 3).toUpperCase(),
     city: city.trim(),
     country: country.trim(),
+    isOwn: false,
   }
 }
 

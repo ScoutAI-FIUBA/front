@@ -33,6 +33,8 @@ import {
   playerToFormValues,
   type PlayerFormValues,
 } from './player-form'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 const NO_TEAM = 'no-team'
 
@@ -243,7 +245,7 @@ export function GlobalPlayerSheet({
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccioná un equipo" /></SelectTrigger>
                 <SelectContent>
                   {(isCreate || !currentTeamId) && <SelectItem value={NO_TEAM}>Sin equipo</SelectItem>}
-                  {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                  {sortTeamsOwnFirst(teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
                 </SelectContent>
               </Select>
               {!isCreate && currentTeamId && (

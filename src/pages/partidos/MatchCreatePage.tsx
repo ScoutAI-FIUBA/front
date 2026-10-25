@@ -33,6 +33,8 @@ import { ImportErrorAlert, MatchImportPreview, TeamMismatchAlerts } from './Matc
 import { StatsFileDropzone } from './StatsFileDropzone'
 import { TeamQuickCreateDialog } from './TeamQuickCreateDialog'
 import { suggestForSides, teamNamesInFile } from './team-suggestion'
+import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
+import { TeamNameWithBadge } from '@/components/OwnTeamBadge'
 
 type TeamsState = 'loading' | 'success' | 'error' | 'session-expired'
 type Busy = 'preview' | 'saving' | 'creating'
@@ -91,7 +93,7 @@ export function MatchCreatePage() {
     try {
       const loaded = await teamService.list()
       if (!isActive()) return
-      setTeams(loaded)
+      setTeams(sortTeamsOwnFirst(loaded))
       setTeamsState('success')
     } catch (loadError) {
       if (!isActive()) return
@@ -410,7 +412,7 @@ export function MatchCreatePage() {
                       <SelectValue placeholder="Elegí el equipo local" />
                     </SelectTrigger>
                     <SelectContent>
-                      {teams.map((team) => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                      {sortTeamsOwnFirst(teams).map((team) => <SelectItem key={team.id} value={team.id}><TeamNameWithBadge team={team} /></SelectItem>)}
                     </SelectContent>
                   </Select>
                 )}
@@ -434,9 +436,9 @@ export function MatchCreatePage() {
                       <SelectValue placeholder="Elegí el equipo visitante" />
                     </SelectTrigger>
                     <SelectContent>
-                      {teams.map((team) => (
+                      {sortTeamsOwnFirst(teams).map((team) => (
                         <SelectItem key={team.id} value={team.id} disabled={team.id === homeTeamId}>
-                          {team.name}
+                          <TeamNameWithBadge team={team} />
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -533,7 +535,7 @@ export function MatchCreatePage() {
         teams={teams}
         onCreated={(team) => {
           if (!createSide) return
-          setTeams((current) => [...current, team])
+          setTeams((current) => sortTeamsOwnFirst([...current, team]))
           chooseTeam(createSide, team.id)
         }}
         onUseExisting={(team) => { if (createSide) chooseTeam(createSide, team.id) }}

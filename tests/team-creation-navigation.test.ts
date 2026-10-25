@@ -14,11 +14,13 @@ const values: CreateTeamDto = {
   shortName: 'CAN',
   city: 'Rosario',
   country: 'Argentina',
+  isOwn: true,
 }
 
 const createdTeam: Team = {
   id: 'team/created',
   ...values,
+  isOwn: true,
 }
 
 test('creating a team from Subir video returns with the new team selected', async () => {
