@@ -28,6 +28,7 @@ export interface Team {
   shortName: string
   city: string
   country: string
+  isOwn: boolean
   league?: string
   category?: string
   season?: string
@@ -84,7 +85,7 @@ export type VideoStatus = 'uploaded' | 'processing' | 'analyzed' | 'failed'
 
 export interface Video {
   id: string
-  matchId?: string
+  matchId: string | null
   teamId: string
   title: string
   storageUrl: string

@@ -7,7 +7,10 @@ function loadStore(): MockStore {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY)
     if (raw) {
-      return JSON.parse(raw) as MockStore
+      const parsed = JSON.parse(raw) as MockStore
+      parsed.teams = parsed.teams.map((team) => ({ ...team, isOwn: team.isOwn ?? false }))
+      parsed.videos = parsed.videos.map((video) => ({ ...video, matchId: video.matchId || null }))
+      return parsed
     }
   } catch {
     /* ignore */

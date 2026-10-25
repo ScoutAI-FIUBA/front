@@ -55,6 +55,8 @@ ScoutAI v2 Phase 2 material library.
 
 - Videos use the configured video service; automatic jobs always use the real ProcessingJob boundary.
 - Backend `READY`, `PENDING_UPLOAD`, and `FAILED` map to ready, preparing, and failed material states.
+- Every backend video response includes nullable `match_id`; the frontend preserves it as nullable `matchId`
+  without adding match-linking behavior to the current video flows.
 - Automatic job states remain `QUEUED`, `RUNNING`, `DONE`, and `FAILED`.
 - The backend still lacks a global jobs endpoint, so the shared frontend catalogue composes per-video histories with bounded concurrency and partial results.
 

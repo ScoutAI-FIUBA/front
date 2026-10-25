@@ -67,6 +67,15 @@ Current limits:
 - The same detail response may include nullable `presigned_thumbnail_url`; the frontend maps it to `thumbnailUrl` and uses it as the native video poster. It is a fresh signed URL with the backend's current 3600-second lifetime, not a public stable URL.
 - `GET /videos?team_id=...` deliberately does not include a thumbnail field. After rendering that base catalog, Partidos progressively calls the existing detail endpoint with at most four concurrent requests. Signed poster URLs are cached in memory for 55 minutes; null and failed lookups keep the schematic fallback and are negatively cached for five minutes. No additional backend contract is required.
 - Non-ready videos do not request a presigned playback URL.
+- Backend video responses include `match_id` as a UUID or `null`. The frontend maps it to `matchId` without
+  exposing or changing the dedicated video-to-match linking operation in the current delivery.
+
+## Teams Backend Integration
+
+Team responses include the non-null boolean `is_own`, represented as `isOwn` in the frontend model. Creation
+currently omits the property and uses the backend default (`false`) because there is no visual control yet.
+Editing includes the boolean loaded with the team, preserving both `true` and `false` while the visible identity
+fields are updated.
 
 ## Players Backend Integration
 

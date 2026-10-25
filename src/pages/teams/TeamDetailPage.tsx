@@ -84,7 +84,7 @@ export function TeamDetailPage() {
     if (!team) return
     setTeamSubmitting(true)
     try {
-      const updatedTeam = await teamService.update(team.id, values)
+      const updatedTeam = await teamService.update(team.id, { ...values, isOwn: team.isOwn })
       setTeam(updatedTeam)
       setTeamEditOpen(false)
       toast.success('Equipo actualizado')

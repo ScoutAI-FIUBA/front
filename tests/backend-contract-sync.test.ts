@@ -20,6 +20,7 @@ const apiVideo: ApiVideo = {
   duration_ms: 90_000,
   created_at: '2026-10-05T10:00:00Z',
   updated_at: '2026-10-05T10:00:00Z',
+  match_id: null,
 }
 
 test('video detail maps the signed poster and remains compatible when it is absent', () => {
@@ -32,10 +33,22 @@ test('video detail maps the signed poster and remains compatible when it is abse
 
   const legacy = mapApiVideo(apiVideo, 'https://storage.example/video-signed')
   assert.equal(legacy.thumbnailUrl, undefined)
+  assert.equal(legacy.matchId, null)
+
+  const linked = mapApiVideo({ ...apiVideo, match_id: 'match-1' })
+  assert.equal(linked.matchId, 'match-1')
 
   const apiSource = readFileSync(new URL('../src/services/api/videos.api.ts', import.meta.url), 'utf8')
   assert.match(apiSource, /presigned_thumbnail_url\?: string \| null/)
   assert.match(apiSource, /data\.presigned_thumbnail_url \?\? ''/)
+})
+
+test('mock video uploads start without inventing a match association', () => {
+  const source = readFileSync(new URL('../src/services/mock/videos.mock.ts', import.meta.url), 'utf8')
+  const store = readFileSync(new URL('../src/mocks/store.ts', import.meta.url), 'utf8')
+  assert.match(source, /matchId: null/)
+  assert.doesNotMatch(source, /matchId: ''/)
+  assert.match(store, /matchId: video\.matchId \|\| null/)
 })
 
 test('clip responses map persisted descriptions and normalize legacy responses', () => {

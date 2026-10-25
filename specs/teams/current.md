@@ -34,6 +34,9 @@ Current behavior documentation.
   that secondary request fails; the team list remains usable.
 - Team create and edit share a short dialog with name, short name, city, and
   country. Delete remains secondary and requires confirmation.
+- The frontend model preserves the backend `is_own` flag as `isOwn`. The current dialog intentionally has no
+  control for it: create leaves it omitted so the backend default applies, while edit sends the loaded boolean
+  unchanged so updating identity or location cannot reset it accidentally.
 - `/equipos/:teamId` loads team identity and roster in parallel using
   `teamService.getById()` and `playerService.filterByTeam()`.
 - The roster prioritizes jersey number, name, position, and physical measurements.
@@ -49,7 +52,8 @@ Current behavior documentation.
 
 ## Acceptance Criteria
 
-- Team UI uses only `name`, `shortName`, `city`, and `country` as productive data.
+- Team UI displays only `name`, `shortName`, `city`, and `country`; `isOwn` is retained as contract data without
+  adding a visual control in this delivery.
 - `Ver plantel` is the primary team action; video links and synthetic KPIs are not
   presented on the team index.
 - Loading, error, empty, no-results, and retry states exist for the team index and

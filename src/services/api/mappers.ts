@@ -15,6 +15,7 @@ export interface ApiTeam {
   city: string
   country: string
   created_at?: string
+  is_own: boolean
 }
 
 export interface ApiPlayer {
@@ -79,6 +80,7 @@ export function mapApiTeam(team: ApiTeam): Team {
     shortName: team.short_name,
     city: team.city,
     country: team.country,
+    isOwn: team.is_own,
   }
 }
 
@@ -103,12 +105,14 @@ export function toTeamPayload(dto: {
   shortName: string
   city: string
   country: string
+  isOwn?: boolean
 }) {
   return {
     name: dto.name,
     short_name: dto.shortName,
     city: dto.city,
     country: dto.country,
+    ...(dto.isOwn === undefined ? {} : { is_own: dto.isOwn }),
   }
 }
 

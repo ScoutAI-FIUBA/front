@@ -28,16 +28,16 @@ export const mockVideoService: IVideoService = {
 
   async upload(dto) {
     await simulateNetwork(800)
-      const video = {
-        id: generateId('video'),
-      matchId: '',
-        teamId: dto.teamId,
+    const video = {
+      id: generateId('video'),
+      matchId: null,
+      teamId: dto.teamId,
       title: dto.title,
       storageUrl: `/mock/videos/${dto.file.name}`,
       durationMs: dto.durationMs,
       description: dto.description,
-        uploadedAt: new Date().toISOString(),
-        status: 'uploaded' as const,
+      uploadedAt: new Date().toISOString(),
+      status: 'uploaded' as const,
       resolution: '1080p',
     }
     updateStore((s) => {

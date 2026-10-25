@@ -7,6 +7,7 @@ export interface CreateTeamDto {
   country: string
   league?: string
   category?: string
+  isOwn?: boolean
 }
 
 export interface UpdateTeamDto {
@@ -14,6 +15,7 @@ export interface UpdateTeamDto {
   shortName: string
   city: string
   country: string
+  isOwn: boolean
 }
 
 export interface ITeamService {

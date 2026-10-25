@@ -23,6 +23,7 @@ export interface ApiVideo {
   duration_ms: number | null
   created_at: string
   updated_at: string
+  match_id: string | null
 }
 
 function mapVideoStatus(status: ApiVideo['status']): VideoStatus {
@@ -34,6 +35,7 @@ function mapVideoStatus(status: ApiVideo['status']): VideoStatus {
 export function mapApiVideo(video: ApiVideo, playbackUrl = '', thumbnailUrl = ''): Video {
   return {
     id: video.id,
+    matchId: video.match_id,
     teamId: video.team_id,
     title: video.title,
     storageUrl: playbackUrl,

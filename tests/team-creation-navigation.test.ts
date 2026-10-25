@@ -19,6 +19,7 @@ const values: CreateTeamDto = {
 const createdTeam: Team = {
   id: 'team/created',
   ...values,
+  isOwn: false,
 }
 
 test('creating a team from Subir video returns with the new team selected', async () => {

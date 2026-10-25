@@ -83,7 +83,7 @@ export function TeamsPage() {
     try {
       let returnPath: string | null = null
       if (editingTeam) {
-        await teamService.update(editingTeam.id, values)
+        await teamService.update(editingTeam.id, { ...values, isOwn: editingTeam.isOwn })
         toast.success('Equipo actualizado')
       } else {
         const created = await createTeamWithNavigationContext({
