@@ -16,11 +16,17 @@ export const playerFormSchema = z.object({
   heightCm: z
     .string()
     .trim()
-    .refine((value) => value === '' || (Number.isFinite(Number(value)) && Number(value) > 0), 'Ingresá una altura válida'),
+    .refine(
+      (value) => value === '' || (Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 300),
+      'Ingresá una altura válida de hasta 300 cm',
+    ),
   weightKg: z
     .string()
     .trim()
-    .refine((value) => value === '' || (Number.isFinite(Number(value)) && Number(value) > 0), 'Ingresá un peso válido'),
+    .refine(
+      (value) => value === '' || (Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 400),
+      'Ingresá un peso válido de hasta 400 kg',
+    ),
 })
 
 export type PlayerFormValues = z.infer<typeof playerFormSchema>
