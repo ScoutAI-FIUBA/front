@@ -59,6 +59,29 @@ test('profile updates run only when real player fields changed', () => {
   assert.equal(playerFormHasChanges({ ...values, weightKg: '76' }, current), true)
 })
 
+test('an empty nullable profile remains unchanged until a real value is added', () => {
+  const current: Player = {
+    ...player('1', 'Ana', 'Base'),
+    birthDate: null,
+    heightCm: null,
+    weightKg: null,
+    primaryPosition: null,
+  }
+  const values = playerToFormValues(current)
+
+  assert.deepEqual(values, {
+    firstName: 'Ana',
+    lastName: 'Base',
+    primaryPosition: '',
+    jerseyNumber: '',
+    birthDate: '',
+    heightCm: '',
+    weightKg: '',
+  })
+  assert.equal(playerFormHasChanges(values, current), false)
+  assert.equal(playerFormHasChanges({ ...values, primaryPosition: 'PG' }, current), true)
+})
+
 test('global sheet preserves assignment semantics and partial mutation feedback', () => {
   const page = readFileSync(new URL('../src/pages/players/PlayersPage.tsx', import.meta.url), 'utf8')
   const sheet = readFileSync(new URL('../src/pages/players/GlobalPlayerSheet.tsx', import.meta.url), 'utf8')

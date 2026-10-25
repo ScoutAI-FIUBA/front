@@ -19,6 +19,8 @@ interface PlayerFormFieldsProps {
   jerseyWarning?: string | null
 }
 
+const NO_POSITION = 'no-position'
+
 function FieldError({ message }: { message?: string }) {
   if (!message) return null
   return <p className="mt-1 text-xs text-destructive">{message}</p>
@@ -44,14 +46,18 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label>Posición</Label>
+          <Label>Posición <span className="font-normal text-muted-foreground">(opcional)</span></Label>
           <Controller
             name="primaryPosition"
             control={control}
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value || NO_POSITION}
+                onValueChange={(value) => field.onChange(value === NO_POSITION ? '' : value)}
+              >
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Seleccioná una posición" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NO_POSITION}>Sin especificar</SelectItem>
                   {POSITIONS.map((position) => (
                     <SelectItem key={position.code} value={position.code}>{position.label}</SelectItem>
                   ))}
@@ -89,7 +95,7 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
       </div>
 
       <div>
-        <Label htmlFor="player-birth-date">Fecha de nacimiento</Label>
+        <Label htmlFor="player-birth-date">Fecha de nacimiento <span className="font-normal text-muted-foreground">(opcional)</span></Label>
         <Input
           id="player-birth-date"
           type="date"
@@ -102,13 +108,13 @@ export function PlayerFormFields({ form, jerseyWarning }: PlayerFormFieldsProps)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="player-height">Altura (cm)</Label>
-          <Input id="player-height" type="number" min="1" className="mt-1" {...register('heightCm')} />
+          <Label htmlFor="player-height">Altura (cm) <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+          <Input id="player-height" type="number" min="1" max="300" step="1" className="mt-1" {...register('heightCm')} />
           <FieldError message={errors.heightCm?.message} />
         </div>
         <div>
-          <Label htmlFor="player-weight">Peso (kg)</Label>
-          <Input id="player-weight" type="number" min="1" className="mt-1" {...register('weightKg')} />
+          <Label htmlFor="player-weight">Peso (kg) <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+          <Input id="player-weight" type="number" min="1" max="400" step="1" className="mt-1" {...register('weightKg')} />
           <FieldError message={errors.weightKg?.message} />
         </div>
       </div>

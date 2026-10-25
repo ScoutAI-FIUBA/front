@@ -33,12 +33,20 @@ const validForm = {
   weightKg: '70',
 }
 
-test('player validation accepts real fields and rejects future or invalid measurements', () => {
+test('player validation accepts optional profile fields and rejects invalid filled values', () => {
   assert.equal(playerFormSchema.safeParse(validForm).success, true)
-  assert.equal(playerFormSchema.safeParse({ ...validForm, primaryPosition: '' }).success, false)
+  assert.equal(playerFormSchema.safeParse({
+    ...validForm,
+    primaryPosition: '',
+    birthDate: '',
+    heightCm: '',
+    weightKg: '',
+  }).success, true)
   assert.equal(playerFormSchema.safeParse({ ...validForm, birthDate: '2999-01-01' }).success, false)
   assert.equal(playerFormSchema.safeParse({ ...validForm, heightCm: '0' }).success, false)
-  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '' }).success, false)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, heightCm: '301' }).success, false)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '401' }).success, false)
+  assert.equal(playerFormSchema.safeParse({ ...validForm, weightKg: '70.5' }).success, false)
   assert.equal(playerFormSchema.safeParse({ ...validForm, jerseyNumber: '123' }).success, false)
 })
 

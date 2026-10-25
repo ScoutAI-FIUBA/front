@@ -12,6 +12,7 @@ export const POSITION_CODES: ReadonlyArray<PositionCode> = POSITIONS.map((p) => 
 
 const LABEL_BY_CODE = new Map(POSITIONS.map((p) => [p.code, p.label]))
 
-export function positionLabel(code: string): string {
+export function positionLabel(code: string | null | undefined): string {
+  if (!code) return 'Sin especificar'
   return LABEL_BY_CODE.get(code as PositionCode) ?? code
 }

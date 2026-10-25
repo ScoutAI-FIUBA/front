@@ -3,22 +3,22 @@ import type { Player } from '@/types'
 export interface CreatePlayerDto {
   firstName: string
   lastName: string
-  birthDate: string
+  birthDate: string | null
   primaryPosition: Player['primaryPosition']
   jerseyNumber?: string
-  heightCm?: number
-  weightKg?: number
+  heightCm: number | null
+  weightKg: number | null
   teamId?: string
 }
 
 export interface UpdatePlayerDto {
   firstName: string
   lastName: string
-  birthDate: string
+  birthDate: string | null
   primaryPosition: Player['primaryPosition']
   jerseyNumber?: string
-  heightCm?: number
-  weightKg?: number
+  heightCm: number | null
+  weightKg: number | null
 }
 
 export interface IPlayerService {

@@ -21,10 +21,10 @@ export interface ApiPlayer {
   id: string
   first_name: string
   last_name: string
-  birth_date: string
-  height_cm: number
-  weight_kg: number
-  primary_position: string
+  birth_date: string | null
+  height_cm: number | null
+  weight_kg: number | null
+  primary_position: string | null
   jersey_number?: string | null
   team_id?: string | null
 }
@@ -115,18 +115,18 @@ export function toTeamPayload(dto: {
 export function toPlayerPayload(dto: {
   firstName: string
   lastName: string
-  birthDate: string
-  primaryPosition: string
+  birthDate: string | null
+  primaryPosition: Player['primaryPosition']
   jerseyNumber?: string
-  heightCm?: number
-  weightKg?: number
+  heightCm: number | null
+  weightKg: number | null
 }) {
   return {
     first_name: dto.firstName,
     last_name: dto.lastName,
     birth_date: dto.birthDate,
-    height_cm: dto.heightCm ?? 180,
-    weight_kg: dto.weightKg ?? 75,
+    height_cm: dto.heightCm,
+    weight_kg: dto.weightKg,
     primary_position: dto.primaryPosition,
     jersey_number: dto.jerseyNumber ?? null,
   }

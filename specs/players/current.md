@@ -40,10 +40,14 @@ Current behavior documentation.
 - Profile updates and team moves execute only when needed; partial success remains visible and retryable without frontend rollback.
 - Jersey number is optional text of one or two digits: inputs strip non-digits, and `0` and `00` are distinct values.
 - Delete exists only as a secondary action inside edit and uses browser confirmation.
-- Create player requires first name, last name, position, birth date, valid height, and valid weight.
+- Create player requires only first name and last name. Position, birth date, height, and weight are optional and
+  empty controls are serialized as explicit `null` values; the frontend never invents profile data.
 - Create and edit surfaces share the same player-field component and validation schema.
 - Create and edit forms set today's local date as the maximum birth date and
-  reject a future value before calling the player service.
+  reject a future filled value before calling the player service.
+- Editing is a full profile replacement, matching `PUT /players/{player_id}`: keeping an optional control empty
+  preserves `null`, filling it adds the value, and clearing it sends `null`.
+- Player lists and roster surfaces render an absent position as `Sin especificar` and omit absent measurements.
 - Closing the `/jugadores/nuevo` compatibility sheet returns to `/jugadores`.
 - Toasts provide success and error feedback.
 
