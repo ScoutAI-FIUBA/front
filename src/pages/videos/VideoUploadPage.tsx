@@ -17,9 +17,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
-import { teamService, videoService } from '@/services/registry'
-import type { Team } from '@/types'
+import { matchService, teamService, videoService } from '@/services/registry'
+import type { MatchRecord, Team } from '@/types'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { videoUploadReturnPath, videoUploadSuccessPath } from './video-upload-navigation'
@@ -27,6 +28,14 @@ import { upsertVideoInAnalysisCatalog } from '@/pages/analysis/analysis-job-cata
 import { teamsPathForVideoUpload } from '@/pages/teams/team-creation-navigation'
 import { sortTeamsOwnFirst } from '@/pages/teams/team-ownership'
 import { OwnTeamBadge } from '@/components/OwnTeamBadge'
+import {
+  MATCH_LINK_FAILED_TOAST,
+  MATCH_LOAD_ERROR_NOTE,
+  NO_MATCH_LABEL,
+  NO_MATCH_VALUE,
+  matchIdToLink,
+  uploadMatchOptions,
+} from './video-upload-match'
 
 type VideoUploadStep = 1 | 2 | 3
 
@@ -78,6 +87,9 @@ export function VideoUploadPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [teamsState, setTeamsState] = useState<'loading' | 'success' | 'error'>('loading')
+  const [matches, setMatches] = useState<MatchRecord[]>([])
+  const [matchesState, setMatchesState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
+  const [matchId, setMatchId] = useState(NO_MATCH_VALUE)
 
   const applyLoadedTeams = useCallback((loaded: Team[]) => {
     setTeams(sortTeamsOwnFirst(loaded))
@@ -113,6 +125,29 @@ export function VideoUploadPage() {
     [teamId, teams],
   )
 
+  // Optional match: loaded per selected team, reset when the team changes. A failure never blocks the upload.
+  useEffect(() => {
+    setMatchId(NO_MATCH_VALUE)
+    setMatches([])
+    if (!teamId) {
+      setMatchesState('idle')
+      return
+    }
+    let active = true
+    setMatchesState('loading')
+    void matchService.list({ teamId }).then(
+      (loaded) => { if (active) { setMatches(loaded); setMatchesState('success') } },
+      () => { if (active) setMatchesState('error') },
+    )
+    return () => { active = false }
+  }, [teamId])
+
+  const teamNames = useMemo(() => new globalThis.Map(teams.map((team) => [team.id, team.name])), [teams])
+  const matchOptions = useMemo(
+    () => uploadMatchOptions(matches, teamId, teamNames),
+    [matches, teamId, teamNames],
+  )
+
   const acceptFile = (selectedFile: File | undefined) => {
     if (!selectedFile) return
     if (selectedFile.type && !selectedFile.type.startsWith('video/')) {
@@ -138,7 +173,16 @@ export function VideoUploadPage() {
 
     try {
       setIsUploading(true)
-      const uploaded = await videoService.upload({ title: title.trim(), teamId, description: description.trim(), file })
+      let uploaded = await videoService.upload({ title: title.trim(), teamId, description: description.trim(), file })
+      // The link is attempted once, right after the upload resolved; a failure never fails the upload.
+      const linkMatchId = matchIdToLink(matchId, matchOptions)
+      if (linkMatchId) {
+        try {
+          uploaded = await videoService.setMatch(uploaded.id, uploaded.teamId, linkMatchId)
+        } catch {
+          toast.warning(MATCH_LINK_FAILED_TOAST)
+        }
+      }
       if (!user || !upsertVideoInAnalysisCatalog(user.id, uploaded)) return
       toast.success('Video subido correctamente')
       navigate(videoUploadSuccessPath(searchParams, uploaded))
@@ -388,6 +432,21 @@ export function VideoUploadPage() {
                     className="mt-2 h-13 rounded-none border-x-0 border-t-0 border-[#3A4254] bg-transparent px-0 text-lg text-[#F4F5F7] focus-visible:ring-0"
                     disabled={isUploading}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="video-match" className="text-xs font-semibold uppercase tracking-[0.16em] text-[#A3ABBA]">Partido <span className="normal-case tracking-normal text-[#6F788A]">(opcional)</span></Label>
+                  <Select value={matchId} onValueChange={setMatchId} disabled={isUploading || !teamId || matchesState !== 'success'}>
+                    <SelectTrigger id="video-match" className="mt-2 h-13 rounded-none border-x-0 border-t-0 border-[#3A4254] bg-transparent px-0 text-lg text-[#F4F5F7] focus:ring-0">
+                      <SelectValue placeholder={matchesState === 'loading' ? 'Cargando partidos…' : NO_MATCH_LABEL} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_MATCH_VALUE}>{NO_MATCH_LABEL}</SelectItem>
+                      {matchOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {matchesState === 'error' ? (
+                    <p role="status" className="mt-2 text-sm text-[#A3ABBA]">{MATCH_LOAD_ERROR_NOTE}</p>
+                  ) : null}
                 </div>
               </div>
 

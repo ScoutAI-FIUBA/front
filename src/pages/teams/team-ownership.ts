@@ -19,3 +19,12 @@ export function filterTeamsByOwnership<T extends Pick<Team, 'isOwn'>>(teams: T[]
   if (filter === 'rivals') return teams.filter((team) => !team.isOwn)
   return teams
 }
+
+/** Players filter value for "all teams" (matches the Select item value). */
+export const ALL_PLAYERS_TEAM_FILTER = 'all'
+
+/** Preselects the team only when there is exactly one own team; with several, "Todos" avoids hiding the others. */
+export function defaultPlayersTeamFilter(teams: Pick<Team, 'id' | 'isOwn'>[]): string {
+  const own = teams.filter((team) => team.isOwn)
+  return own.length === 1 ? own[0].id : ALL_PLAYERS_TEAM_FILTER
+}
