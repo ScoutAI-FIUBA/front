@@ -5,7 +5,7 @@ import { BasketballCourtLines } from '@/components/analysis/BasketballCourtLines
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 import { useAnalysisJobCatalog } from '@/pages/analysis/use-analysis-job-catalog'
 import { VideoAnalysisJobs } from '@/pages/videos/VideoAnalysisJobs'
 import { VideoPlaybackDialog } from '@/pages/videos/VideoPlaybackDialog'

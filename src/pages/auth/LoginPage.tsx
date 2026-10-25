@@ -10,7 +10,7 @@ import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
 import { AuthPasswordField } from '@/components/auth/AuthPasswordField'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { SessionRestoreStatus } from '@/components/auth/SessionRestoreStatus'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 import { googleLoginErrorMessage, loginErrorMessage } from './login-errors'
 import { loginDestination } from './login-navigation'
 

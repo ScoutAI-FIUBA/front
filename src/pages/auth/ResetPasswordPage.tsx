@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 export function ResetPasswordPage() {
   const { resetPassword } = useAuth()

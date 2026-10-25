@@ -15,7 +15,7 @@ import { addCreatedJobToAnalysisCatalog } from './analysis-job-catalog-store'
 import { useAnalysisJobCatalog } from './use-analysis-job-catalog'
 import { videoUploadPath } from '@/pages/videos/video-upload-navigation'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 export function AnalysisJobNewPage() {
   const { user } = useAuth()

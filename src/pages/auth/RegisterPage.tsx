@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { AuthPanelHeader, AuthShell } from '@/components/auth/AuthShell'
 import { AuthPasswordField } from '@/components/auth/AuthPasswordField'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 export function RegisterPage() {
   const navigate = useNavigate()

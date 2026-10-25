@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -22,29 +20,9 @@ import {
 import { setAnalysisJobCatalogIdentity } from '@/pages/analysis/analysis-job-catalog-store'
 import { setMatchPosterCacheIdentity } from '@/pages/matches/match-posters'
 import { restoreSessionUser } from './session-restore'
+import { AuthContext } from './auth-context'
 
-interface AuthContextValue {
-  user: User | null
-  token: string | null
-  isLoading: boolean
-  sessionRestoreError: boolean
-  lastAuthenticatedUserId: string | null
-  sessionEndReason: 'expired' | 'logout' | null
-  isAuthenticated: boolean
-  retrySessionRestore: () => Promise<void>
-  login: (credentials: UserCredentials) => Promise<User>
-  register: (dto: RegisterDto) => Promise<User>
-  loginWithGoogle: (idToken: string) => Promise<User>
-  logout: () => Promise<void>
-  requestPasswordReset: (email: string) => Promise<void>
-  resetPassword: (token: string, password: string) => Promise<void>
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
-  updateProfile: (fullName: string) => Promise<void>
-  sendEmailVerification: () => Promise<void>
-  confirmEmailVerification: (token: string) => Promise<void>
-}
 
-const AuthContext = createContext<AuthContextValue | null>(null)
 const SUPERSEDED_AUTH_OPERATION = 'La operación de autenticación pertenece a una sesión anterior.'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -243,10 +221,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
-  return ctx
 }

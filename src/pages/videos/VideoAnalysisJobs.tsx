@@ -21,7 +21,7 @@ import { createAnalysisJobsPoller, hasActiveAnalysisJobs } from './analysis-jobs
 import { addCreatedJobToAnalysisCatalog } from '@/pages/analysis/analysis-job-catalog-store'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import { AnalysisPollingNotice } from '@/components/analysis/AnalysisPollingNotice'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/auth-context'
 
 type LoadState = 'loading' | 'success' | 'error' | 'session-expired'
 
