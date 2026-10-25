@@ -1,6 +1,8 @@
+import { normalizeJerseyNumber } from '@/lib/jersey'
 import { simulateNetwork } from '@/mocks/delays'
 import { getStore, updateStore, generateId } from '@/mocks/store'
-import type { IPlayerService } from '../contracts/players.service'
+import type { Player } from '@/types'
+import type { IPlayerService, TeamRosterResult } from '../contracts/players.service'
 
 export const mockPlayerService: IPlayerService = {
   async list() {
@@ -19,11 +21,11 @@ export const mockPlayerService: IPlayerService = {
       id: generateId('player'),
       firstName: dto.firstName,
       lastName: dto.lastName,
-      birthDate: dto.birthDate,
-      primaryPosition: dto.primaryPosition,
+      birthDate: dto.birthDate ?? null,
+      primaryPosition: dto.primaryPosition ?? null,
       jerseyNumber: dto.jerseyNumber,
-      heightCm: dto.heightCm,
-      weightKg: dto.weightKg,
+      heightCm: dto.heightCm ?? null,
+      weightKg: dto.weightKg ?? null,
       teamId: dto.teamId ?? null,
       createdAt: new Date().toISOString(),
       status: 'pending' as const,
@@ -56,11 +58,11 @@ export const mockPlayerService: IPlayerService = {
       if (!player) return
       player.firstName = dto.firstName
       player.lastName = dto.lastName
-      player.birthDate = dto.birthDate
-      player.primaryPosition = dto.primaryPosition
+      player.birthDate = dto.birthDate ?? null
+      player.primaryPosition = dto.primaryPosition ?? null
       player.jerseyNumber = dto.jerseyNumber
-      player.heightCm = dto.heightCm
-      player.weightKg = dto.weightKg
+      player.heightCm = dto.heightCm ?? null
+      player.weightKg = dto.weightKg ?? null
     })
     const player = updated.players.find((p) => p.id === id)
     if (!player) throw new Error('Player not found')
@@ -82,6 +84,49 @@ export const mockPlayerService: IPlayerService = {
       .filter((m) => m.teamId === teamId && !m.leftAt)
       .map((m) => m.playerId)
     return store.players.filter((p) => playerIds.includes(p.id))
+  },
+
+  async createTeamRoster(teamId, inputs) {
+    await simulateNetwork()
+    const created: Player[] = []
+    const skipped: TeamRosterResult['skipped'] = []
+    updateStore((s) => {
+      const taken = new Set(
+        s.players
+          .filter((p) => p.teamId === teamId && p.jerseyNumber)
+          .map((p) => normalizeJerseyNumber(p.jerseyNumber as string)),
+      )
+      for (const input of inputs) {
+        const jersey = normalizeJerseyNumber(input.jerseyNumber)
+        if (taken.has(jersey)) {
+          skipped.push({ jerseyNumber: input.jerseyNumber, reason: 'jersey_taken' })
+          continue
+        }
+        taken.add(jersey)
+        const player: Player = {
+          id: generateId('player'),
+          firstName: input.firstName,
+          lastName: input.lastName,
+          birthDate: null,
+          primaryPosition: null,
+          jerseyNumber: input.jerseyNumber,
+          heightCm: null,
+          weightKg: null,
+          teamId,
+          createdAt: new Date().toISOString(),
+          status: 'pending',
+        }
+        s.players.push(player)
+        s.memberships.push({
+          id: generateId('mem'),
+          teamId,
+          playerId: player.id,
+          joinedAt: new Date().toISOString(),
+        })
+        created.push(player)
+      }
+    })
+    return { created, skipped }
   },
 
   async getTeamName(playerId) {

@@ -1,4 +1,4 @@
-import type { IPlayerService } from '../contracts/players.service'
+import type { IPlayerService, TeamRosterResult } from '../contracts/players.service'
 import type { Player } from '@/types'
 import { apiJson } from './http-client'
 import { mapApiPlayer, toPlayerPayload, type ApiPlayer } from './mappers'
@@ -80,6 +80,27 @@ export const apiPlayerService: IPlayerService = {
 
   async filterByTeam(teamId: string): Promise<Player[]> {
     return fetchPlayers(teamId)
+  },
+
+  async createTeamRoster(teamId, players): Promise<TeamRosterResult> {
+    const data = await apiJson<{
+      created: ApiPlayer[]
+      skipped: { jersey_number: string; reason: string }[]
+    }>('/players/bulk', {
+      method: 'POST',
+      body: JSON.stringify({
+        team_id: teamId,
+        players: players.map((player) => ({
+          first_name: player.firstName,
+          last_name: player.lastName,
+          jersey_number: player.jerseyNumber,
+        })),
+      }),
+    })
+    return {
+      created: data.created.map(mapApiPlayer),
+      skipped: data.skipped.map((entry) => ({ jerseyNumber: entry.jersey_number, reason: entry.reason })),
+    }
   },
 
   async getTeamName(playerId: string): Promise<string | null> {

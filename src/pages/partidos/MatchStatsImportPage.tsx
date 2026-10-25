@@ -15,13 +15,20 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { PageHeader } from '@/components/ui/page-header'
 import { isApiAuthenticationError } from '@/services/api/errors'
 import { isMatchApiError, teamMismatchDetails } from '@/services/api/matches.client'
-import { matchService, teamService } from '@/services/registry'
+import { matchService, playerService, teamService } from '@/services/registry'
 import type { MatchRecord, MatchStatsImportPreview, Team, TeamMismatchDetail } from '@/types'
 import {
+  NO_ROSTER_CHOICE,
   NOT_EDITABLE_NOTE,
   OVERWRITE_WARNING,
   type MatchErrorCopy,
+  type RosterChoice,
+  anyRosterChoice,
+  buildRosterRequest,
+  createRostersThenRepreview,
   matchErrorCopy,
+  mismatchAccepted,
+  rosterCreatedMessage,
 } from './match-import'
 import { formatMatchDate } from './box-score-format'
 import { MATCH_DIALOG_CLASS } from './dialog-theme'
@@ -50,6 +57,7 @@ export function MatchStatsImportPage() {
   const [error, setError] = useState<MatchErrorCopy | null>(null)
   const [mismatch, setMismatch] = useState<TeamMismatchDetail[] | null>(null)
   const [preview, setPreview] = useState<MatchStatsImportPreview | null>(null)
+  const [rosterChoice, setRosterChoice] = useState<RosterChoice>(NO_ROSTER_CHOICE)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const previewHeadingRef = useRef<HTMLHeadingElement>(null)
   const activeRef = useRef(true)
@@ -176,13 +184,15 @@ export function MatchStatsImportPage() {
       setError(null)
       setMismatch(null)
       try {
-        setPreview(await matchService.previewStatsImport({
+        const next = await matchService.previewStatsImport({
           file,
           fileName: file.name,
           homeTeamId: match.homeTeamId,
           awayTeamId: match.awayTeamId,
           allowTeamMismatch: allowTeamMismatch || undefined,
-        }))
+        })
+        setRosterChoice(NO_ROSTER_CHOICE)
+        setPreview(next)
       } catch (previewError) {
         if (isMatchApiError(previewError, 'TEAM_MISMATCH')) {
           setMismatch(teamMismatchDetails(previewError))
@@ -198,7 +208,29 @@ export function MatchStatsImportPage() {
     return withLock('saving', async () => {
       setError(null)
       try {
-        await matchService.saveStats(match.id, preview.savePayload)
+        let payload = preview.savePayload
+        if (anyRosterChoice(rosterChoice)) {
+          const created = await createRostersThenRepreview({
+            playerService,
+            rosters: buildRosterRequest(preview, rosterChoice, {
+              HOME: { id: match.homeTeamId, name: homeName },
+              AWAY: { id: match.awayTeamId, name: awayName },
+            }),
+            repreview: () => matchService.previewStatsImport({
+              file: file as File,
+              fileName: (file as File).name,
+              homeTeamId: match.homeTeamId,
+              awayTeamId: match.awayTeamId,
+              allowTeamMismatch: mismatchAccepted(preview) || undefined,
+            }),
+          })
+          payload = created.preview.savePayload
+          setRosterChoice(NO_ROSTER_CHOICE)
+          setPreview(created.preview)
+          const message = rosterCreatedMessage(created.createdBySide)
+          if (message) toast.success(message)
+        }
+        await matchService.saveStats(match.id, payload)
         if (!activeRef.current) return
         toast.success('Estadísticas guardadas')
         navigate(matchDetailPath(match.id))
@@ -239,6 +271,8 @@ export function MatchStatsImportPage() {
             saving={busy === 'saving'}
             replacing={hasStats}
             confirmLabel={hasStats ? 'Reemplazar estadísticas' : 'Guardar estadísticas'}
+            rosterChoice={rosterChoice}
+            onRosterChoiceChange={(side, on) => setRosterChoice((current) => ({ ...current, [side]: on }))}
           />
           <div aria-live="polite" className="mt-4">
             {error ? <ImportErrorAlert copy={error} /> : null}

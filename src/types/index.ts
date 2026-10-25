@@ -48,10 +48,10 @@ export interface Player {
   id: string
   firstName: string
   lastName: string
-  birthDate: string
-  heightCm?: number
-  weightKg?: number
-  primaryPosition: PositionCode
+  birthDate: string | null
+  heightCm?: number | null
+  weightKg?: number | null
+  primaryPosition: PositionCode | null
   createdAt: string
   teamId?: string | null
   jerseyNumber?: string
